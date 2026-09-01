@@ -1,0 +1,16 @@
+{
+  "name": "liveia-tiktok-live-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Protótipo para validar captura de eventos públicos de uma TikTok LIVE.",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "tiktok-live-connector": "2.4.4"
+  }
+}
