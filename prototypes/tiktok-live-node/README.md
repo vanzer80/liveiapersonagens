@@ -16,10 +16,15 @@ VALIDADO em teste real:
 
 ### MVP 2 — Resposta textual com IA
 EM TESTE:
-- somente comentários iniciados por `!ia` são enviados à IA;
+- comentários iniciados por `!ia` ou `ia` podem ser selecionados para a IA;
 - a resposta aparece apenas no terminal;
 - não existe envio automático de mensagem de volta ao TikTok;
-- provedor e modelo são configuráveis por variáveis de ambiente.
+- provedor e modelo são configuráveis por variáveis de ambiente;
+- o fluxo comentário real → IA → resposta textual já gerou resposta válida em LIVE real;
+- `openrouter/free` mostrou variação de modelo e chegou a selecionar um modelo de segurança que respondeu apenas `User Safety: safe`;
+- para a próxima revalidação, a hipótese de teste usa um modelo gratuito específico: `qwen/qwen3-30b-a3b:free`.
+
+A escolha desse modelo é apenas para tornar o teste reproduzível. Não é uma decisão definitiva de arquitetura, fornecedor ou modelo comercial.
 
 ## Requisitos
 
@@ -38,11 +43,11 @@ npm install
 
 ## Configurar IA para o MVP 2
 
-A hipótese inicial de protótipo usa uma API compatível com OpenAI via OpenRouter. Isso não é uma decisão definitiva de arquitetura.
+A hipótese atual de protótipo usa uma API compatível com OpenAI via OpenRouter. Isso não é uma decisão definitiva de arquitetura.
 
 1. Copie `.env.example` para `.env`.
 2. Coloque sua chave no campo `OPENROUTER_API_KEY`.
-3. O modelo padrão de teste é `openrouter/free`, mas pode ser trocado por `AI_MODEL`.
+3. O modelo de teste atual é `qwen/qwen3-30b-a3b:free`, mas pode ser trocado por `AI_MODEL`.
 
 O arquivo `.env` está ignorado pelo Git e não deve ser enviado ao repositório.
 
@@ -68,10 +73,16 @@ Comentários comuns continuam apenas sendo exibidos:
 [COMENTÁRIO] @usuario: oi pessoal
 ```
 
-Para chamar a IA no MVP 2, envie um comentário começando por `!ia`:
+Para chamar a IA no MVP 2, envie um comentário começando por `!ia` ou por `ia`:
 
 ```text
 !ia qual sua opinião sobre isso?
+```
+
+ou:
+
+```text
+ia qual sua opinião sobre isso?
 ```
 
 Saída esperada:
@@ -79,11 +90,11 @@ Saída esperada:
 ```text
 [DECISÃO IA] @usuario: selecionado.
 [ENTRADA IA] @usuario: qual sua opinião sobre isso?
-[RESPOSTA IA] modelo=...
+[RESPOSTA IA] modelo=qwen/qwen3-30b-a3b:free
 [RESPOSTA IA] @usuario: ...
 ```
 
-A regra `!ia` é temporária e existe para evitar custo/chamadas em todos os comentários durante a validação técnica.
+A regra de gatilho é temporária e existe para evitar chamadas em todos os comentários durante a validação técnica.
 
 ## Eventos do MVP 1
 
@@ -98,8 +109,8 @@ Durante a live, eventos aparecem aproximadamente assim:
 
 ## Próximas validações
 
-1. Confirmar uma chamada real de IA usando um comentário `!ia` da LIVE.
-2. Medir latência da resposta textual.
-3. Refinar persona provisória.
-4. Substituir o gatilho manual por uma regra simples de seleção/priorização.
-5. Somente depois avançar para TTS.
+1. Revalidar respostas reais usando o modelo gratuito específico configurado.
+2. Confirmar que comentários comuns não geram chamada à IA.
+3. Confirmar que erro do provedor não derruba a conexão da LIVE.
+4. Observar latência e consistência de algumas respostas curtas.
+5. Somente depois encerrar o MVP 2 e avançar para TTS.
