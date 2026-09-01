@@ -6,7 +6,6 @@ try {
 
 const DEFAULT_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_MODEL = 'openrouter/free';
-const PLACEHOLDER_API_KEY = 'cole_sua_chave_aqui';
 const DEFAULT_PERSONA = [
   'Você é um personagem virtual brasileiro participando de uma transmissão ao vivo.',
   'Responda em português do Brasil, com naturalidade, simpatia e objetividade.',
@@ -26,10 +25,6 @@ function normalizeApiKey(value) {
   return key;
 }
 
-function isPlaceholderApiKey(apiKey) {
-  return apiKey.toLowerCase() === PLACEHOLDER_API_KEY;
-}
-
 export function getAiConfig() {
   const rawApiKey = process.env.OPENROUTER_API_KEY || process.env.AI_API_KEY || '';
 
@@ -43,17 +38,16 @@ export function getAiConfig() {
 
 export function isAiConfigured() {
   const { apiKey } = getAiConfig();
-  return Boolean(apiKey) && !isPlaceholderApiKey(apiKey);
+  return Boolean(apiKey && apiKey !== 'cole_sua_chave_aqui');
 }
 
 export function getSafeAiKeyInfo() {
   const { apiKey } = getAiConfig();
-  const placeholderDetected = Boolean(apiKey) && isPlaceholderApiKey(apiKey);
 
-  if (!apiKey || placeholderDetected) {
+  if (!apiKey || apiKey === 'cole_sua_chave_aqui') {
     return {
       configured: false,
-      placeholderDetected,
+      placeholder: apiKey === 'cole_sua_chave_aqui',
       formatLooksValid: false,
       length: apiKey.length,
     };
@@ -61,7 +55,7 @@ export function getSafeAiKeyInfo() {
 
   return {
     configured: true,
-    placeholderDetected: false,
+    placeholder: false,
     formatLooksValid: apiKey.startsWith('sk-or-v1-'),
     length: apiKey.length,
   };
@@ -70,12 +64,8 @@ export function getSafeAiKeyInfo() {
 export async function validateAiAuthentication() {
   const { apiKey } = getAiConfig();
 
-  if (!apiKey) {
-    throw new Error('Chave de API ausente. Defina OPENROUTER_API_KEY no arquivo .env.');
-  }
-
-  if (isPlaceholderApiKey(apiKey)) {
-    throw new Error('O arquivo .env ainda contém o texto de exemplo. Substitua cole_sua_chave_aqui pela chave real do OpenRouter.');
+  if (!apiKey || apiKey === 'cole_sua_chave_aqui') {
+    throw new Error('Chave de API ausente. Preencha OPENROUTER_API_KEY no arquivo .env.');
   }
 
   const response = await fetch('https://openrouter.ai/api/v1/key', {
@@ -108,15 +98,24 @@ function normalizeContent(content) {
   return '';
 }
 
+function buildSafeEmptyResponseDiagnostics(payload, requestedModel) {
+  const choice = payload?.choices?.[0];
+  const message = choice?.message;
+
+  return [
+    `modelo=${payload?.model || requestedModel || 'desconhecido'}`,
+    `finish_reason=${choice?.finish_reason ?? 'ausente'}`,
+    `reasoning=${message?.reasoning ? 'presente' : 'ausente'}`,
+    `refusal=${message?.refusal ? 'presente' : 'ausente'}`,
+    `completion_tokens=${payload?.usage?.completion_tokens ?? '?'}`,
+  ].join(' | ');
+}
+
 export async function generateAiReply({ user, comment }) {
   const { apiUrl, apiKey, model } = getAiConfig();
 
-  if (!apiKey) {
-    throw new Error('Chave de API ausente. Defina OPENROUTER_API_KEY ou AI_API_KEY.');
-  }
-
-  if (isPlaceholderApiKey(apiKey)) {
-    throw new Error('A chave ainda não foi preenchida no .env. Substitua cole_sua_chave_aqui pela chave real do OpenRouter.');
+  if (!apiKey || apiKey === 'cole_sua_chave_aqui') {
+    throw new Error('Chave de API ausente. Defina OPENROUTER_API_KEY no arquivo .env.');
   }
 
   const response = await fetch(apiUrl, {
@@ -138,9 +137,15 @@ export async function generateAiReply({ user, comment }) {
         },
       ],
       temperature: 0.7,
-      max_tokens: 120,
+      // O roteador gratuito pode escolher modelos de raciocínio. Mantemos o raciocínio
+      // mínimo e fora da resposta, reservando tokens para a fala final do personagem.
+      reasoning: {
+        effort: 'minimal',
+        exclude: true,
+      },
+      max_completion_tokens: 400,
     }),
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(30000),
   });
 
   const payload = await response.json().catch(() => ({}));
@@ -153,7 +158,9 @@ export async function generateAiReply({ user, comment }) {
   const text = normalizeContent(payload?.choices?.[0]?.message?.content);
 
   if (!text) {
-    throw new Error('O provedor respondeu sem texto utilizável.');
+    throw new Error(
+      `O provedor respondeu sem texto utilizável. ${buildSafeEmptyResponseDiagnostics(payload, model)}`,
+    );
   }
 
   return {
