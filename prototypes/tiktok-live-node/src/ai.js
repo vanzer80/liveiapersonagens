@@ -5,7 +5,11 @@ try {
 }
 
 const DEFAULT_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const DEFAULT_MODEL = 'openrouter/free';
+const DEFAULT_MODEL = 'nvidia/nemotron-3.5-lightning:free';
+const DEFAULT_FALLBACK_MODELS = [
+  'minimax/minimax-m3:free',
+  'liquid/lfm-2.5-2.6b:free',
+];
 const DEFAULT_PERSONA = [
   'Você é um personagem virtual brasileiro participando de uma transmissão ao vivo.',
   'Responda em português do Brasil, com naturalidade, simpatia e objetividade.',
@@ -25,13 +29,30 @@ function normalizeApiKey(value) {
   return key;
 }
 
+function parseModelList(value) {
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function uniqueModels(models) {
+  return [...new Set(models.filter(Boolean))];
+}
+
 export function getAiConfig() {
   const rawApiKey = process.env.OPENROUTER_API_KEY || process.env.AI_API_KEY || '';
+  const configuredModel = (process.env.AI_MODEL || DEFAULT_MODEL).trim();
+  const configuredFallbacks = parseModelList(process.env.AI_FALLBACK_MODELS);
 
   return {
     apiUrl: (process.env.AI_API_URL || DEFAULT_API_URL).trim(),
     apiKey: normalizeApiKey(rawApiKey),
-    model: (process.env.AI_MODEL || DEFAULT_MODEL).trim(),
+    model: configuredModel,
+    fallbackModels: uniqueModels([
+      DEFAULT_MODEL,
+      ...(configuredFallbacks.length ? configuredFallbacks : DEFAULT_FALLBACK_MODELS),
+    ]).filter((candidate) => candidate !== configuredModel),
     trigger: (process.env.AI_TRIGGER || '!ia').trim(),
   };
 }
@@ -111,13 +132,18 @@ function buildSafeEmptyResponseDiagnostics(payload, requestedModel) {
   ].join(' | ');
 }
 
-export async function generateAiReply({ user, comment }) {
-  const { apiUrl, apiKey, model } = getAiConfig();
+function isGuardrailOnlyResponse(payload, text) {
+  const servedModel = String(payload?.model || '').toLowerCase();
+  const normalizedText = String(text || '').trim();
 
-  if (!apiKey || apiKey === 'cole_sua_chave_aqui') {
-    throw new Error('Chave de API ausente. Defina OPENROUTER_API_KEY no arquivo .env.');
-  }
+  return (
+    servedModel.includes('content-safety') ||
+    /^user safety:\s*(safe|unsafe)\b/i.test(normalizedText) ||
+    /^assistant safety:\s*(safe|unsafe)\b/i.test(normalizedText)
+  );
+}
 
+async function requestReplyFromModel({ apiUrl, apiKey, model, user, comment }) {
   const response = await fetch(apiUrl, {
     method: 'POST',
     headers: {
@@ -138,7 +164,6 @@ export async function generateAiReply({ user, comment }) {
       ],
       temperature: 0.7,
       // Para conversa de LIVE, priorizamos resposta direta e baixa latência.
-      // O modelo permanece configurável por AI_MODEL e esta escolha é apenas de protótipo.
       reasoning: {
         effort: 'none',
         exclude: true,
@@ -152,19 +177,72 @@ export async function generateAiReply({ user, comment }) {
 
   if (!response.ok) {
     const detail = payload?.error?.message || payload?.message || `HTTP ${response.status}`;
-    throw new Error(`Falha no provedor de IA: ${detail}`);
+    return {
+      ok: false,
+      error: detail,
+      payload,
+    };
   }
 
   const text = normalizeContent(payload?.choices?.[0]?.message?.content);
 
   if (!text) {
-    throw new Error(
-      `O provedor respondeu sem texto utilizável. ${buildSafeEmptyResponseDiagnostics(payload, model)}`,
-    );
+    return {
+      ok: false,
+      error: `O provedor respondeu sem texto utilizável. ${buildSafeEmptyResponseDiagnostics(payload, model)}`,
+      payload,
+    };
+  }
+
+  if (isGuardrailOnlyResponse(payload, text)) {
+    return {
+      ok: false,
+      error: `modelo inadequado para conversa (${payload?.model || model}) retornou apenas classificação de segurança`,
+      payload,
+    };
   }
 
   return {
+    ok: true,
     text,
     model: payload?.model || model,
   };
+}
+
+export async function generateAiReply({ user, comment }) {
+  const { apiUrl, apiKey, model, fallbackModels } = getAiConfig();
+
+  if (!apiKey || apiKey === 'cole_sua_chave_aqui') {
+    throw new Error('Chave de API ausente. Defina OPENROUTER_API_KEY no arquivo .env.');
+  }
+
+  const candidates = uniqueModels([model, ...fallbackModels]);
+  const failures = [];
+
+  for (const candidate of candidates) {
+    try {
+      const result = await requestReplyFromModel({
+        apiUrl,
+        apiKey,
+        model: candidate,
+        user,
+        comment,
+      });
+
+      if (result.ok) {
+        return {
+          text: result.text,
+          model: result.model,
+          requestedModel: model,
+          fallbackUsed: candidate !== model,
+        };
+      }
+
+      failures.push(`${candidate}: ${result.error}`);
+    } catch (error) {
+      failures.push(`${candidate}: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
+  throw new Error(`Falha no provedor de IA após fallback: ${failures.join(' | ')}`);
 }
