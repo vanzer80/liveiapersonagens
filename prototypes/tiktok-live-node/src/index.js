@@ -15,7 +15,7 @@ const aiConfig = getAiConfig();
 
 console.log('Live IA — Protótipo TikTok LIVE');
 console.log(`Tentando conectar em @${username}...`);
-console.log(`Modo IA: comentários iniciados por ${aiConfig.trigger}`);
+console.log(`Modo IA: comentários iniciados por ${aiConfig.trigger} ou ${aiConfig.trigger.replace(/^\W+/, '')}`);
 console.log(`Modelo IA: ${aiConfig.model}`);
 console.log(`Chave IA: ${isAiConfigured() ? 'configurada' : 'NÃO configurada'}`);
 console.log('Pressione Ctrl+C para encerrar.\n');
@@ -48,17 +48,37 @@ function extractChatText(data) {
   return candidates.find(([, value]) => typeof value === 'string' && value.trim().length > 0) || [null, ''];
 }
 
+function matchAiTrigger(comment) {
+  const configured = aiConfig.trigger.trim();
+  const withoutPunctuation = configured.replace(/^\W+/, '');
+  const candidates = [...new Set([configured, withoutPunctuation].filter(Boolean))];
+  const normalizedComment = comment.trimStart().toLowerCase();
+
+  for (const candidate of candidates) {
+    const normalizedCandidate = candidate.toLowerCase();
+    if (
+      normalizedComment === normalizedCandidate ||
+      normalizedComment.startsWith(`${normalizedCandidate} `)
+    ) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 let detectedChatTextField = null;
 let aiBusy = false;
 
 async function maybeGenerateAiReply(user, comment) {
-  const trigger = aiConfig.trigger;
+  const matchedTrigger = matchAiTrigger(comment);
 
-  if (!comment.toLowerCase().startsWith(trigger.toLowerCase())) {
+  if (!matchedTrigger) {
     return;
   }
 
-  const selectedText = comment.slice(trigger.length).trim();
+  const trimmedComment = comment.trimStart();
+  const selectedText = trimmedComment.slice(matchedTrigger.length).trim();
 
   if (!selectedText) {
     console.log(`[DECISÃO IA] @${user}: ignorado — gatilho sem mensagem.`);
