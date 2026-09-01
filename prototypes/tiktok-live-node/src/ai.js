@@ -14,17 +14,70 @@ const DEFAULT_PERSONA = [
   'Se não souber algo, responda de forma simples e conversacional.',
 ].join(' ');
 
+function normalizeApiKey(value) {
+  let key = String(value || '').trim();
+
+  // Tolera colagens comuns no .env sem expor a chave no terminal.
+  key = key.replace(/^OPENROUTER_API_KEY\s*=\s*/i, '').trim();
+  key = key.replace(/^AI_API_KEY\s*=\s*/i, '').trim();
+  key = key.replace(/^Bearer\s+/i, '').trim();
+
+  return key;
+}
+
 export function getAiConfig() {
+  const rawApiKey = process.env.OPENROUTER_API_KEY || process.env.AI_API_KEY || '';
+
   return {
-    apiUrl: process.env.AI_API_URL || DEFAULT_API_URL,
-    apiKey: process.env.AI_API_KEY || process.env.OPENROUTER_API_KEY || '',
-    model: process.env.AI_MODEL || DEFAULT_MODEL,
-    trigger: process.env.AI_TRIGGER || '!ia',
+    apiUrl: (process.env.AI_API_URL || DEFAULT_API_URL).trim(),
+    apiKey: normalizeApiKey(rawApiKey),
+    model: (process.env.AI_MODEL || DEFAULT_MODEL).trim(),
+    trigger: (process.env.AI_TRIGGER || '!ia').trim(),
   };
 }
 
 export function isAiConfigured() {
   return Boolean(getAiConfig().apiKey);
+}
+
+export function getSafeAiKeyInfo() {
+  const { apiKey } = getAiConfig();
+
+  if (!apiKey) {
+    return { configured: false, formatLooksValid: false, length: 0 };
+  }
+
+  return {
+    configured: true,
+    formatLooksValid: apiKey.startsWith('sk-or-v1-'),
+    length: apiKey.length,
+  };
+}
+
+export async function validateAiAuthentication() {
+  const { apiKey } = getAiConfig();
+
+  if (!apiKey) {
+    throw new Error('Chave de API ausente. Defina OPENROUTER_API_KEY no arquivo .env.');
+  }
+
+  const response = await fetch('https://openrouter.ai/api/v1/key', {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const detail = payload?.error?.message || payload?.message || `HTTP ${response.status}`;
+    throw new Error(detail);
+  }
+
+  return true;
 }
 
 function normalizeContent(content) {
