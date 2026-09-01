@@ -5,7 +5,7 @@ try {
 }
 
 const DEFAULT_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const DEFAULT_MODEL = 'openrouter/free';
+const DEFAULT_MODEL = 'qwen/qwen3-30b-a3b:free';
 const DEFAULT_PERSONA = [
   'Você é um personagem virtual brasileiro participando de uma transmissão ao vivo.',
   'Responda em português do Brasil, com naturalidade, simpatia e objetividade.',
@@ -137,10 +137,10 @@ export async function generateAiReply({ user, comment }) {
         },
       ],
       temperature: 0.7,
-      // O roteador gratuito pode escolher modelos de raciocínio. Mantemos o raciocínio
-      // mínimo e fora da resposta, reservando tokens para a fala final do personagem.
+      // Para conversa de LIVE, priorizamos resposta direta e baixa latência.
+      // O modelo permanece configurável por AI_MODEL e esta escolha é apenas de protótipo.
       reasoning: {
-        effort: 'minimal',
+        effort: 'none',
         exclude: true,
       },
       max_completion_tokens: 400,
