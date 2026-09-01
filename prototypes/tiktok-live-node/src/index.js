@@ -24,7 +24,12 @@ console.log('Live IA — Protótipo TikTok LIVE');
 console.log(`Tentando conectar em @${username}...`);
 console.log(`Modo IA: comentários iniciados por ${aiConfig.trigger} ou ${aiConfig.trigger.replace(/^\W+/, '')}`);
 console.log(`Modelo IA: ${aiConfig.model}`);
-console.log(`Chave IA: ${isAiConfigured() ? 'configurada' : 'NÃO configurada'}`);
+
+if (aiKeyInfo.placeholderDetected) {
+  console.log('Chave IA: NÃO configurada — o .env ainda contém cole_sua_chave_aqui');
+} else {
+  console.log(`Chave IA: ${isAiConfigured() ? 'configurada' : 'NÃO configurada'}`);
+}
 
 if (aiKeyInfo.configured) {
   console.log(`Formato da chave: ${aiKeyInfo.formatLooksValid ? 'compatível com OpenRouter' : 'ATENÇÃO — formato inesperado'} (${aiKeyInfo.length} caracteres)`);
