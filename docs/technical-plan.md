@@ -19,7 +19,7 @@ Validado:
 Aprendizado relevante: na versão testada do conector, o texto do comentário apareceu no campo `content`; o protótipo mantém fallback entre campos possíveis em vez de assumir um campo fixo.
 
 ### Etapa 2 — Resposta textual
-**Status: EM IMPLEMENTAÇÃO / TESTE.**
+**Status: EM TESTE COM FLUXO BÁSICO FUNCIONANDO.**
 
 Objetivos desta etapa:
 - selecionar eventos relevantes;
@@ -27,11 +27,20 @@ Objetivos desta etapa:
 - evitar resposta mecânica a todo comentário;
 - registrar entrada, decisão e saída para diagnóstico.
 
-Primeiro teste controlado:
-- gatilho temporário `!ia` seleciona o comentário para IA;
-- resposta é exibida somente no terminal;
+Estado do teste:
+- gatilho temporário `!ia` ou `ia` seleciona o comentário para IA;
+- comentário real já percorreu TikTok → captura → OpenRouter → resposta textual válida no terminal;
+- resposta continua somente no terminal nesta etapa; não há escrita automática no chat do TikTok;
 - provedor/modelo ficam configuráveis;
-- hipótese inicial de protótipo usa API compatível com OpenAI via OpenRouter e opção gratuita, sem transformar isso em decisão definitiva de arquitetura.
+- `openrouter/free` mostrou comportamento variável porque pode selecionar modelos gratuitos diferentes, inclusive um modelo de segurança que retornou apenas `User Safety: safe`;
+- hipótese atual de revalidação: fixar `qwen/qwen3-30b-a3b:free` para tornar qualidade e latência mais reproduzíveis;
+- esta escolha é somente de protótipo e não define arquitetura comercial, fornecedor definitivo ou modelo final.
+
+Antes de encerrar a Etapa 2, revalidar:
+- algumas respostas reais com o modelo específico;
+- comentário comum sem chamada à IA;
+- erro do provedor sem derrubar a conexão da LIVE;
+- latência e consistência suficientes para então avançar a TTS.
 
 ### Etapa 3 — TTS
 Adicionar voz com foco em:
