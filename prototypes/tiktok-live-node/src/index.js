@@ -1,4 +1,5 @@
 import { ControlEvent, TikTokLiveConnection, WebcastEvent } from 'tiktok-live-connector';
+import { generateAiReply, getAiConfig, isAiConfigured } from './ai.js';
 
 const usernameArg = process.argv[2];
 const username = (usernameArg || process.env.TIKTOK_USERNAME || '').replace(/^@/, '').trim();
@@ -10,8 +11,13 @@ if (!username) {
   process.exit(1);
 }
 
+const aiConfig = getAiConfig();
+
 console.log('Live IA — Protótipo TikTok LIVE');
 console.log(`Tentando conectar em @${username}...`);
+console.log(`Modo IA: comentários iniciados por ${aiConfig.trigger}`);
+console.log(`Modelo IA: ${aiConfig.model}`);
+console.log(`Chave IA: ${isAiConfigured() ? 'configurada' : 'NÃO configurada'}`);
 console.log('Pressione Ctrl+C para encerrar.\n');
 
 // A versão 2.4.4 acessa propriedades de options durante a construção.
@@ -43,6 +49,42 @@ function extractChatText(data) {
 }
 
 let detectedChatTextField = null;
+let aiBusy = false;
+
+async function maybeGenerateAiReply(user, comment) {
+  const trigger = aiConfig.trigger;
+
+  if (!comment.toLowerCase().startsWith(trigger.toLowerCase())) {
+    return;
+  }
+
+  const selectedText = comment.slice(trigger.length).trim();
+
+  if (!selectedText) {
+    console.log(`[DECISÃO IA] @${user}: ignorado — gatilho sem mensagem.`);
+    return;
+  }
+
+  if (aiBusy) {
+    console.log(`[DECISÃO IA] @${user}: ignorado — IA já está processando outro comentário.`);
+    return;
+  }
+
+  console.log(`[DECISÃO IA] @${user}: selecionado.`);
+  console.log(`[ENTRADA IA] @${user}: ${selectedText}`);
+
+  aiBusy = true;
+
+  try {
+    const result = await generateAiReply({ user, comment: selectedText });
+    console.log(`[RESPOSTA IA] modelo=${result.model}`);
+    console.log(`[RESPOSTA IA] @${user}: ${result.text}`);
+  } catch (error) {
+    console.error(`[ERRO IA] ${error instanceof Error ? error.message : error}`);
+  } finally {
+    aiBusy = false;
+  }
+}
 
 connection.on(WebcastEvent.CHAT, (data) => {
   const user = data?.user?.uniqueId || data?.user?.nickname || data?.uniqueId || 'usuario-desconhecido';
@@ -54,6 +96,10 @@ connection.on(WebcastEvent.CHAT, (data) => {
   }
 
   console.log(`[COMENTÁRIO] @${user}: ${comment || '(texto vazio)'}`);
+
+  if (comment) {
+    void maybeGenerateAiReply(user, comment);
+  }
 });
 
 connection.on(WebcastEvent.MEMBER, (data) => {
