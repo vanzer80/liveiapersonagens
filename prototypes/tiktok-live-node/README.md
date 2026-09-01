@@ -22,7 +22,8 @@ EM TESTE, com fluxo básico já funcionando:
 - provedor e modelo são configuráveis por variáveis de ambiente;
 - o fluxo comentário real → IA → resposta textual já gerou resposta válida em LIVE real;
 - `openrouter/free` mostrou variação de modelo e chegou a selecionar um modelo de segurança que respondeu apenas `User Safety: safe`;
-- a tentativa de fixar `qwen/qwen3-30b-a3b:free` falhou em execução real em 2026-09-01 com `This model is unavailable for free`; portanto esse slug não deve ser usado como hipótese atual de teste, mesmo que páginas de catálogo ainda possam exibi-lo como gratuito.
+- a tentativa de fixar `qwen/qwen3-30b-a3b:free` falhou em execução real em 2026-09-01 com `This model is unavailable for free`; portanto esse slug não deve ser usado como hipótese atual de teste;
+- o protótipo agora tenta automaticamente fallbacks gratuitos quando o modelo configurado está indisponível, responde sem texto útil ou devolve somente classificação de segurança.
 
 A escolha de provedor/modelo continua sendo apenas hipótese de protótipo. Não é decisão definitiva de arquitetura, fornecedor ou modelo comercial.
 
@@ -47,11 +48,12 @@ A hipótese atual de protótipo usa uma API compatível com OpenAI via OpenRoute
 
 1. Copie `.env.example` para `.env`.
 2. Coloque sua chave no campo `OPENROUTER_API_KEY`.
-3. O modelo permanece configurável por `AI_MODEL`.
-4. `openrouter/free` pode ser usado como fallback de validação do pipeline, mas não garante consistência de finalidade/qualidade entre chamadas.
-5. Antes de fixar um modelo gratuito específico, confirme disponibilidade real via API no momento do teste.
+3. O modelo principal permanece configurável por `AI_MODEL`.
+4. Os modelos de fallback podem ser definidos por `AI_FALLBACK_MODELS`, separados por vírgula.
+5. A configuração de exemplo atual usa `nvidia/nemotron-3.5-lightning:free` como principal e fallbacks gratuitos específicos.
+6. A disponibilidade de modelos gratuitos pode mudar sem aviso; por isso o fallback automático faz parte da robustez do protótipo.
 
-O arquivo `.env` está ignorado pelo Git e não deve ser enviado ao repositório. Em máquinas já configuradas, `git pull` não altera o valor de `AI_MODEL` dentro do `.env` local.
+O arquivo `.env` está ignorado pelo Git e não deve ser enviado ao repositório. Em máquinas já configuradas, `git pull` não altera o valor de `AI_MODEL` dentro do `.env` local. Mesmo assim, o código passa a tentar fallbacks automaticamente após o pull.
 
 ## Executar
 
@@ -87,7 +89,7 @@ ou:
 ia qual sua opinião sobre isso?
 ```
 
-Saída esperada quando o modelo escolhido está disponível:
+Saída esperada quando algum dos modelos disponíveis responder corretamente:
 
 ```text
 [DECISÃO IA] @usuario: selecionado.
@@ -111,9 +113,8 @@ Durante a live, eventos aparecem aproximadamente assim:
 
 ## Próximas validações
 
-1. No `.env` local da máquina de teste, substituir o slug indisponível `qwen/qwen3-30b-a3b:free` por uma opção confirmada como disponível no momento do teste.
-2. Preferir um modelo conversacional específico para revalidar algumas respostas reais; se não houver opção gratuita confiável, usar temporariamente `openrouter/free` apenas para validar o pipeline.
-3. Confirmar que comentários comuns não geram chamada à IA.
-4. Confirmar que erro do provedor não derruba a conexão da LIVE — comportamento já observado em falhas anteriores, mas manter como critério de aceite da issue.
-5. Observar latência e consistência de algumas respostas curtas.
-6. Somente depois encerrar o MVP 2 e avançar para TTS.
+1. Executar novo teste real após `git pull` e confirmar que o comentário `ia ...` recebe resposta textual mesmo se o `.env` local ainda apontar para o Qwen indisponível.
+2. Confirmar que comentários comuns não geram chamada à IA.
+3. Confirmar que erro de um modelo não derruba a conexão da LIVE e que o fallback é acionado.
+4. Observar latência e consistência de algumas respostas curtas.
+5. Somente depois encerrar o MVP 2 e avançar para TTS.
