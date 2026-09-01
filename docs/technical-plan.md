@@ -19,7 +19,7 @@ Validado:
 Aprendizado relevante: na versão testada do conector, o texto do comentário apareceu no campo `content`; o protótipo mantém fallback entre campos possíveis em vez de assumir um campo fixo.
 
 ### Etapa 2 — Resposta textual
-**Status: EM TESTE COM FLUXO BÁSICO FUNCIONANDO.**
+**Status: NÚCLEO VALIDADO EM LIVE REAL em 2026-09-01.**
 
 Objetivos desta etapa:
 - selecionar eventos relevantes;
@@ -27,34 +27,38 @@ Objetivos desta etapa:
 - evitar resposta mecânica a todo comentário;
 - registrar entrada, decisão e saída para diagnóstico.
 
-Estado do teste:
+Validado em teste real:
 - gatilho temporário `!ia` ou `ia` seleciona o comentário para IA;
-- comentário real já percorreu TikTok → captura → OpenRouter → resposta textual válida no terminal;
-- resposta continua somente no terminal nesta etapa; não há escrita automática no chat do TikTok;
-- provedor/modelo ficam configuráveis;
-- `openrouter/free` mostrou comportamento variável porque pode selecionar modelos gratuitos diferentes, inclusive um modelo de segurança que retornou apenas `User Safety: safe`;
-- tentativa de tornar o teste reproduzível com `qwen/qwen3-30b-a3b:free` falhou em execução real em 2026-09-01: o provedor respondeu `This model is unavailable for free. The paid version is available now - use this slug instead: qwen/qwen3-30b-a3b`;
-- portanto, o modelo conversacional específico para fechar a Etapa 2 continua PENDENTE e deve ser confirmado pela API no momento do teste, não apenas por página de catálogo;
-- esta escolha continua sendo somente de protótipo e não define arquitetura comercial, fornecedor definitivo ou modelo final.
+- comentário comum sem gatilho permanece apenas como comentário e não chama a IA;
+- comentário real percorreu TikTok → captura → OpenRouter → modelo conversacional → resposta textual válida no terminal;
+- `nvidia/nemotron-3.5-lightning:free` gerou resposta conversacional em português para comentário real após a correção de configuração;
+- a conexão da LIVE permaneceu ativa e continuou recebendo eventos depois da resposta da IA;
+- provedor e modelo permanecem configuráveis;
+- o protótipo possui modelos alternativos para reduzir impacto quando um modelo gratuito fica indisponível.
 
-Estado local importante para continuidade:
-- o `.env` da máquina de teste é ignorado pelo Git;
-- após o último teste, o `.env` local ficou configurado com `AI_MODEL=qwen/qwen3-30b-a3b:free`, que atualmente falhou na API;
-- um novo teste precisa primeiro trocar essa linha local por um modelo disponível ou temporariamente por `openrouter/free`;
-- `git pull` sozinho não corrige essa linha do `.env` local.
+Aprendizados desta etapa:
+- `openrouter/free` mostrou comportamento variável e chegou a selecionar um modelo de segurança que retornou apenas `User Safety: safe`;
+- `qwen/qwen3-30b-a3b:free` ficou indisponível gratuitamente durante o teste de 2026-09-01;
+- a disponibilidade de modelos gratuitos pode mudar, então a aplicação não deve depender de um único slug gratuito;
+- a escolha atual de OpenRouter e Nemotron continua sendo somente de protótipo e não define arquitetura comercial, fornecedor definitivo ou modelo final.
 
-Antes de encerrar a Etapa 2, revalidar:
-- algumas respostas reais com um modelo conversacional específico atualmente disponível;
-- comentário comum sem chamada à IA;
-- erro do provedor sem derrubar a conexão da LIVE;
-- latência e consistência suficientes para então avançar a TTS.
+Pendências de robustez que não bloqueiam o início da próxima etapa:
+- observar latência e consistência em uma amostra maior de respostas;
+- confirmar em execução real a troca automática para um modelo alternativo quando o principal estiver indisponível;
+- continuar registrando mudanças de disponibilidade dos modelos gratuitos.
 
 ### Etapa 3 — TTS
+Próxima etapa de implementação.
+
 Adicionar voz com foco em:
+- transformar a resposta textual validada em áudio;
 - baixo custo inicial;
-- latência aceitável;
+- baixa latência para conversa em LIVE;
+- voz adequada ao personagem;
 - estabilidade;
 - possibilidade futura de troca do provedor.
+
+A primeira validação de TTS deve continuar somente no ambiente local/terminal, sem antecipar avatar ou transmissão completa.
 
 ### Etapa 4 — Avatar
 Integrar representação visual somente depois que captura, decisão e voz estiverem funcionando.
