@@ -1,8 +1,25 @@
 # Protótipo TikTok LIVE — Node.js
 
-Objetivo: validar a captura de eventos públicos de uma TikTok LIVE no terminal antes de adicionar IA, TTS ou avatar.
+Objetivo atual: validar o fluxo incremental do projeto, começando pela captura de eventos públicos de uma TikTok LIVE e avançando agora para resposta textual com IA.
 
 > Este protótipo usa uma biblioteca comunitária/não oficial baseada em engenharia reversa. Ele serve para validação técnica e não representa uma escolha definitiva para produção/comercialização.
+
+## Estado atual
+
+### MVP 1 — Captura de eventos
+VALIDADO em teste real:
+- conexão com LIVE ativa;
+- entrada de usuários;
+- comentários em tempo real;
+- identificação do usuário;
+- texto completo do comentário com extração robusta por múltiplos campos do payload.
+
+### MVP 2 — Resposta textual com IA
+EM TESTE:
+- somente comentários iniciados por `!ia` são enviados à IA;
+- a resposta aparece apenas no terminal;
+- não existe envio automático de mensagem de volta ao TikTok;
+- provedor e modelo são configuráveis por variáveis de ambiente.
 
 ## Requisitos
 
@@ -19,6 +36,16 @@ cd prototypes/tiktok-live-node
 npm install
 ```
 
+## Configurar IA para o MVP 2
+
+A hipótese inicial de protótipo usa uma API compatível com OpenAI via OpenRouter. Isso não é uma decisão definitiva de arquitetura.
+
+1. Copie `.env.example` para `.env`.
+2. Coloque sua chave no campo `OPENROUTER_API_KEY`.
+3. O modelo padrão de teste é `openrouter/free`, mas pode ser trocado por `AI_MODEL`.
+
+O arquivo `.env` está ignorado pelo Git e não deve ser enviado ao repositório.
+
 ## Executar
 
 ```bash
@@ -33,15 +60,34 @@ Exemplo:
 npm start -- @criador
 ```
 
-## Saída esperada
+## Teste controlado da IA
 
-Ao conectar:
+Comentários comuns continuam apenas sendo exibidos:
 
 ```text
-Conectado. roomId=...
+[COMENTÁRIO] @usuario: oi pessoal
 ```
 
-Durante a live, eventos devem aparecer aproximadamente assim:
+Para chamar a IA no MVP 2, envie um comentário começando por `!ia`:
+
+```text
+!ia qual sua opinião sobre isso?
+```
+
+Saída esperada:
+
+```text
+[DECISÃO IA] @usuario: selecionado.
+[ENTRADA IA] @usuario: qual sua opinião sobre isso?
+[RESPOSTA IA] modelo=...
+[RESPOSTA IA] @usuario: ...
+```
+
+A regra `!ia` é temporária e existe para evitar custo/chamadas em todos os comentários durante a validação técnica.
+
+## Eventos do MVP 1
+
+Durante a live, eventos aparecem aproximadamente assim:
 
 ```text
 [COMENTÁRIO] @usuario: mensagem
@@ -50,15 +96,10 @@ Durante a live, eventos devem aparecer aproximadamente assim:
 [PRESENTE] @usuario | giftId=1234
 ```
 
-## O que observar no primeiro teste
+## Próximas validações
 
-1. Se conecta sem autenticação adicional.
-2. Se os comentários chegam em tempo real.
-3. Se `uniqueId`/nome do usuário aparece corretamente.
-4. Se eventos de entrada (`MEMBER`) chegam de forma confiável.
-5. Se a conexão permanece estável.
-6. Se surgem erros, bloqueios, CAPTCHA ou desconexões.
-
-## Critério de sucesso desta etapa
-
-Consideramos o primeiro marco validado quando comentários reais de uma LIVE aparecem no terminal, associados ao usuário que comentou, de forma reproduzível.
+1. Confirmar uma chamada real de IA usando um comentário `!ia` da LIVE.
+2. Medir latência da resposta textual.
+3. Refinar persona provisória.
+4. Substituir o gatilho manual por uma regra simples de seleção/priorização.
+5. Somente depois avançar para TTS.
