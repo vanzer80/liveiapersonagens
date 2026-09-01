@@ -33,11 +33,18 @@ Estado do teste:
 - resposta continua somente no terminal nesta etapa; não há escrita automática no chat do TikTok;
 - provedor/modelo ficam configuráveis;
 - `openrouter/free` mostrou comportamento variável porque pode selecionar modelos gratuitos diferentes, inclusive um modelo de segurança que retornou apenas `User Safety: safe`;
-- hipótese atual de revalidação: fixar `qwen/qwen3-30b-a3b:free` para tornar qualidade e latência mais reproduzíveis;
-- esta escolha é somente de protótipo e não define arquitetura comercial, fornecedor definitivo ou modelo final.
+- tentativa de tornar o teste reproduzível com `qwen/qwen3-30b-a3b:free` falhou em execução real em 2026-09-01: o provedor respondeu `This model is unavailable for free. The paid version is available now - use this slug instead: qwen/qwen3-30b-a3b`;
+- portanto, o modelo conversacional específico para fechar a Etapa 2 continua PENDENTE e deve ser confirmado pela API no momento do teste, não apenas por página de catálogo;
+- esta escolha continua sendo somente de protótipo e não define arquitetura comercial, fornecedor definitivo ou modelo final.
+
+Estado local importante para continuidade:
+- o `.env` da máquina de teste é ignorado pelo Git;
+- após o último teste, o `.env` local ficou configurado com `AI_MODEL=qwen/qwen3-30b-a3b:free`, que atualmente falhou na API;
+- um novo teste precisa primeiro trocar essa linha local por um modelo disponível ou temporariamente por `openrouter/free`;
+- `git pull` sozinho não corrige essa linha do `.env` local.
 
 Antes de encerrar a Etapa 2, revalidar:
-- algumas respostas reais com o modelo específico;
+- algumas respostas reais com um modelo conversacional específico atualmente disponível;
 - comentário comum sem chamada à IA;
 - erro do provedor sem derrubar a conexão da LIVE;
 - latência e consistência suficientes para então avançar a TTS.
