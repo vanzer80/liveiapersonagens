@@ -6,6 +6,7 @@ try {
 
 const DEFAULT_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_MODEL = 'openrouter/free';
+const PLACEHOLDER_API_KEY = 'cole_sua_chave_aqui';
 const DEFAULT_PERSONA = [
   'Você é um personagem virtual brasileiro participando de uma transmissão ao vivo.',
   'Responda em português do Brasil, com naturalidade, simpatia e objetividade.',
@@ -25,6 +26,10 @@ function normalizeApiKey(value) {
   return key;
 }
 
+function isPlaceholderApiKey(apiKey) {
+  return apiKey.toLowerCase() === PLACEHOLDER_API_KEY;
+}
+
 export function getAiConfig() {
   const rawApiKey = process.env.OPENROUTER_API_KEY || process.env.AI_API_KEY || '';
 
@@ -37,18 +42,26 @@ export function getAiConfig() {
 }
 
 export function isAiConfigured() {
-  return Boolean(getAiConfig().apiKey);
+  const { apiKey } = getAiConfig();
+  return Boolean(apiKey) && !isPlaceholderApiKey(apiKey);
 }
 
 export function getSafeAiKeyInfo() {
   const { apiKey } = getAiConfig();
+  const placeholderDetected = Boolean(apiKey) && isPlaceholderApiKey(apiKey);
 
-  if (!apiKey) {
-    return { configured: false, formatLooksValid: false, length: 0 };
+  if (!apiKey || placeholderDetected) {
+    return {
+      configured: false,
+      placeholderDetected,
+      formatLooksValid: false,
+      length: apiKey.length,
+    };
   }
 
   return {
     configured: true,
+    placeholderDetected: false,
     formatLooksValid: apiKey.startsWith('sk-or-v1-'),
     length: apiKey.length,
   };
@@ -59,6 +72,10 @@ export async function validateAiAuthentication() {
 
   if (!apiKey) {
     throw new Error('Chave de API ausente. Defina OPENROUTER_API_KEY no arquivo .env.');
+  }
+
+  if (isPlaceholderApiKey(apiKey)) {
+    throw new Error('O arquivo .env ainda contém o texto de exemplo. Substitua cole_sua_chave_aqui pela chave real do OpenRouter.');
   }
 
   const response = await fetch('https://openrouter.ai/api/v1/key', {
@@ -96,6 +113,10 @@ export async function generateAiReply({ user, comment }) {
 
   if (!apiKey) {
     throw new Error('Chave de API ausente. Defina OPENROUTER_API_KEY ou AI_API_KEY.');
+  }
+
+  if (isPlaceholderApiKey(apiKey)) {
+    throw new Error('A chave ainda não foi preenchida no .env. Substitua cole_sua_chave_aqui pela chave real do OpenRouter.');
   }
 
   const response = await fetch(apiUrl, {
