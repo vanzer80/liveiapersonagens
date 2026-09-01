@@ -30,10 +30,30 @@ connection.on(ControlEvent.DISCONNECTED, ({ code, reason } = {}) => {
   console.log(`[DESCONECTADO] code=${code ?? '?'} reason=${reason ?? 'sem-motivo'}`);
 });
 
+function extractChatText(data) {
+  const candidates = [
+    ['comment', data?.comment],
+    ['content', data?.content],
+    ['text', data?.text],
+    ['message', data?.message],
+    ['msg', data?.msg],
+  ];
+
+  return candidates.find(([, value]) => typeof value === 'string' && value.trim().length > 0) || [null, ''];
+}
+
+let detectedChatTextField = null;
+
 connection.on(WebcastEvent.CHAT, (data) => {
   const user = data?.user?.uniqueId || data?.user?.nickname || data?.uniqueId || 'usuario-desconhecido';
-  const comment = data?.comment ?? '';
-  console.log(`[COMENTÁRIO] @${user}: ${comment}`);
+  const [field, comment] = extractChatText(data);
+
+  if (field && !detectedChatTextField) {
+    detectedChatTextField = field;
+    console.log(`[INFO CHAT] campo de texto detectado: ${field}`);
+  }
+
+  console.log(`[COMENTÁRIO] @${user}: ${comment || '(texto vazio)'}`);
 });
 
 connection.on(WebcastEvent.MEMBER, (data) => {
