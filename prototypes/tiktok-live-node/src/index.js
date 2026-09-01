@@ -14,7 +14,9 @@ console.log('Live IA — Protótipo TikTok LIVE');
 console.log(`Tentando conectar em @${username}...`);
 console.log('Pressione Ctrl+C para encerrar.\n');
 
-const connection = new TikTokLiveConnection(username);
+// A versão 2.4.4 acessa propriedades de options durante a construção.
+// Passamos um objeto vazio explicitamente para evitar erro quando options fica undefined.
+const connection = new TikTokLiveConnection(username, {});
 
 connection.on(WebcastEvent.CHAT, (data) => {
   const user = data?.user?.uniqueId || data?.user?.nickname || 'usuario-desconhecido';
