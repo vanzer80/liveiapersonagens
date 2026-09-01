@@ -7,19 +7,31 @@ Validar o fluxo técnico em etapas, começando pela captura de eventos de uma Ti
 ## Sequência de validação
 
 ### Etapa 1 — Captura de eventos
-Critério de sucesso inicial:
-- conectar a uma LIVE de teste;
-- receber comentários;
-- exibir nome/identificação disponível do usuário;
-- registrar eventos no terminal;
-- observar estabilidade, desconexões e reconexões.
+**Status: VALIDADA NO PROTÓTIPO REAL em 2026-09-01.**
+
+Validado:
+- conexão a uma LIVE de teste;
+- recebimento de comentários em tempo real;
+- identificação disponível do usuário;
+- registro dos eventos no terminal;
+- encerramento e nova conexão manual reproduzíveis no ambiente testado.
+
+Aprendizado relevante: na versão testada do conector, o texto do comentário apareceu no campo `content`; o protótipo mantém fallback entre campos possíveis em vez de assumir um campo fixo.
 
 ### Etapa 2 — Resposta textual
-Somente após a Etapa 1 estar validada:
+**Status: EM IMPLEMENTAÇÃO / TESTE.**
+
+Objetivos desta etapa:
 - selecionar eventos relevantes;
 - gerar resposta coerente com uma persona;
 - evitar resposta mecânica a todo comentário;
 - registrar entrada, decisão e saída para diagnóstico.
+
+Primeiro teste controlado:
+- gatilho temporário `!ia` seleciona o comentário para IA;
+- resposta é exibida somente no terminal;
+- provedor/modelo ficam configuráveis;
+- hipótese inicial de protótipo usa API compatível com OpenAI via OpenRouter e opção gratuita, sem transformar isso em decisão definitiva de arquitetura.
 
 ### Etapa 3 — TTS
 Adicionar voz com foco em:
@@ -47,4 +59,4 @@ Rodar o fluxo completo em ambiente real e medir estabilidade e qualidade da expe
 
 ## Stack
 
-Ainda não definida oficialmente. A escolha deve ser feita com base no primeiro experimento de captura, priorizando simplicidade, custo baixo, qualidade das bibliotecas disponíveis e facilidade de manutenção.
+Ainda não definida oficialmente. Node.js + `tiktok-live-connector` seguem como combinação validada para o protótipo de captura, não como arquitetura comercial aprovada. A camada de IA também permanece intercambiável durante a validação.
