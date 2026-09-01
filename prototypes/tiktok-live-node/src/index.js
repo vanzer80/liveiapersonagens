@@ -1,5 +1,11 @@
 import { ControlEvent, TikTokLiveConnection, WebcastEvent } from 'tiktok-live-connector';
-import { generateAiReply, getAiConfig, isAiConfigured } from './ai.js';
+import {
+  generateAiReply,
+  getAiConfig,
+  getSafeAiKeyInfo,
+  isAiConfigured,
+  validateAiAuthentication,
+} from './ai.js';
 
 const usernameArg = process.argv[2];
 const username = (usernameArg || process.env.TIKTOK_USERNAME || '').replace(/^@/, '').trim();
@@ -12,12 +18,25 @@ if (!username) {
 }
 
 const aiConfig = getAiConfig();
+const aiKeyInfo = getSafeAiKeyInfo();
 
 console.log('Live IA — Protótipo TikTok LIVE');
 console.log(`Tentando conectar em @${username}...`);
 console.log(`Modo IA: comentários iniciados por ${aiConfig.trigger} ou ${aiConfig.trigger.replace(/^\W+/, '')}`);
 console.log(`Modelo IA: ${aiConfig.model}`);
 console.log(`Chave IA: ${isAiConfigured() ? 'configurada' : 'NÃO configurada'}`);
+
+if (aiKeyInfo.configured) {
+  console.log(`Formato da chave: ${aiKeyInfo.formatLooksValid ? 'compatível com OpenRouter' : 'ATENÇÃO — formato inesperado'} (${aiKeyInfo.length} caracteres)`);
+
+  try {
+    await validateAiAuthentication();
+    console.log('Autenticação OpenRouter: VALIDADA');
+  } catch (error) {
+    console.error(`Autenticação OpenRouter: FALHOU — ${error instanceof Error ? error.message : error}`);
+  }
+}
+
 console.log('Pressione Ctrl+C para encerrar.\n');
 
 // A versão 2.4.4 acessa propriedades de options durante a construção.
