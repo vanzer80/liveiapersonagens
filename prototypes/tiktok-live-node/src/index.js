@@ -12,12 +12,13 @@ if (!username) {
 
 console.log('Live IA — Protótipo TikTok LIVE');
 console.log(`Tentando conectar em @${username}...`);
+console.log('Modo diagnóstico: somente eventos novos após a conexão.');
 console.log('Pressione Ctrl+C para encerrar.\n');
 
 // A versão 2.4.4 acessa propriedades de options durante a construção.
-// Passamos opções explicitamente para evitar erro quando options fica undefined.
+// Desativamos o lote inicial para separar comentários novos do histórico da LIVE.
 const connection = new TikTokLiveConnection(username, {
-  processInitialData: true,
+  processInitialData: false,
 });
 
 connection.on(ControlEvent.ERROR, (error) => {
@@ -30,8 +31,9 @@ connection.on(ControlEvent.DISCONNECTED, ({ code, reason } = {}) => {
   console.log(`[DESCONECTADO] code=${code ?? '?'} reason=${reason ?? 'sem-motivo'}`);
 });
 
-// Diagnóstico temporário: verifica se mensagens de chat chegam decodificadas
-// mesmo quando o evento WebcastEvent.CHAT não é disparado.
+let rawChatDumps = 0;
+
+// Diagnóstico de baixo nível: confirma o payload que a biblioteca decodificou.
 connection.on(ControlEvent.DECODED_DATA, (eventName, data) => {
   const normalizedName = String(eventName || '');
   const looksLikeChat = /chat|comment/i.test(normalizedName) || typeof data?.comment === 'string';
@@ -40,13 +42,26 @@ connection.on(ControlEvent.DECODED_DATA, (eventName, data) => {
     const user = data?.user?.uniqueId || data?.user?.nickname || data?.uniqueId || 'usuario-desconhecido';
     const comment = data?.comment ?? '(sem campo comment)';
     console.log(`[DEBUG CHAT] evento=${normalizedName} @${user}: ${comment}`);
+
+    if (rawChatDumps < 3) {
+      rawChatDumps += 1;
+      console.log(`[DEBUG CHAT RAW ${rawChatDumps}] campos=${Object.keys(data || {}).join(', ')}`);
+      console.dir(data, { depth: 6, colors: true, maxArrayLength: 20 });
+    }
   }
 });
 
 connection.on(WebcastEvent.CHAT, (data) => {
   const user = data?.user?.uniqueId || data?.user?.nickname || data?.uniqueId || 'usuario-desconhecido';
-  const comment = data?.comment ?? '';
-  console.log(`[COMENTÁRIO] @${user}: ${comment}`);
+
+  const candidates = [data?.comment, data?.content, data?.text, data?.message, data?.msg];
+  const comment = candidates.find((value) => typeof value === 'string' && value.trim().length > 0) || '';
+
+  console.log(`[COMENTÁRIO] @${user}: ${comment || '(texto vazio)'}`);
+
+  if (!comment) {
+    console.log(`[CHAT SEM TEXTO] campos=${Object.keys(data || {}).join(', ')}`);
+  }
 });
 
 connection.on(WebcastEvent.MEMBER, (data) => {
