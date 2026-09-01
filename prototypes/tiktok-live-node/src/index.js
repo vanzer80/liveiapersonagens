@@ -1,4 +1,4 @@
-import { TikTokLiveConnection, WebcastEvent } from 'tiktok-live-connector';
+import { ControlEvent, TikTokLiveConnection, WebcastEvent } from 'tiktok-live-connector';
 
 const usernameArg = process.argv[2];
 const username = (usernameArg || process.env.TIKTOK_USERNAME || '').replace(/^@/, '').trim();
@@ -15,28 +15,53 @@ console.log(`Tentando conectar em @${username}...`);
 console.log('Pressione Ctrl+C para encerrar.\n');
 
 // A versão 2.4.4 acessa propriedades de options durante a construção.
-// Passamos um objeto vazio explicitamente para evitar erro quando options fica undefined.
-const connection = new TikTokLiveConnection(username, {});
+// Passamos opções explicitamente para evitar erro quando options fica undefined.
+const connection = new TikTokLiveConnection(username, {
+  processInitialData: true,
+});
+
+connection.on(ControlEvent.ERROR, (error) => {
+  const info = error?.info || 'sem-info';
+  const exception = error?.exception || error;
+  console.error('[ERRO CONECTOR]', info, exception);
+});
+
+connection.on(ControlEvent.DISCONNECTED, ({ code, reason } = {}) => {
+  console.log(`[DESCONECTADO] code=${code ?? '?'} reason=${reason ?? 'sem-motivo'}`);
+});
+
+// Diagnóstico temporário: verifica se mensagens de chat chegam decodificadas
+// mesmo quando o evento WebcastEvent.CHAT não é disparado.
+connection.on(ControlEvent.DECODED_DATA, (eventName, data) => {
+  const normalizedName = String(eventName || '');
+  const looksLikeChat = /chat|comment/i.test(normalizedName) || typeof data?.comment === 'string';
+
+  if (looksLikeChat) {
+    const user = data?.user?.uniqueId || data?.user?.nickname || data?.uniqueId || 'usuario-desconhecido';
+    const comment = data?.comment ?? '(sem campo comment)';
+    console.log(`[DEBUG CHAT] evento=${normalizedName} @${user}: ${comment}`);
+  }
+});
 
 connection.on(WebcastEvent.CHAT, (data) => {
-  const user = data?.user?.uniqueId || data?.user?.nickname || 'usuario-desconhecido';
+  const user = data?.user?.uniqueId || data?.user?.nickname || data?.uniqueId || 'usuario-desconhecido';
   const comment = data?.comment ?? '';
   console.log(`[COMENTÁRIO] @${user}: ${comment}`);
 });
 
 connection.on(WebcastEvent.MEMBER, (data) => {
-  const user = data?.user?.uniqueId || data?.user?.nickname || 'usuario-desconhecido';
+  const user = data?.user?.uniqueId || data?.user?.nickname || data?.uniqueId || 'usuario-desconhecido';
   console.log(`[ENTRADA] @${user}`);
 });
 
 connection.on(WebcastEvent.GIFT, (data) => {
-  const user = data?.user?.uniqueId || data?.user?.nickname || 'usuario-desconhecido';
+  const user = data?.user?.uniqueId || data?.user?.nickname || data?.uniqueId || 'usuario-desconhecido';
   const giftId = data?.giftId ?? 'desconhecido';
   console.log(`[PRESENTE] @${user} | giftId=${giftId}`);
 });
 
 connection.on(WebcastEvent.LIKE, (data) => {
-  const user = data?.user?.uniqueId || data?.user?.nickname || 'usuario-desconhecido';
+  const user = data?.user?.uniqueId || data?.user?.nickname || data?.uniqueId || 'usuario-desconhecido';
   const count = data?.likeCount ?? data?.totalLikeCount ?? '?';
   console.log(`[LIKE] @${user} | quantidade=${count}`);
 });
