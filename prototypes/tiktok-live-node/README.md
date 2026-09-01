@@ -15,16 +15,16 @@ VALIDADO em teste real:
 - texto completo do comentário com extração robusta por múltiplos campos do payload.
 
 ### MVP 2 — Resposta textual com IA
-EM TESTE:
+EM TESTE, com fluxo básico já funcionando:
 - comentários iniciados por `!ia` ou `ia` podem ser selecionados para a IA;
 - a resposta aparece apenas no terminal;
 - não existe envio automático de mensagem de volta ao TikTok;
 - provedor e modelo são configuráveis por variáveis de ambiente;
 - o fluxo comentário real → IA → resposta textual já gerou resposta válida em LIVE real;
 - `openrouter/free` mostrou variação de modelo e chegou a selecionar um modelo de segurança que respondeu apenas `User Safety: safe`;
-- para a próxima revalidação, a hipótese de teste usa um modelo gratuito específico: `qwen/qwen3-30b-a3b:free`.
+- a tentativa de fixar `qwen/qwen3-30b-a3b:free` falhou em execução real em 2026-09-01 com `This model is unavailable for free`; portanto esse slug não deve ser usado como hipótese atual de teste, mesmo que páginas de catálogo ainda possam exibi-lo como gratuito.
 
-A escolha desse modelo é apenas para tornar o teste reproduzível. Não é uma decisão definitiva de arquitetura, fornecedor ou modelo comercial.
+A escolha de provedor/modelo continua sendo apenas hipótese de protótipo. Não é decisão definitiva de arquitetura, fornecedor ou modelo comercial.
 
 ## Requisitos
 
@@ -47,9 +47,11 @@ A hipótese atual de protótipo usa uma API compatível com OpenAI via OpenRoute
 
 1. Copie `.env.example` para `.env`.
 2. Coloque sua chave no campo `OPENROUTER_API_KEY`.
-3. O modelo de teste atual é `qwen/qwen3-30b-a3b:free`, mas pode ser trocado por `AI_MODEL`.
+3. O modelo permanece configurável por `AI_MODEL`.
+4. `openrouter/free` pode ser usado como fallback de validação do pipeline, mas não garante consistência de finalidade/qualidade entre chamadas.
+5. Antes de fixar um modelo gratuito específico, confirme disponibilidade real via API no momento do teste.
 
-O arquivo `.env` está ignorado pelo Git e não deve ser enviado ao repositório.
+O arquivo `.env` está ignorado pelo Git e não deve ser enviado ao repositório. Em máquinas já configuradas, `git pull` não altera o valor de `AI_MODEL` dentro do `.env` local.
 
 ## Executar
 
@@ -85,12 +87,12 @@ ou:
 ia qual sua opinião sobre isso?
 ```
 
-Saída esperada:
+Saída esperada quando o modelo escolhido está disponível:
 
 ```text
 [DECISÃO IA] @usuario: selecionado.
 [ENTRADA IA] @usuario: qual sua opinião sobre isso?
-[RESPOSTA IA] modelo=qwen/qwen3-30b-a3b:free
+[RESPOSTA IA] modelo=...
 [RESPOSTA IA] @usuario: ...
 ```
 
@@ -109,8 +111,9 @@ Durante a live, eventos aparecem aproximadamente assim:
 
 ## Próximas validações
 
-1. Revalidar respostas reais usando o modelo gratuito específico configurado.
-2. Confirmar que comentários comuns não geram chamada à IA.
-3. Confirmar que erro do provedor não derruba a conexão da LIVE.
-4. Observar latência e consistência de algumas respostas curtas.
-5. Somente depois encerrar o MVP 2 e avançar para TTS.
+1. No `.env` local da máquina de teste, substituir o slug indisponível `qwen/qwen3-30b-a3b:free` por uma opção confirmada como disponível no momento do teste.
+2. Preferir um modelo conversacional específico para revalidar algumas respostas reais; se não houver opção gratuita confiável, usar temporariamente `openrouter/free` apenas para validar o pipeline.
+3. Confirmar que comentários comuns não geram chamada à IA.
+4. Confirmar que erro do provedor não derruba a conexão da LIVE — comportamento já observado em falhas anteriores, mas manter como critério de aceite da issue.
+5. Observar latência e consistência de algumas respostas curtas.
+6. Somente depois encerrar o MVP 2 e avançar para TTS.
