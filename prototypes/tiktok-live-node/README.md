@@ -94,9 +94,18 @@ Saída esperada quando algum dos modelos disponíveis responder corretamente:
 ```text
 [DECISÃO IA] @usuario: selecionado.
 [ENTRADA IA] @usuario: qual sua opinião sobre isso?
-[RESPOSTA IA] modelo=...
+[RESPOSTA IA] modelo=... latencia_ms=...
 [RESPOSTA IA] @usuario: ...
 ```
+
+Quando o modelo principal falhar e um fallback responder, o terminal também registra:
+
+```text
+[FALLBACK IA] principal=... utilizado=...
+[RESPOSTA IA] modelo=... latencia_ms=...
+```
+
+`latencia_ms` mede o tempo total desde o início da chamada até a resposta final, incluindo tentativas de fallback. Em caso de falha completa, o tempo também aparece em `[ERRO IA]`.
 
 A regra de gatilho é temporária e existe para evitar chamadas em todos os comentários durante a validação técnica.
 
@@ -111,10 +120,24 @@ Durante a live, eventos aparecem aproximadamente assim:
 [PRESENTE] @usuario | giftId=1234
 ```
 
-## Próximas validações
+## Teste final para fechar o MVP 2
 
-1. Executar novo teste real após `git pull` e confirmar que o comentário `ia ...` recebe resposta textual mesmo se o `.env` local ainda apontar para o Qwen indisponível.
-2. Confirmar que comentários comuns não geram chamada à IA.
-3. Confirmar que erro de um modelo não derruba a conexão da LIVE e que o fallback é acionado.
-4. Observar latência e consistência de algumas respostas curtas.
-5. Somente depois encerrar o MVP 2 e avançar para TTS.
+Após `git pull`, faça cinco chamadas curtas em uma mesma LIVE:
+
+```text
+ia sugira um nome curto para uma assistente virtual
+ia crie uma ideia de personagem divertido
+ia conte uma piada curta e leve
+ia dê uma dica simples para organizar o dia
+ia invente um cumprimento para quem entrou na live
+```
+
+Em cada chamada, confirme:
+
+1. aparece `[RESPOSTA IA] modelo=... latencia_ms=...`;
+2. a resposta é curta, natural e coerente em PT-BR;
+3. comentário comum sem `ia` ou `!ia` não aciona o modelo;
+4. a LIVE continua recebendo eventos depois da resposta;
+5. se houver troca de modelo, aparece `[FALLBACK IA] principal=... utilizado=...`.
+
+Registre os cinco valores de `latencia_ms` e qual modelo respondeu. Somente depois dessa amostra consistente o MVP 2 pode ser encerrado e o TTS iniciado.
