@@ -19,7 +19,7 @@ Validado:
 Aprendizado relevante: na versão testada do conector, o texto do comentário apareceu no campo `content`; o protótipo mantém fallback entre campos possíveis em vez de assumir um campo fixo.
 
 ### Etapa 2 — Resposta textual
-**Status: FUNCIONANDO EM LIVE REAL; VALIDAÇÃO FINAL DE CONSISTÊNCIA E LATÊNCIA PENDENTE.**
+**Status: VALIDADA EM LIVE REAL.**
 
 Objetivos desta etapa:
 - selecionar eventos relevantes;
@@ -34,7 +34,10 @@ Validado em teste real:
 - `nvidia/nemotron-3.5-lightning:free` gerou resposta conversacional em português para comentário real após a correção de configuração;
 - a conexão da LIVE permaneceu ativa e continuou recebendo eventos depois da resposta da IA;
 - provedor e modelo permanecem configuráveis;
-- o protótipo possui modelos alternativos para reduzir impacto quando um modelo gratuito fica indisponível.
+- o protótipo possui modelos alternativos para reduzir impacto quando um modelo gratuito fica indisponível;
+- a amostra final gerou cinco respostas com latências de `6890`, `2653`, `1548`, `2283` e `1621 ms`;
+- média de `2999 ms` e mediana de `2283 ms`;
+- a captura continuou ativa e a Issue #2 foi encerrada como concluída.
 
 Aprendizados desta etapa:
 - `openrouter/free` mostrou comportamento variável e chegou a selecionar um modelo de segurança que retornou apenas `User Safety: safe`;
@@ -42,13 +45,13 @@ Aprendizados desta etapa:
 - a disponibilidade de modelos gratuitos pode mudar, então a aplicação não deve depender de um único slug gratuito;
 - a escolha atual de OpenRouter e Nemotron continua sendo somente de protótipo e não define arquitetura comercial, fornecedor definitivo ou modelo final.
 
-Pendências necessárias antes de iniciar a próxima etapa:
-- executar cinco chamadas curtas em uma mesma LIVE e registrar modelo, `latencia_ms`, qualidade da resposta e continuidade da captura;
-- confirmar em execução real a troca automática para um modelo alternativo quando o principal estiver indisponível;
+Limitação preservada para etapa futura:
+- enquanto `aiBusy` está ativo, um segundo comentário elegível é ignorado de forma controlada;
+- implementar fila ou regra de prioridade antes da live completa, sem antecipar essa complexidade no TTS local;
 - continuar registrando mudanças de disponibilidade dos modelos gratuitos.
 
 ### Etapa 3 — TTS
-Próxima etapa de implementação somente depois do fechamento do MVP 2.
+**Status: PRÓXIMA ETAPA OFICIAL DE IMPLEMENTAÇÃO.**
 
 Adicionar voz com foco em:
 - transformar a resposta textual validada em áudio;
