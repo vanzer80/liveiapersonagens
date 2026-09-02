@@ -12,3 +12,7 @@ Prioridades atuais:
 - alternativas de integração com OBS/TikTok LIVE Studio.
 
 Descobertas relevantes e duradouras devem ser consolidadas também no documento de pesquisa do Google Drive.
+
+## Pesquisas concluídas
+
+- [`tts-mvp3.md`](tts-mvp3.md) — comparação oficial e escolha provisória de TTS para o MVP 3, em 2026-09-02.

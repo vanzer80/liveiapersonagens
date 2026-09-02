@@ -8,15 +8,13 @@ Plataforma modular para criação de personagens de IA voltados a transmissões 
 
 O objetivo imediato não é construir um SaaS completo. Primeiro precisamos validar, em etapas, que a experiência funciona tecnicamente e em uma live real.
 
-## Primeiro marco técnico
+## Estado dos marcos técnicos
 
-Conectar a uma TikTok LIVE de teste e exibir no terminal os eventos disponíveis, começando por:
+- MVP 1 — captura de eventos: validado em LIVE real.
+- MVP 2 — resposta textual com IA: validado em LIVE real e encerrado na Issue #2.
+- MVP 3 — TTS local: implementação inicial disponível; validação auditiva no Windows e em LIVE real pendente na Issue #3.
 
-- comentários;
-- identificação do usuário;
-- outros eventos públicos disponíveis de forma confiável.
-
-IA de diálogo, TTS e avatar entram somente depois que essa captura estiver validada.
+O protótipo atual converte a resposta textual em WAV e reproduz o áudio localmente com uma voz instalada no Windows. Essa escolha é apenas uma hipótese gratuita para validação, não o fornecedor definitivo do produto.
 
 ## Ordem de implementação
 
@@ -40,7 +38,8 @@ liveiapersonagens/
 ├── prototypes/
 │   └── README.md
 ├── research/
-│   └── README.md
+│   ├── README.md
+│   └── tts-mvp3.md
 └── tests/
     └── README.md
 ```
@@ -58,3 +57,8 @@ O GitHub deve registrar principalmente código, testes, experimentos técnicos, 
 ## Repositório
 
 `vanzer80/liveiapersonagens`
+
+Issues de validação:
+
+- [#2 — MVP 2: resposta textual](https://github.com/vanzer80/liveiapersonagens/issues/2) — concluída;
+- [#3 — MVP 3: TTS local](https://github.com/vanzer80/liveiapersonagens/issues/3) — aberta até o teste real no Windows.

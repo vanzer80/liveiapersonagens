@@ -51,17 +51,24 @@ Limitação preservada para etapa futura:
 - continuar registrando mudanças de disponibilidade dos modelos gratuitos.
 
 ### Etapa 3 — TTS
-**Status: PRÓXIMA ETAPA OFICIAL DE IMPLEMENTAÇÃO.**
+**Status: IMPLEMENTAÇÃO INICIAL CONCLUÍDA; VALIDAÇÃO NO WINDOWS PENDENTE.**
 
-Adicionar voz com foco em:
+Implementado no protótipo:
 - transformar a resposta textual validada em áudio;
-- baixo custo inicial;
-- baixa latência para conversa em LIVE;
-- voz adequada ao personagem;
-- estabilidade;
-- possibilidade futura de troca do provedor.
+- adaptador separado em `src/tts.js`;
+- provedor inicial `windows-sapi`, sem nova chave ou custo;
+- preferência automática por uma voz `pt-BR` instalada no Windows;
+- geração de WAV temporário, reprodução local e limpeza do arquivo;
+- normalização mínima de Markdown, emojis e URLs;
+- configuração por ambiente e teste controlado com `npm run test:tts`;
+- logs separados de geração, voz, latência, reprodução e erro;
+- falha de TTS isolada para não derrubar a captura nem apagar a resposta textual.
 
-A primeira validação de TTS deve continuar somente no ambiente local/terminal, sem antecipar avatar ou transmissão completa.
+Hipótese provisória: `System.Speech.Synthesis.SpeechSynthesizer` do Windows foi escolhido para o primeiro teste por não exigir conta, chave ou pagamento. Naturalidade, latência e disponibilidade de voz em português brasileiro ainda precisam ser confirmadas no computador do usuário. O fornecedor continua substituível.
+
+A Issue #3 permanece aberta até o usuário ouvir a voz no Windows durante uma LIVE real e confirmar a continuidade dos eventos. A limitação de `aiBusy` foi preservada: não há fila nesta etapa.
+
+Pesquisa comparativa: [`research/tts-mvp3.md`](../research/tts-mvp3.md).
 
 ### Etapa 4 — Avatar
 Integrar representação visual somente depois que captura, decisão e voz estiverem funcionando.

@@ -31,6 +31,22 @@ Limitação registrada: enquanto `aiBusy` está ativo, outro comentário elegív
 
 A escolha de OpenRouter, Nemotron e MiniMax continua sendo hipótese de protótipo, não decisão definitiva de arquitetura ou fornecedor.
 
+### MVP 3 — TTS local
+
+IMPLEMENTADO PARA TESTE, AINDA NÃO VALIDADO NO WINDOWS:
+
+- `src/tts.js` separa o TTS da captura e da IA;
+- o primeiro provedor é `windows-sapi`, usando `System.Speech` e uma voz instalada no Windows;
+- não exige nova conta, chave ou pagamento;
+- prefere automaticamente uma voz `pt-BR` quando `TTS_VOICE` está vazio;
+- gera um WAV temporário, reproduz de forma síncrona e remove o arquivo;
+- remove Markdown técnico, emojis e URLs antes da fala;
+- registra geração, voz efetiva, idioma, latência e duração da reprodução;
+- erro de TTS não encerra a LIVE nem apaga a resposta textual;
+- `npm run test:tts` permite testar sem TikTok.
+
+`windows-sapi` é somente uma hipótese reversível do protótipo. A Issue #3 deve continuar aberta até a confirmação auditiva em uma LIVE real no Windows.
+
 ## Requisitos
 
 - Node.js 20 ou superior
@@ -46,7 +62,7 @@ cd prototypes/tiktok-live-node
 npm install
 ```
 
-## Configurar IA para o MVP 2
+## Configurar IA e TTS
 
 A hipótese atual de protótipo usa uma API compatível com OpenAI via OpenRouter. Isso não é uma decisão definitiva de arquitetura.
 
@@ -58,6 +74,19 @@ A hipótese atual de protótipo usa uma API compatível com OpenAI via OpenRoute
 6. A disponibilidade de modelos gratuitos pode mudar sem aviso; por isso o fallback automático faz parte da robustez do protótipo.
 
 O arquivo `.env` está ignorado pelo Git e não deve ser enviado ao repositório. Em máquinas já configuradas, `git pull` não altera o valor de `AI_MODEL` dentro do `.env` local. Mesmo assim, o código passa a tentar fallbacks automaticamente após o pull.
+
+Para ativar a voz durante a LIVE, acrescente ao `.env`:
+
+```env
+TTS_ENABLED=true
+TTS_PROVIDER=windows-sapi
+TTS_VOICE=
+TTS_RATE=0
+```
+
+Com `TTS_VOICE` vazio, o adaptador procura primeiro uma voz `pt-BR` instalada. `TTS_RATE` aceita um número inteiro entre `-10` e `10`.
+
+Se nenhuma voz brasileira estiver disponível, instale uma voz em **Configurações do Windows → Hora e idioma → Fala → Gerenciar vozes** e repita o teste.
 
 ## Executar
 
@@ -113,6 +142,39 @@ Quando o modelo principal falhar e um fallback responder, o terminal também reg
 
 A regra de gatilho é temporária e existe para evitar chamadas em todos os comentários durante a validação técnica.
 
+## Teste controlado do TTS sem LIVE
+
+No Windows, execute:
+
+```bash
+npm run test:tts
+```
+
+O teste usa uma frase curta em português, mesmo que `TTS_ENABLED` ainda esteja ausente no `.env`. Também é possível passar outra frase:
+
+```bash
+npm run test:tts -- "Olá, este é outro teste de voz."
+```
+
+Saída esperada:
+
+```text
+[TTS] gerando | provedor=windows-sapi voz=automática-pt-BR
+[TTS] áudio gerado | provedor=windows-sapi voz=... idioma=pt-BR latencia_ms=...
+[TTS] reproduzindo...
+[TTS] concluído | duracao_ms=...
+```
+
+Em Linux ou em um ambiente sem PowerShell/dispositivo de áudio, o teste termina com `[ERRO TTS]` sem afetar os testes automatizados. Isso não valida nem invalida a reprodução no Windows.
+
+## Testes automatizados
+
+```bash
+npm test
+```
+
+Os testes cobrem normalização do texto e configuração segura do adaptador. A geração e a reprodução reais dependem do Windows e devem ser confirmadas com `npm run test:tts`.
+
 ## Eventos do MVP 1
 
 Durante a live, eventos aparecem aproximadamente assim:
@@ -146,4 +208,4 @@ Critérios confirmados:
 
 ## Próxima etapa — MVP 3: TTS local
 
-Converter a resposta textual validada em áudio reproduzido no computador, ainda sem avatar e sem transmissão completa. O adaptador de TTS deve permanecer substituível e registrar latência, sucesso, erro e duração do áudio.
+Executar a validação no Windows e em LIVE real. O MVP 3 só será marcado como validado quando a voz for ouvida, os tempos aparecerem no terminal e os eventos continuarem chegando durante e depois do áudio.
