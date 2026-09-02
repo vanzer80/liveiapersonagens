@@ -1,6 +1,6 @@
 # Protótipo TikTok LIVE — Node.js
 
-Objetivo atual: validar o fluxo incremental do projeto, começando pela captura de eventos públicos de uma TikTok LIVE e avançando agora para resposta textual com IA.
+Objetivo atual: validar o fluxo incremental do projeto. Captura e resposta textual estão validadas; a próxima etapa é TTS local/terminal.
 
 > Este protótipo usa uma biblioteca comunitária/não oficial baseada em engenharia reversa. Ele serve para validação técnica e não representa uma escolha definitiva para produção/comercialização.
 
@@ -15,17 +15,21 @@ VALIDADO em teste real:
 - texto completo do comentário com extração robusta por múltiplos campos do payload.
 
 ### MVP 2 — Resposta textual com IA
-EM TESTE, com fluxo básico já funcionando:
-- comentários iniciados por `!ia` ou `ia` podem ser selecionados para a IA;
-- a resposta aparece apenas no terminal;
-- não existe envio automático de mensagem de volta ao TikTok;
-- provedor e modelo são configuráveis por variáveis de ambiente;
-- o fluxo comentário real → IA → resposta textual já gerou resposta válida em LIVE real;
-- `openrouter/free` mostrou variação de modelo e chegou a selecionar um modelo de segurança que respondeu apenas `User Safety: safe`;
-- a tentativa de fixar `qwen/qwen3-30b-a3b:free` falhou em execução real em 2026-09-01 com `This model is unavailable for free`; portanto esse slug não deve ser usado como hipótese atual de teste;
-- o protótipo agora tenta automaticamente fallbacks gratuitos quando o modelo configurado está indisponível, responde sem texto útil ou devolve somente classificação de segurança.
+VALIDADO em TikTok LIVE real:
+- comentários iniciados por `!ia` ou `ia` são selecionados para a IA;
+- comentários comuns não acionam o modelo;
+- resposta curta em PT-BR aparece no terminal;
+- erros e fallbacks não derrubam a captura;
+- modelo principal e fallbacks são configuráveis;
+- fallback real já foi validado com `minimax/minimax-m3:free`;
+- a amostra final produziu cinco respostas com latências de `6890`, `2653`, `1548`, `2283` e `1621 ms`;
+- média de `2999 ms`, mediana de `2283 ms`, mínimo de `1548 ms` e máximo de `6890 ms`;
+- a LIVE continuou recebendo eventos durante e depois das respostas;
+- a Issue #2 foi encerrada como concluída.
 
-A escolha de provedor/modelo continua sendo apenas hipótese de protótipo. Não é decisão definitiva de arquitetura, fornecedor ou modelo comercial.
+Limitação registrada: enquanto `aiBusy` está ativo, outro comentário elegível é ignorado. Isso protege o protótipo contra chamadas simultâneas, mas uma fila ou regra de prioridade será necessária antes da live completa.
+
+A escolha de OpenRouter, Nemotron e MiniMax continua sendo hipótese de protótipo, não decisão definitiva de arquitetura ou fornecedor.
 
 ## Requisitos
 
@@ -120,24 +124,26 @@ Durante a live, eventos aparecem aproximadamente assim:
 [PRESENTE] @usuario | giftId=1234
 ```
 
-## Teste final para fechar o MVP 2
+## Resultado da validação final do MVP 2
 
-Após `git pull`, faça cinco chamadas curtas em uma mesma LIVE:
+A bateria final confirmou cinco respostas bem-sucedidas com `nvidia/nemotron-3.5-lightning:free`:
 
-```text
-ia sugira um nome curto para uma assistente virtual
-ia crie uma ideia de personagem divertido
-ia conte uma piada curta e leve
-ia dê uma dica simples para organizar o dia
-ia invente um cumprimento para quem entrou na live
-```
+| Chamada | Latência |
+|---|---:|
+| 1 | 6890 ms |
+| 2 | 2653 ms |
+| 3 | 1548 ms |
+| 4 | 2283 ms |
+| 5 | 1621 ms |
 
-Em cada chamada, confirme:
+Critérios confirmados:
+- resposta curta, natural e coerente em PT-BR;
+- comentários comuns não geram chamada à IA;
+- eventos continuam chegando durante e depois da resposta;
+- medição automática de latência funciona;
+- uso de fallback é registrado separadamente;
+- reconexão manual à mesma LIVE funciona.
 
-1. aparece `[RESPOSTA IA] modelo=... latencia_ms=...`;
-2. a resposta é curta, natural e coerente em PT-BR;
-3. comentário comum sem `ia` ou `!ia` não aciona o modelo;
-4. a LIVE continua recebendo eventos depois da resposta;
-5. se houver troca de modelo, aparece `[FALLBACK IA] principal=... utilizado=...`.
+## Próxima etapa — MVP 3: TTS local
 
-Registre os cinco valores de `latencia_ms` e qual modelo respondeu. Somente depois dessa amostra consistente o MVP 2 pode ser encerrado e o TTS iniciado.
+Converter a resposta textual validada em áudio reproduzido no computador, ainda sem avatar e sem transmissão completa. O adaptador de TTS deve permanecer substituível e registrar latência, sucesso, erro e duração do áudio.
