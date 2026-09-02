@@ -19,7 +19,7 @@ Validado:
 Aprendizado relevante: na versão testada do conector, o texto do comentário apareceu no campo `content`; o protótipo mantém fallback entre campos possíveis em vez de assumir um campo fixo.
 
 ### Etapa 2 — Resposta textual
-**Status: NÚCLEO VALIDADO EM LIVE REAL em 2026-09-01.**
+**Status: FUNCIONANDO EM LIVE REAL; VALIDAÇÃO FINAL DE CONSISTÊNCIA E LATÊNCIA PENDENTE.**
 
 Objetivos desta etapa:
 - selecionar eventos relevantes;
@@ -42,13 +42,13 @@ Aprendizados desta etapa:
 - a disponibilidade de modelos gratuitos pode mudar, então a aplicação não deve depender de um único slug gratuito;
 - a escolha atual de OpenRouter e Nemotron continua sendo somente de protótipo e não define arquitetura comercial, fornecedor definitivo ou modelo final.
 
-Pendências de robustez que não bloqueiam o início da próxima etapa:
-- observar latência e consistência em uma amostra maior de respostas;
+Pendências necessárias antes de iniciar a próxima etapa:
+- executar cinco chamadas curtas em uma mesma LIVE e registrar modelo, `latencia_ms`, qualidade da resposta e continuidade da captura;
 - confirmar em execução real a troca automática para um modelo alternativo quando o principal estiver indisponível;
 - continuar registrando mudanças de disponibilidade dos modelos gratuitos.
 
 ### Etapa 3 — TTS
-Próxima etapa de implementação.
+Próxima etapa de implementação somente depois do fechamento do MVP 2.
 
 Adicionar voz com foco em:
 - transformar a resposta textual validada em áudio;
