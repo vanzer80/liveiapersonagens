@@ -6,6 +6,7 @@ import {
   isAiConfigured,
   validateAiAuthentication,
 } from './ai.js';
+import { getTtsConfig, speakText } from './tts.js';
 
 const usernameArg = process.argv[2];
 const username = (usernameArg || process.env.TIKTOK_USERNAME || '').replace(/^@/, '').trim();
@@ -19,11 +20,18 @@ if (!username) {
 
 const aiConfig = getAiConfig();
 const aiKeyInfo = getSafeAiKeyInfo();
+const ttsConfig = getTtsConfig();
 
 console.log('Live IA — Protótipo TikTok LIVE');
 console.log(`Tentando conectar em @${username}...`);
 console.log(`Modo IA: comentários iniciados por ${aiConfig.trigger} ou ${aiConfig.trigger.replace(/^\W+/, '')}`);
 console.log(`Modelo IA: ${aiConfig.model}`);
+console.log(
+  `TTS: ${ttsConfig.enabled ? 'ativado' : 'desativado'} | provedor=${ttsConfig.provider} voz=${ttsConfig.voice || 'automática-pt-BR'} velocidade=${ttsConfig.rate}`,
+);
+if (ttsConfig.error) {
+  console.error(`[ERRO TTS] latencia_ms=0 | ${ttsConfig.error}`);
+}
 
 if (aiKeyInfo.placeholderDetected) {
   console.log('Chave IA: NÃO configurada — o .env ainda contém cole_sua_chave_aqui');
@@ -130,6 +138,7 @@ async function maybeGenerateAiReply(user, comment) {
 
     console.log(`[RESPOSTA IA] modelo=${result.model} latencia_ms=${latencyMs}`);
     console.log(`[RESPOSTA IA] @${user}: ${result.text}`);
+    await speakText(result.text);
   } catch (error) {
     const latencyMs = Math.round(performance.now() - aiStartedAt);
     console.error(

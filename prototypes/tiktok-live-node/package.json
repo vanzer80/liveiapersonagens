@@ -5,7 +5,9 @@
   "type": "module",
   "description": "Protótipo para validar captura de eventos públicos de uma TikTok LIVE.",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test": "node --test",
+    "test:tts": "node src/tts-smoke.js"
   },
   "engines": {
     "node": ">=20"
