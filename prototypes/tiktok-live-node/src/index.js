@@ -118,13 +118,23 @@ async function maybeGenerateAiReply(user, comment) {
   console.log(`[ENTRADA IA] @${user}: ${selectedText}`);
 
   aiBusy = true;
+  const aiStartedAt = performance.now();
 
   try {
     const result = await generateAiReply({ user, comment: selectedText });
-    console.log(`[RESPOSTA IA] modelo=${result.model}`);
+    const latencyMs = Math.round(performance.now() - aiStartedAt);
+
+    if (result.fallbackUsed) {
+      console.log(`[FALLBACK IA] principal=${result.requestedModel} utilizado=${result.model}`);
+    }
+
+    console.log(`[RESPOSTA IA] modelo=${result.model} latencia_ms=${latencyMs}`);
     console.log(`[RESPOSTA IA] @${user}: ${result.text}`);
   } catch (error) {
-    console.error(`[ERRO IA] ${error instanceof Error ? error.message : error}`);
+    const latencyMs = Math.round(performance.now() - aiStartedAt);
+    console.error(
+      `[ERRO IA] latencia_ms=${latencyMs} | ${error instanceof Error ? error.message : error}`,
+    );
   } finally {
     aiBusy = false;
   }
