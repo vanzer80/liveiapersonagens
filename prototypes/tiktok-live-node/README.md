@@ -33,7 +33,7 @@ A escolha de OpenRouter, Nemotron e MiniMax continua sendo hipótese de protóti
 
 ### MVP 3 — TTS local
 
-IMPLEMENTADO PARA TESTE, AINDA NÃO VALIDADO NO WINDOWS:
+VALIDADO LOCALMENTE NO WINDOWS; LIVE REAL PENDENTE:
 
 - `src/tts.js` separa o TTS da captura e da IA;
 - o primeiro provedor é `windows-sapi`, usando `System.Speech` e uma voz instalada no Windows;
@@ -45,7 +45,7 @@ IMPLEMENTADO PARA TESTE, AINDA NÃO VALIDADO NO WINDOWS:
 - erro de TTS não encerra a LIVE nem apaga a resposta textual;
 - `npm run test:tts` permite testar sem TikTok.
 
-`windows-sapi` é somente uma hipótese reversível do protótipo. A Issue #3 deve continuar aberta até a confirmação auditiva em uma LIVE real no Windows.
+O teste local selecionou `Microsoft Maria Desktop` em `pt-BR`, gerou o WAV em 884 ms e concluiu uma reprodução audível de 7508 ms. `windows-sapi` continua sendo somente uma hipótese reversível do protótipo. A Issue #3 deve permanecer aberta até o teste integrado em LIVE real.
 
 ## Requisitos
 
@@ -206,6 +206,6 @@ Critérios confirmados:
 - uso de fallback é registrado separadamente;
 - reconexão manual à mesma LIVE funciona.
 
-## Próxima etapa — MVP 3: TTS local
+## Próxima etapa — MVP 3 em LIVE real
 
-Executar a validação no Windows e em LIVE real. O MVP 3 só será marcado como validado quando a voz for ouvida, os tempos aparecerem no terminal e os eventos continuarem chegando durante e depois do áudio.
+Ativar o TTS no `.env` e executar a validação integrada em TikTok LIVE. O MVP 3 só será encerrado quando um comentário elegível gerar texto e voz, um comentário comum não chamar IA/TTS e os eventos continuarem chegando durante e depois do áudio.

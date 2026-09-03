@@ -51,7 +51,7 @@ Limitação preservada para etapa futura:
 - continuar registrando mudanças de disponibilidade dos modelos gratuitos.
 
 ### Etapa 3 — TTS
-**Status: IMPLEMENTAÇÃO INICIAL CONCLUÍDA; VALIDAÇÃO NO WINDOWS PENDENTE.**
+**Status: TTS LOCAL VALIDADO NO WINDOWS; VALIDAÇÃO EM LIVE REAL PENDENTE.**
 
 Implementado no protótipo:
 - transformar a resposta textual validada em áudio;
@@ -64,9 +64,16 @@ Implementado no protótipo:
 - logs separados de geração, voz, latência, reprodução e erro;
 - falha de TTS isolada para não derrubar a captura nem apagar a resposta textual.
 
-Hipótese provisória: `System.Speech.Synthesis.SpeechSynthesizer` do Windows foi escolhido para o primeiro teste por não exigir conta, chave ou pagamento. Naturalidade, latência e disponibilidade de voz em português brasileiro ainda precisam ser confirmadas no computador do usuário. O fornecedor continua substituível.
+Validado no Windows em 2026-09-03:
+- voz `Microsoft Maria Desktop` selecionada automaticamente em `pt-BR`;
+- geração do WAV concluída em 884 ms;
+- reprodução audível concluída em 7508 ms;
+- o transporte do script PowerShell foi estabilizado com `-EncodedCommand` em UTF-16LE;
+- nove testes automatizados aprovados e zero vulnerabilidades na auditoria.
 
-A Issue #3 permanece aberta até o usuário ouvir a voz no Windows durante uma LIVE real e confirmar a continuidade dos eventos. A limitação de `aiBusy` foi preservada: não há fila nesta etapa.
+Hipótese provisória: `System.Speech.Synthesis.SpeechSynthesizer` do Windows foi escolhido por não exigir conta, chave ou pagamento. Naturalidade e adequação da voz ao personagem ainda precisam ser avaliadas; o fornecedor continua substituível.
+
+A Issue #3 permanece aberta até o comentário real produzir texto e voz durante uma TikTok LIVE e a continuidade dos eventos ser confirmada. A limitação de `aiBusy` foi preservada: não há fila nesta etapa.
 
 Pesquisa comparativa: [`research/tts-mvp3.md`](../research/tts-mvp3.md).
 

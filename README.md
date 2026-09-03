@@ -12,9 +12,9 @@ O objetivo imediato não é construir um SaaS completo. Primeiro precisamos vali
 
 - MVP 1 — captura de eventos: validado em LIVE real.
 - MVP 2 — resposta textual com IA: validado em LIVE real e encerrado na Issue #2.
-- MVP 3 — TTS local: implementação inicial disponível; validação auditiva no Windows e em LIVE real pendente na Issue #3.
+- MVP 3 — TTS local: geração e reprodução validadas no Windows; teste integrado em LIVE real pendente na Issue #3.
 
-O protótipo atual converte a resposta textual em WAV e reproduz o áudio localmente com uma voz instalada no Windows. Essa escolha é apenas uma hipótese gratuita para validação, não o fornecedor definitivo do produto.
+O protótipo converte a resposta textual em WAV e reproduz o áudio localmente com uma voz instalada no Windows. O teste real selecionou `Microsoft Maria Desktop` em `pt-BR`, gerou o áudio em 884 ms e concluiu uma reprodução audível. Essa escolha continua sendo uma hipótese gratuita para validação, não o fornecedor definitivo do produto.
 
 ## Ordem de implementação
 
@@ -61,4 +61,4 @@ O GitHub deve registrar principalmente código, testes, experimentos técnicos, 
 Issues de validação:
 
 - [#2 — MVP 2: resposta textual](https://github.com/vanzer80/liveiapersonagens/issues/2) — concluída;
-- [#3 — MVP 3: TTS local](https://github.com/vanzer80/liveiapersonagens/issues/3) — aberta até o teste real no Windows.
+- [#3 — MVP 3: TTS local](https://github.com/vanzer80/liveiapersonagens/issues/3) — aberta até o teste integrado em LIVE real.
