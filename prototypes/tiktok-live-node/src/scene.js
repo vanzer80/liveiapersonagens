@@ -12,7 +12,7 @@ export const SCENE_VARIANTS = Object.freeze({
   INFLUENCER: 'influencer',
 });
 
-export const DEFAULT_SCENE_VARIANT = SCENE_VARIANTS.INFLUENCER;
+export const DEFAULT_SCENE_VARIANT = SCENE_VARIANTS.SPONGEBOB;
 
 export const DEFAULT_SCENE_ASSETS = Object.freeze({
   [SCENE_VARIANTS.SPONGEBOB]: Object.freeze({

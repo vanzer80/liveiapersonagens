@@ -15,7 +15,7 @@ html,body{margin:0;width:100%;height:100%;background:#050505;color:#fff;font-fam
 main{width:100%;height:100%;display:grid;place-items:center}
 .frame{position:relative;height:min(100vh,100%);aspect-ratio:9/16;background:#111;overflow:hidden}
 video{width:100%;height:100%;object-fit:cover;display:block;background:#111}
-.badge{position:absolute;left:12px;bottom:12px;background:rgba(0,0,0,.6);padding:6px 10px;border-radius:999px;font-size:12px;letter-spacing:.04em}
+.badge{position:absolute;left:12px;bottom:12px;background:rgba(0,0,0,.6);padding:6px 10px;border-radius:999px;font-size:12px;letter-spacing:.04em;display:__BADGE_DISPLAY__}
 </style>
 </head>
 <body>
@@ -131,6 +131,8 @@ export function createScenePreview({
   port = Number(process.env.SCENE_PREVIEW_PORT || 3333),
   logger = console,
 } = {}) {
+  const showBadge = parseBoolean(process.env.SCENE_PREVIEW_SHOW_BADGE, false);
+  const html = HTML.replace('__BADGE_DISPLAY__', showBadge ? 'block' : 'none');
   let current = {
     variant: 'spongebob',
     state: 'idle',
@@ -144,7 +146,7 @@ export function createScenePreview({
 
     if (url.pathname === '/') {
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
-      response.end(HTML);
+      response.end(html);
       return;
     }
 

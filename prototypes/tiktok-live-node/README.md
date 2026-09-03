@@ -9,9 +9,10 @@ Objetivo: validar incrementalmente o fluxo `TikTok LIVE → IA → TTS → cena 
 - **MVP 1 — captura TikTok LIVE:** VALIDADO em LIVE real.
 - **MVP 2 — resposta textual com IA:** VALIDADO em LIVE real.
 - **MVP 3 — TTS local:** VALIDADO no Windows e em LIVE real com voz pt-BR.
-- **MVP 4 — cena visual:** EM IMPLEMENTAÇÃO; o ramo Bob já executou `idle → thinking → speaking → idle` com ativos reais, TTS externo e sincronização aproximada validada.
+- **MVP 4 — cena visual:** RAMO BOB VALIDADO localmente; influencer adiada para uma segunda etapa.
+- **MVP 5 — Bob em LIVE real:** integração pronta no código; confirmação audiovisual por um espectador pendente.
 
-No MVP 4, o controlador suporta duas variantes (`spongebob` e `influencer`) e os testes isolados da lógica de cena estão aprovados. Para a variante Bob Esponja, a imagem mestre e os três clipes iniciais já foram aprovados no Google Drive oficial:
+O controlador ainda suporta duas variantes, mas a direção vigente prioriza `spongebob`. A imagem mestre e os três clipes iniciais do Bob foram aprovados no Google Drive oficial:
 
 - `spongebob-idle-v1.mp4`
 - `spongebob-thinking-v1.mp4`
@@ -43,14 +44,18 @@ Após essa evidência, o adaptador `tts.js` passou a expor callbacks opcionais:
 - `onPlaybackStart`: chamado após a geração do áudio e imediatamente antes de iniciar a reprodução;
 - `onPlaybackEnd`: chamado após a reprodução terminar.
 
-O `scene-smoke.js` usa esses callbacks para controlar `speaking`, sem interceptar mensagens de log. O próximo smoke test deve registrar:
+O `scene-smoke.js` usa esses callbacks para controlar `speaking`, sem interceptar mensagens de log. O teste final no Windows registrou:
 
 ```text
 [TESTE CENA] sync_mode=tts-playback-callback
-[TESTE CENA] speaking_inicio_apos_callback_ms=...
+[TESTE CENA] speaking_inicio_apos_callback_ms=1
+[TESTE CENA] speaking_visivel_ms=12457
+[TESTE CENA] estado_final=idle
 ```
 
 Os callbacks são opcionais para manter compatibilidade com chamadas anteriores de `speakText`.
+
+O ciclo local do Bob está concluído para o protótipo e não deve ser repetido por rotina.
 
 ### Qualidade da voz
 
@@ -161,6 +166,28 @@ npm start -- nome_do_usuario
 
 Comentários iniciados por `!ia` ou `ia` acionam o fluxo de IA. Comentários comuns continuam sendo apenas registrados no terminal.
 
+## Executar o Bob integrado à LIVE
+
+Use o comando único:
+
+```bash
+npm run live:bob -- nome_do_usuario
+```
+
+O comando:
+
+1. ativa a variante Bob, o TTS e uma persona curta de LIVE;
+2. verifica os três MP4s aprovados;
+3. abre `http://127.0.0.1:3333` em `idle`;
+4. tenta conectar ao TikTok a cada cinco segundos enquanto a conta ainda não estiver ao vivo;
+5. entra em `thinking` quando um comentário `ia`/`!ia` é selecionado;
+6. entra em `speaking` no callback real de início do TTS;
+7. retorna a `idle` ao terminar ou se ocorrer falha.
+
+No TikTok LIVE Studio, use a URL local como fonte de link em uma cena vertical. Se a fonte não carregar, abra a URL no Edge em tela cheia e capture essa janela. Ative o áudio do sistema no mixer para que o TTS chegue aos espectadores.
+
+A transmissão só estará validada depois que outro dispositivo confirmar imagem e voz em LIVE real. Procedimento completo: [`../../docs/mvp5-live-bob.md`](../../docs/mvp5-live-bob.md).
+
 ## Testes automatizados
 
 ```bash
@@ -169,9 +196,10 @@ npm test
 
 A lógica do controlador de cena cobre seleção de variante, transições, estado desconhecido e fallback restrito à mesma família visual.
 
-## Próximos critérios do MVP 4
+## Próximos critérios
 
-- fazer um smoke test de regressão no Windows após o refactor para callbacks explícitos;
-- comparar uma alternativa neural PT-BR para reduzir a sensação de voz robotizada;
-- gerar/aprovar imagem mestre e três clipes da influencer original;
-- validar a mesma arquitetura nas duas variantes antes de transmissão real.
+- executar a transmissão pelo TikTok LIVE Studio;
+- confirmar imagem e voz em outro celular;
+- validar duas respostas consecutivas;
+- depois implementar agradecimento de presentes, fila e prioridade;
+- comparar TTS neural e retomar a influencer em etapa posterior.

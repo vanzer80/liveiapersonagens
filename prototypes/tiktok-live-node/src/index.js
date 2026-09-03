@@ -6,6 +6,7 @@ import {
   isAiConfigured,
   validateAiAuthentication,
 } from './ai.js';
+import { createLiveSceneRuntime, getLiveSceneConfig } from './live-scene.js';
 import { getTtsConfig, speakText } from './tts.js';
 
 const usernameArg = process.argv[2];
@@ -21,6 +22,15 @@ if (!username) {
 const aiConfig = getAiConfig();
 const aiKeyInfo = getSafeAiKeyInfo();
 const ttsConfig = getTtsConfig();
+const sceneConfig = getLiveSceneConfig();
+const liveScene = createLiveSceneRuntime({ config: sceneConfig });
+const connectRetryEnabled = ['1', 'true', 'yes', 'sim', 'on'].includes(
+  String(process.env.TIKTOK_CONNECT_RETRY || '').trim().toLowerCase(),
+);
+const configuredConnectRetryMs = Number(process.env.TIKTOK_CONNECT_RETRY_MS || 5000);
+const connectRetryMs = Number.isFinite(configuredConnectRetryMs)
+  ? Math.max(1000, configuredConnectRetryMs)
+  : 5000;
 
 console.log('Live IA — Protótipo TikTok LIVE');
 console.log(`Tentando conectar em @${username}...`);
@@ -28,6 +38,9 @@ console.log(`Modo IA: comentários iniciados por ${aiConfig.trigger} ou ${aiConf
 console.log(`Modelo IA: ${aiConfig.model}`);
 console.log(
   `TTS: ${ttsConfig.enabled ? 'ativado' : 'desativado'} | provedor=${ttsConfig.provider} voz=${ttsConfig.voice || 'automática-pt-BR'} velocidade=${ttsConfig.rate}`,
+);
+console.log(
+  `Cena LIVE: ${sceneConfig.enabled ? 'ativada' : 'desativada'} | variante=${sceneConfig.variant}`,
 );
 if (ttsConfig.error) {
   console.error(`[ERRO TTS] latencia_ms=0 | ${ttsConfig.error}`);
@@ -50,6 +63,14 @@ if (aiKeyInfo.configured) {
   }
 }
 
+try {
+  await liveScene.start();
+} catch (error) {
+  console.error(`[ERRO CENA LIVE] ${error instanceof Error ? error.message : error}`);
+  console.error('A LIVE não será iniciada sem os três ativos visuais configurados.');
+  process.exit(1);
+}
+
 console.log('Pressione Ctrl+C para encerrar.\n');
 
 // A versão 2.4.4 acessa propriedades de options durante a construção.
@@ -57,6 +78,7 @@ console.log('Pressione Ctrl+C para encerrar.\n');
 const connection = new TikTokLiveConnection(username, {
   processInitialData: false,
 });
+let shuttingDown = false;
 
 connection.on(ControlEvent.ERROR, (error) => {
   const info = error?.info || 'sem-info';
@@ -129,6 +151,7 @@ async function maybeGenerateAiReply(user, comment) {
   const aiStartedAt = performance.now();
 
   try {
+    await liveScene.showThinking({ user, comment: selectedText });
     const result = await generateAiReply({ user, comment: selectedText });
     const latencyMs = Math.round(performance.now() - aiStartedAt);
 
@@ -138,13 +161,21 @@ async function maybeGenerateAiReply(user, comment) {
 
     console.log(`[RESPOSTA IA] modelo=${result.model} latencia_ms=${latencyMs}`);
     console.log(`[RESPOSTA IA] @${user}: ${result.text}`);
-    await speakText(result.text);
+    await liveScene.speak(result.text, {
+      speaker: speakText,
+      metadata: { user, comment: selectedText },
+    });
   } catch (error) {
     const latencyMs = Math.round(performance.now() - aiStartedAt);
     console.error(
       `[ERRO IA] latencia_ms=${latencyMs} | ${error instanceof Error ? error.message : error}`,
     );
   } finally {
+    try {
+      await liveScene.ensureIdle({ reason: 'interaction-finished', user });
+    } catch (error) {
+      console.error(`[ERRO CENA LIVE] falha ao retornar para idle: ${error instanceof Error ? error.message : error}`);
+    }
     aiBusy = false;
   }
 }
@@ -182,25 +213,47 @@ connection.on(WebcastEvent.LIKE, (data) => {
   console.log(`[LIKE] @${user} | quantidade=${count}`);
 });
 
-try {
-  const state = await connection.connect();
-  console.log(`Conectado. roomId=${state.roomId}\n`);
-} catch (error) {
-  console.error('\nFalha ao conectar na TikTok LIVE.');
-  console.error(error instanceof Error ? error.message : error);
-  console.error('\nConfirme se o usuário está realmente AO VIVO e tente novamente.');
-  process.exit(1);
-}
-
 async function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
   console.log('\nEncerrando conexão...');
   try {
     await connection.disconnect();
   } catch {
     // Nada a fazer no encerramento do protótipo.
   }
+  await liveScene.stop();
   process.exit(0);
 }
 
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+
+async function connectToLive() {
+  let attempt = 0;
+
+  while (!shuttingDown) {
+    attempt += 1;
+    try {
+      const state = await connection.connect();
+      console.log(`Conectado. roomId=${state.roomId}\n`);
+      return;
+    } catch (error) {
+      console.error('\nFalha ao conectar na TikTok LIVE.');
+      console.error(error instanceof Error ? error.message : error);
+
+      if (!connectRetryEnabled) {
+        console.error('\nConfirme se o usuário está realmente AO VIVO e tente novamente.');
+        await liveScene.stop();
+        process.exit(1);
+      }
+
+      console.log(
+        `[CONEXÃO] tentativa=${attempt} | aguardando a LIVE de @${username}; nova tentativa em ${connectRetryMs} ms.`,
+      );
+      await new Promise((resolveRetry) => setTimeout(resolveRetry, connectRetryMs));
+    }
+  }
+}
+
+await connectToLive();

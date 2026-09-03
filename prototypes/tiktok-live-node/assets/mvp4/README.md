@@ -18,9 +18,9 @@ npm run preview:spongebob
 
 O áudio embutido nos MP4s é mutado na prévia. O TTS externo continua sendo a fonte de voz dinâmica.
 
-## Variante B — influencer virtual original
+## Variante B — influencer virtual original (adiada)
 
-Ainda pendentes:
+Adiada para uma segunda etapa por decisão do usuário em 2026-09-03. Permanecem pendentes:
 
 - imagem mestre aprovada;
 - `influencer-idle-v1.mp4`;

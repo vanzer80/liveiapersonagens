@@ -4,6 +4,23 @@
 
 Validar o fluxo técnico em etapas, começando pela captura de eventos de uma TikTok LIVE.
 
+## Direção vigente — 2026-09-03
+
+Por decisão do usuário, a influencer virtual foi adiada para uma segunda etapa. O ramo Bob Esponja encerra o objetivo visual imediato do MVP 4. A prioridade atual é validar uma LIVE real com comentário elegível, resposta da IA, TTS, estados visuais e recepção de imagem e áudio por um espectador.
+
+Implementação preparada no protótipo:
+
+- `npm run live:bob -- <usuario>` ativa a cena Bob e o TTS;
+- a prévia local inicia antes da conexão com a sala;
+- o conector repete a tentativa enquanto a conta ainda não está ao vivo;
+- a cena entra em `thinking` durante a IA;
+- callbacks reais do TTS controlam `speaking` e retorno ao `idle`;
+- falha de IA ou TTS força retorno seguro ao `idle`;
+- os MP4s permanecem mutados;
+- TikTok LIVE Studio assume composição e transmissão da URL local e do áudio do sistema.
+
+Essa implementação passou em testes automatizados no Linux, mas somente o teste no Windows e a confirmação em um segundo dispositivo podem validar a transmissão.
+
 ## Sequência de validação
 
 ### Etapa 1 — Captura de eventos
@@ -89,24 +106,23 @@ A Issue #3 foi encerrada. A limitação de `aiBusy` foi preservada: ainda não h
 Pesquisa comparativa: [`research/tts-mvp3.md`](../research/tts-mvp3.md).
 
 ### Etapa 4 — Cena visual com personagem
-**Status: ESPECIFICADA; IMPLEMENTAÇÃO PENDENTE NA ISSUE #4.**
+**Status: RAMO BOB VALIDADO LOCALMENTE; INFLUENCER ADIADA.**
 
 Decisão para o protótipo:
-- usar um personagem original, humanoide e realista com aparência 3D;
-- gerar no Flow/Veo uma biblioteca de clipes verticais pré-renderizados;
+- usar o ramo Bob Esponja com a licença informada pelo usuário, sujeita à confirmação de escopo antes de uso público/comercial;
+- gerar no Flow/Veo uma biblioteca de clipes verticais pré-renderizados a partir da imagem mestre aprovada;
 - tratar os clipes como vídeo 2D, não como modelo 3D controlável em tempo real;
 - manter a fala dinâmica no adaptador TTS; os clipes principais devem ser mudos ou ter apenas ambiente;
 - aceitar sincronização labial aproximada nesta etapa;
 - preservar separação entre controlador de cena, TTS, ativos visuais e transmissão.
+- manter a influencer documentada, mas adiada para uma segunda etapa.
 
 Estados iniciais:
 - `idle`;
-- `listening` ou `thinking`;
+- `thinking`;
 - `speaking`;
-- `thanks-small-gift`;
-- `thanks-special-gift`;
-- `celebrate-like-goal`;
-- `laugh` ou `surprise`.
+
+Estados de presentes, comemoração e surpresa permanecem posteriores.
 
 Contrato técnico pretendido:
 
@@ -119,13 +135,15 @@ evento TikTok
   → retorno ao estado idle
 ```
 
-O primeiro resultado deve ser uma prévia local vertical com transições de estado e áudio sincronizado de forma aceitável. OBS/TikTok LIVE Studio e o envio efetivo do áudio aos espectadores continuam na Etapa 6.
+O ramo Bob cumpriu o primeiro resultado: prévia vertical com ativos reais, `idle → thinking → speaking → idle`, áudio externo, retorno seguro e sincronização por callbacks. O último smoke test no Windows registrou início do `speaking` 1 ms após o callback. Não repetir esse teste por rotina.
 
-### Etapa 5 — Presentes e prioridades
-Adicionar eventos de presentes e regras de prioridade após validar disponibilidade e confiabilidade técnica.
+### Etapa 5 — Bob em LIVE real
+**Status: IMPLEMENTADO NO CÓDIGO; TESTE AUDIOVISUAL REAL PENDENTE.**
 
-### Etapa 6 — Live real
-Rodar o fluxo completo em ambiente real e medir estabilidade e qualidade da experiência.
+Validar a composição pelo TikTok LIVE Studio e confirmar em um celular de espectador que imagem e TTS chegam juntos. O primeiro teste usa somente comentários iniciados por `ia` ou `!ia`.
+
+### Etapa 6 — Presentes e prioridades
+Adicionar agradecimento de presentes, fila e regras de prioridade somente depois da validação audiovisual da Etapa 5.
 
 ## Princípios
 

@@ -1,13 +1,15 @@
 # MVP 4 — Ativos visuais
 
-Status: **EM IMPLEMENTAÇÃO**.
+Status: **RAMO BOB CONCLUÍDO PARA O PROTÓTIPO LOCAL**.
 
-O MVP 4 compara duas variantes visuais usando o mesmo pipeline técnico, controlador de estados e TTS:
+Direção atual, decidida em 2026-09-03: a influencer virtual foi adiada para uma segunda etapa. O projeto seguirá primeiro para a transmissão prática do Bob Esponja em TikTok LIVE real.
+
+O plano original do MVP 4 comparava duas variantes visuais usando o mesmo pipeline técnico, controlador de estados e TTS:
 
 - **Variante A — Bob Esponja licenciado**, conforme licença informada pelo usuário; o escopo contratual ainda deve ser confirmado antes de LIVE pública/uso comercial.
 - **Variante B — influencer virtual feminina original**, sem semelhança intencional com celebridade ou influenciadora real.
 
-A especificação anterior de um host masculino original foi substituída por este teste comparativo.
+A especificação anterior de um host masculino original foi substituída por esse teste comparativo. A decisão vigente conclui primeiro o ramo Bob e adia a comparação com a influencer.
 
 ## Objetivo do MVP 4
 
@@ -56,13 +58,15 @@ O usuário confirmou funcionamento e voz audível no PC.
 
 A primeira versão usou atraso fixo de 450 ms antes de entrar em `speaking`. Como a geração real do TTS levou 1813 ms, o visual podia antecipar o áudio em cerca de 1,36 s.
 
-O smoke test foi atualizado para observar o sinal de início da reprodução do TTS e só então trocar para `speaking`. Esse ajuste é provisório e precisa ser validado novamente no Windows. O contrato definitivo deve usar evento/callback explícito no adaptador TTS, sem depender de logs.
+O atraso fixo foi removido. O adaptador TTS passou a expor callbacks explícitos `onPlaybackStart` e `onPlaybackEnd`. O teste final no Windows registrou início do `speaking` 1 ms após o callback, reprodução por 12456 ms e retorno a `idle`. A sincronização do ramo Bob está concluída para o protótipo.
 
 ### Qualidade de voz
 
 O usuário descreveu `Microsoft Maria Desktop` como robotizada. Essa voz continua suficiente como fallback/prova técnica, mas uma alternativa neural pt-BR deve ser comparada depois da sincronização, considerando naturalidade, latência, custo e integração.
 
 ## Variante B — influencer virtual original
+
+**ADIADA PARA SEGUNDA ETAPA por decisão do usuário em 2026-09-03.** O material abaixo permanece apenas como referência futura e não bloqueia a transmissão do Bob.
 
 ### Direção visual
 
@@ -105,10 +109,10 @@ Create an original adult female virtual influencer, around 25–30 years old, wi
 
 ## Próximos passos
 
-1. repetir `npm run preview:spongebob` com a nova sinalização provisória de playback e confirmar o início do `speaking` junto da voz;
-2. evoluir o adaptador TTS para evento/callback explícito de playback;
-3. comparar um TTS neural pt-BR para naturalidade;
-4. gerar e aprovar a imagem mestre da influencer;
-5. gerar `idle`, `thinking` e `speaking` da influencer;
-6. executar a mesma prévia local na variante influencer;
-7. somente depois comparar as duas variantes em contexto mais próximo da LIVE.
+1. executar `npm run live:bob -- <usuario>`;
+2. adicionar `http://127.0.0.1:3333` à cena vertical do TikTok LIVE Studio;
+3. habilitar captura do áudio do sistema;
+4. confirmar em outro celular que o espectador recebe imagem e TTS;
+5. validar duas respostas consecutivas iniciadas por `ia` ou `!ia`;
+6. depois implementar agradecimento de presentes, fila e prioridades;
+7. comparar TTS neural e retomar a influencer em etapa posterior.

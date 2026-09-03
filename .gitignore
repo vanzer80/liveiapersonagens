@@ -20,3 +20,8 @@ Thumbs.db
 *.log
 tmp/
 temp/
+
+# Licensed/generated visual assets stay in the official Google Drive.
+prototypes/tiktok-live-node/assets/mvp4/*.mp4
+prototypes/tiktok-live-node/assets/mvp4/*.mov
+prototypes/tiktok-live-node/assets/mvp4/*.wav
