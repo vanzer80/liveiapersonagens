@@ -9,7 +9,7 @@ Objetivo: validar incrementalmente o fluxo `TikTok LIVE → IA → TTS → cena 
 - **MVP 1 — captura TikTok LIVE:** VALIDADO em LIVE real.
 - **MVP 2 — resposta textual com IA:** VALIDADO em LIVE real.
 - **MVP 3 — TTS local:** VALIDADO no Windows e em LIVE real com voz pt-BR.
-- **MVP 4 — cena visual:** EM IMPLEMENTAÇÃO; o primeiro preview local real do ramo Bob já executou `idle → thinking → speaking → idle` com os três MP4s aprovados e TTS externo.
+- **MVP 4 — cena visual:** EM IMPLEMENTAÇÃO; o ramo Bob já executou `idle → thinking → speaking → idle` com ativos reais, TTS externo e sincronização aproximada validada.
 
 No MVP 4, o controlador suporta duas variantes (`spongebob` e `influencer`) e os testes isolados da lógica de cena estão aprovados. Para a variante Bob Esponja, a imagem mestre e os três clipes iniciais já foram aprovados no Google Drive oficial:
 
@@ -17,43 +17,44 @@ No MVP 4, o controlador suporta duas variantes (`spongebob` e `influencer`) e os
 - `spongebob-thinking-v1.mp4`
 - `spongebob-speaking-v1.mp4`
 
-## Primeiro preview local real — 2026-09-03
+## Previews locais reais — 2026-09-03
 
-O usuário executou `npm run preview:spongebob` no Windows com os três ativos reais. A prévia abriu no navegador e os logs registraram:
+No primeiro teste real, o fluxo completo funcionou e retornou ao `idle`, mas o atraso fixo de 450 ms mostrou-se inadequado porque a geração do TTS levou 1813 ms.
+
+No segundo teste, a transição passou a usar o sinal real de playback e registrou:
 
 ```text
-idle -> thinking -> speaking -> idle
+sync_mode=tts-playback-signal
+speaking_inicio_apos_playback_ms=12
+speaking_visivel_ms=12484
+voz=Microsoft Maria Desktop
+idioma=pt-BR
+geracao_ms=1252
+reproducao_ms=12493
 estado_final=idle
 ```
 
-Medições:
+O resultado de **12 ms** é aceitável para a sincronização aproximada prevista no MVP. O atraso fixo foi descartado.
+
+### Contrato de sincronização atual
+
+Após essa evidência, o adaptador `tts.js` passou a expor callbacks opcionais:
+
+- `onPlaybackStart`: chamado após a geração do áudio e imediatamente antes de iniciar a reprodução;
+- `onPlaybackEnd`: chamado após a reprodução terminar.
+
+O `scene-smoke.js` usa esses callbacks para controlar `speaking`, sem interceptar mensagens de log. O próximo smoke test deve registrar:
 
 ```text
-voz=Microsoft Maria Desktop
-idioma=pt-BR
-geracao_ms=1813
-reproducao_ms=12714
-speaking_visivel_ms=14083
+[TESTE CENA] sync_mode=tts-playback-callback
+[TESTE CENA] speaking_inicio_apos_callback_ms=...
 ```
 
-O áudio dos MP4s ficou mutado e o TTS externo foi ouvido no PC. O usuário confirmou que o fluxo funcionou.
-
-### Sincronização — ajuste implementado, reteste pendente
-
-A primeira versão do smoke test usava `450 ms` como atraso estimado antes de entrar em `speaking`. Como a geração real nessa execução levou `1813 ms`, o visual podia começar aproximadamente `1,36 s` antes da voz.
-
-O `scene-smoke.js` foi atualizado para não depender mais desse atraso fixo no caminho do teste: agora ele observa o sinal de que o TTS entrou em reprodução e só então solicita o estado `speaking`. O próximo `npm run preview:spongebob` deve registrar:
-
-```text
-[TESTE CENA] sync_mode=tts-playback-signal
-[TESTE CENA] speaking_inicio_apos_playback_ms=...
-```
-
-Esse ajuste é provisório para o smoke test e ainda precisa ser validado no Windows. A arquitetura final deve expor um evento/callback explícito de playback no adaptador TTS, em vez de acoplar a cena a mensagens de log.
+Os callbacks são opcionais para manter compatibilidade com chamadas anteriores de `speakText`.
 
 ### Qualidade da voz
 
-O usuário descreveu `Microsoft Maria Desktop` como **robotizada**. Isso não invalida o fluxo técnico; `windows-sapi` continua útil como fallback/prova de arquitetura. Depois do ajuste de sincronização, deve ser comparada uma opção neural em PT-BR considerando naturalidade, latência, custo e facilidade de integração.
+O usuário descreveu `Microsoft Maria Desktop` como **robotizada**. Isso não invalida o fluxo técnico; `windows-sapi` continua útil como fallback/prova de arquitetura. A próxima comparação de TTS deve usar uma opção neural em PT-BR considerando naturalidade, latência, custo e facilidade de integração.
 
 ## Requisitos
 
@@ -130,9 +131,9 @@ O comando:
 3. inicia em `idle`;
 4. troca para `thinking`, simulando que uma pergunta chegou;
 5. gera o TTS de uma frase de teste;
-6. ao sinal de início da reprodução do TTS, troca para `speaking`;
+6. usa `onPlaybackStart` para trocar para `speaking`;
 7. mantém o vídeo `speaking` durante a reprodução;
-8. volta automaticamente ao `idle` quando o TTS termina;
+8. usa o fim do playback para concluir o ciclo e volta automaticamente ao `idle`;
 9. deixa a prévia aberta em `idle` até `Ctrl+C`.
 
 O áudio existente dentro dos MP4s fica **mutado no navegador**. A única voz considerada no teste é o TTS externo.
@@ -150,7 +151,7 @@ SCENE_THINKING_MS=3000
 SCENE_PREVIEW_PORT=3333
 ```
 
-`SCENE_TTS_LEAD_MS` não é mais necessário no smoke test atualizado.
+`SCENE_TTS_LEAD_MS` não é mais usado.
 
 ## Executar captura/IA/TTS em TikTok LIVE
 
@@ -170,8 +171,7 @@ A lógica do controlador de cena cobre seleção de variante, transições, esta
 
 ## Próximos critérios do MVP 4
 
-- repetir o preview no Windows com a sinalização de playback e confirmar `speaking` iniciando junto da voz;
-- substituir depois o sinal provisório por evento/callback explícito no adaptador TTS;
+- fazer um smoke test de regressão no Windows após o refactor para callbacks explícitos;
 - comparar uma alternativa neural PT-BR para reduzir a sensação de voz robotizada;
 - gerar/aprovar imagem mestre e três clipes da influencer original;
 - validar a mesma arquitetura nas duas variantes antes de transmissão real.
