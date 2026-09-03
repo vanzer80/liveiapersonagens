@@ -51,7 +51,7 @@ Limitação preservada para etapa futura:
 - continuar registrando mudanças de disponibilidade dos modelos gratuitos.
 
 ### Etapa 3 — TTS
-**Status: TTS LOCAL VALIDADO NO WINDOWS; VALIDAÇÃO EM LIVE REAL PENDENTE.**
+**Status: VALIDADA NO WINDOWS E INTEGRADA EM LIVE REAL.**
 
 Implementado no protótipo:
 - transformar a resposta textual validada em áudio;
@@ -73,12 +73,53 @@ Validado no Windows em 2026-09-03:
 
 Hipótese provisória: `System.Speech.Synthesis.SpeechSynthesizer` do Windows foi escolhido por não exigir conta, chave ou pagamento. Naturalidade e adequação da voz ao personagem ainda precisam ser avaliadas; o fornecedor continua substituível.
 
-A Issue #3 permanece aberta até o comentário real produzir texto e voz durante uma TikTok LIVE e a continuidade dos eventos ser confirmada. A limitação de `aiBusy` foi preservada: não há fila nesta etapa.
+Validado em LIVE real em 2026-09-03:
+- comentários comuns permaneceram somente como comentários e não acionaram IA nem TTS;
+- duas respostas reais do modelo principal foram convertidas em voz;
+- geração do TTS em `455 ms` e `377 ms`;
+- reprodução em `7699 ms` e `7072 ms`;
+- o usuário confirmou que ouviu as duas respostas;
+- um comentário simultâneo foi recebido e ignorado com segurança por `aiBusy`;
+- uma nova interação foi processada após a primeira reprodução, confirmando continuidade.
+
+O som permaneceu somente no dispositivo de áudio do PC. Isso é esperado: o MVP 3 gera e reproduz voz localmente, mas ainda não compõe nem envia áudio e vídeo ao TikTok. O tratamento de configuração inválida já é coberto por teste automatizado e retorna erro de TTS sem lançar exceção; a injeção de falha durante LIVE fica registrada como teste de regressão não bloqueante.
+
+A Issue #3 foi encerrada. A limitação de `aiBusy` foi preservada: ainda não há fila.
 
 Pesquisa comparativa: [`research/tts-mvp3.md`](../research/tts-mvp3.md).
 
-### Etapa 4 — Avatar
-Integrar representação visual somente depois que captura, decisão e voz estiverem funcionando.
+### Etapa 4 — Cena visual com personagem
+**Status: ESPECIFICADA; IMPLEMENTAÇÃO PENDENTE NA ISSUE #4.**
+
+Decisão para o protótipo:
+- usar um personagem original, humanoide e realista com aparência 3D;
+- gerar no Flow/Veo uma biblioteca de clipes verticais pré-renderizados;
+- tratar os clipes como vídeo 2D, não como modelo 3D controlável em tempo real;
+- manter a fala dinâmica no adaptador TTS; os clipes principais devem ser mudos ou ter apenas ambiente;
+- aceitar sincronização labial aproximada nesta etapa;
+- preservar separação entre controlador de cena, TTS, ativos visuais e transmissão.
+
+Estados iniciais:
+- `idle`;
+- `listening` ou `thinking`;
+- `speaking`;
+- `thanks-small-gift`;
+- `thanks-special-gift`;
+- `celebrate-like-goal`;
+- `laugh` ou `surprise`.
+
+Contrato técnico pretendido:
+
+```text
+evento TikTok
+  → decisão e resposta da IA
+  → TTS dinâmico
+  → controlador escolhe o estado visual
+  → compositor local reproduz o clipe correspondente
+  → retorno ao estado idle
+```
+
+O primeiro resultado deve ser uma prévia local vertical com transições de estado e áudio sincronizado de forma aceitável. OBS/TikTok LIVE Studio e o envio efetivo do áudio aos espectadores continuam na Etapa 6.
 
 ### Etapa 5 — Presentes e prioridades
 Adicionar eventos de presentes e regras de prioridade após validar disponibilidade e confiabilidade técnica.
