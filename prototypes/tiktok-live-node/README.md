@@ -1,81 +1,43 @@
 # Protótipo TikTok LIVE — Node.js
 
-Objetivo atual: validar o fluxo incremental do projeto. Captura e resposta textual estão validadas; a próxima etapa é TTS local/terminal.
+Objetivo: validar incrementalmente o fluxo `TikTok LIVE → IA → TTS → cena visual`, sem antecipar transmissão completa ou produto final.
 
-> Este protótipo usa uma biblioteca comunitária/não oficial baseada em engenharia reversa. Ele serve para validação técnica e não representa uma escolha definitiva para produção/comercialização.
+> A captura atual usa uma biblioteca comunitária/não oficial. Ela serve ao protótipo e não representa uma decisão comercial definitiva.
 
 ## Estado atual
 
-### MVP 1 — Captura de eventos
-VALIDADO em teste real:
-- conexão com LIVE ativa;
-- entrada de usuários;
-- comentários em tempo real;
-- identificação do usuário;
-- texto completo do comentário com extração robusta por múltiplos campos do payload.
+- **MVP 1 — captura TikTok LIVE:** VALIDADO em LIVE real.
+- **MVP 2 — resposta textual com IA:** VALIDADO em LIVE real.
+- **MVP 3 — TTS local:** VALIDADO no Windows e em LIVE real com voz pt-BR.
+- **MVP 4 — cena visual:** EM IMPLEMENTAÇÃO.
 
-### MVP 2 — Resposta textual com IA
-VALIDADO em TikTok LIVE real:
-- comentários iniciados por `!ia` ou `ia` são selecionados para a IA;
-- comentários comuns não acionam o modelo;
-- resposta curta em PT-BR aparece no terminal;
-- erros e fallbacks não derrubam a captura;
-- modelo principal e fallbacks são configuráveis;
-- fallback real já foi validado com `minimax/minimax-m3:free`;
-- a amostra final produziu cinco respostas com latências de `6890`, `2653`, `1548`, `2283` e `1621 ms`;
-- média de `2999 ms`, mediana de `2283 ms`, mínimo de `1548 ms` e máximo de `6890 ms`;
-- a LIVE continuou recebendo eventos durante e depois das respostas;
-- a Issue #2 foi encerrada como concluída.
+No MVP 4, o controlador suporta duas variantes (`spongebob` e `influencer`) e os testes isolados da lógica de cena estão aprovados. Para a variante Bob Esponja, a imagem mestre e os três clipes iniciais já foram aprovados no Google Drive oficial:
 
-Limitação registrada: enquanto `aiBusy` está ativo, outro comentário elegível é ignorado. Isso protege o protótipo contra chamadas simultâneas, mas uma fila ou regra de prioridade será necessária antes da live completa.
+- `spongebob-idle-v1.mp4`
+- `spongebob-thinking-v1.mp4`
+- `spongebob-speaking-v1.mp4`
 
-A escolha de OpenRouter, Nemotron e MiniMax continua sendo hipótese de protótipo, não decisão definitiva de arquitetura ou fornecedor.
-
-### MVP 3 — TTS local
-
-VALIDADO LOCALMENTE NO WINDOWS; LIVE REAL PENDENTE:
-
-- `src/tts.js` separa o TTS da captura e da IA;
-- o primeiro provedor é `windows-sapi`, usando `System.Speech` e uma voz instalada no Windows;
-- não exige nova conta, chave ou pagamento;
-- prefere automaticamente uma voz `pt-BR` quando `TTS_VOICE` está vazio;
-- gera um WAV temporário, reproduz de forma síncrona e remove o arquivo;
-- remove Markdown técnico, emojis e URLs antes da fala;
-- registra geração, voz efetiva, idioma, latência e duração da reprodução;
-- erro de TTS não encerra a LIVE nem apaga a resposta textual;
-- `npm run test:tts` permite testar sem TikTok.
-
-O teste local selecionou `Microsoft Maria Desktop` em `pt-BR`, gerou o WAV em 884 ms e concluiu uma reprodução audível de 7508 ms. `windows-sapi` continua sendo somente uma hipótese reversível do protótipo. A Issue #3 deve permanecer aberta até o teste integrado em LIVE real.
+O próximo critério é executar a prévia local real `idle → thinking → speaking + TTS → idle`.
 
 ## Requisitos
 
-- Node.js 20 ou superior
-- npm
-- um usuário do TikTok que esteja AO VIVO no momento do teste
+- Windows 11 para o teste de voz atual;
+- Node.js 20 ou superior;
+- npm;
+- os três MP4 aprovados do Bob Esponja copiados para `assets/mvp4/`.
 
 ## Instalação
 
-No terminal, entre nesta pasta:
+No terminal:
 
 ```bash
-cd prototypes/tiktok-live-node
+cd C:\liveiapersonagens\prototypes\tiktok-live-node
 npm install
 ```
 
-## Configurar IA e TTS
+## Configuração de IA e TTS
 
-A hipótese atual de protótipo usa uma API compatível com OpenAI via OpenRouter. Isso não é uma decisão definitiva de arquitetura.
-
-1. Copie `.env.example` para `.env`.
-2. Coloque sua chave no campo `OPENROUTER_API_KEY`.
-3. O modelo principal permanece configurável por `AI_MODEL`.
-4. Os modelos de fallback podem ser definidos por `AI_FALLBACK_MODELS`, separados por vírgula.
-5. A configuração de exemplo atual usa `nvidia/nemotron-3.5-lightning:free` como principal e fallbacks gratuitos específicos.
-6. A disponibilidade de modelos gratuitos pode mudar sem aviso; por isso o fallback automático faz parte da robustez do protótipo.
-
-O arquivo `.env` está ignorado pelo Git e não deve ser enviado ao repositório. Em máquinas já configuradas, `git pull` não altera o valor de `AI_MODEL` dentro do `.env` local. Mesmo assim, o código passa a tentar fallbacks automaticamente após o pull.
-
-Para ativar a voz durante a LIVE, acrescente ao `.env`:
+O `.env` permanece local e não deve ser enviado ao GitHub. Para o TTS atual:
 
 ```env
 TTS_ENABLED=true
@@ -84,88 +46,86 @@ TTS_VOICE=
 TTS_RATE=0
 ```
 
-Com `TTS_VOICE` vazio, o adaptador procura primeiro uma voz `pt-BR` instalada. `TTS_RATE` aceita um número inteiro entre `-10` e `10`.
+Com `TTS_VOICE` vazio, o adaptador prefere uma voz `pt-BR` instalada no Windows.
 
-Se nenhuma voz brasileira estiver disponível, instale uma voz em **Configurações do Windows → Hora e idioma → Fala → Gerenciar vozes** e repita o teste.
-
-## Executar
-
-```bash
-npm start -- nome_do_usuario
-```
-
-Pode usar com ou sem `@`.
-
-Exemplo:
-
-```bash
-npm start -- @criador
-```
-
-## Teste controlado da IA
-
-Comentários comuns continuam apenas sendo exibidos:
-
-```text
-[COMENTÁRIO] @usuario: oi pessoal
-```
-
-Para chamar a IA no MVP 2, envie um comentário começando por `!ia` ou por `ia`:
-
-```text
-!ia qual sua opinião sobre isso?
-```
-
-ou:
-
-```text
-ia qual sua opinião sobre isso?
-```
-
-Saída esperada quando algum dos modelos disponíveis responder corretamente:
-
-```text
-[DECISÃO IA] @usuario: selecionado.
-[ENTRADA IA] @usuario: qual sua opinião sobre isso?
-[RESPOSTA IA] modelo=... latencia_ms=...
-[RESPOSTA IA] @usuario: ...
-```
-
-Quando o modelo principal falhar e um fallback responder, o terminal também registra:
-
-```text
-[FALLBACK IA] principal=... utilizado=...
-[RESPOSTA IA] modelo=... latencia_ms=...
-```
-
-`latencia_ms` mede o tempo total desde o início da chamada até a resposta final, incluindo tentativas de fallback. Em caso de falha completa, o tempo também aparece em `[ERRO IA]`.
-
-A regra de gatilho é temporária e existe para evitar chamadas em todos os comentários durante a validação técnica.
-
-## Teste controlado do TTS sem LIVE
-
-No Windows, execute:
+## Teste controlado do TTS
 
 ```bash
 npm run test:tts
 ```
 
-O teste usa uma frase curta em português, mesmo que `TTS_ENABLED` ainda esteja ausente no `.env`. Também é possível passar outra frase:
+Também é possível fornecer outra frase:
 
 ```bash
 npm run test:tts -- "Olá, este é outro teste de voz."
 ```
 
-Saída esperada:
+## MVP 4 — preparar ativos locais
+
+Copie os três arquivos aprovados para:
 
 ```text
-[TTS] gerando | provedor=windows-sapi voz=automática-pt-BR
-[TTS] áudio gerado | provedor=windows-sapi voz=... idioma=pt-BR latencia_ms=...
-[TTS] reproduzindo...
-[TTS] concluído | duracao_ms=...
+C:\liveiapersonagens\prototypes\tiktok-live-node\assets\mvp4\
 ```
 
-Em Linux ou em um ambiente sem PowerShell/dispositivo de áudio, o teste termina com `[ERRO TTS]` sem afetar os testes automatizados. Isso não valida nem invalida a reprodução no Windows.
+A pasta deve ficar assim:
+
+```text
+assets\mvp4\
+  spongebob-idle-v1.mp4
+  spongebob-thinking-v1.mp4
+  spongebob-speaking-v1.mp4
+```
+
+Os MP4s não são versionados automaticamente pelo fluxo atual do repositório; a fonte oficial desses ativos é o Google Drive do projeto.
+
+## MVP 4 — teste local integrado do Bob Esponja
+
+Execute:
+
+```bash
+npm run preview:spongebob
+```
+
+O comando:
+
+1. verifica se os três MP4s estão presentes;
+2. abre automaticamente uma prévia vertical no navegador em `http://127.0.0.1:3333`;
+3. inicia em `idle`;
+4. troca para `thinking`, simulando que uma pergunta chegou;
+5. inicia o TTS de uma frase de teste;
+6. troca aproximadamente junto do áudio para `speaking`;
+7. mantém o vídeo `speaking` enquanto o TTS reproduz;
+8. volta automaticamente ao `idle` quando o TTS termina;
+9. deixa a prévia aberta em `idle` até `Ctrl+C`.
+
+O áudio existente dentro dos MP4s fica **mutado no navegador**. A única voz que deve ser considerada no teste é o TTS externo.
+
+Uma frase diferente pode ser passada diretamente:
+
+```bash
+npm run preview:spongebob -- "Oi! Estou respondendo a uma pergunta da live agora."
+```
+
+### Ajustes opcionais
+
+Se necessário, os tempos podem ser ajustados por variáveis de ambiente:
+
+```env
+SCENE_THINKING_MS=3000
+SCENE_TTS_LEAD_MS=450
+SCENE_PREVIEW_PORT=3333
+```
+
+`SCENE_TTS_LEAD_MS` é provisório: usa como referência as latências de geração observadas no TTS já validado para aproximar o início do `speaking` do início da reprodução da voz. Se o teste mostrar diferença perceptível, esse ponto será refinado antes da integração em LIVE real.
+
+## Executar captura/IA/TTS em TikTok LIVE
+
+```bash
+npm start -- nome_do_usuario
+```
+
+Comentários iniciados por `!ia` ou `ia` acionam o fluxo de IA. Comentários comuns continuam sendo apenas registrados no terminal.
 
 ## Testes automatizados
 
@@ -173,39 +133,18 @@ Em Linux ou em um ambiente sem PowerShell/dispositivo de áudio, o teste termina
 npm test
 ```
 
-Os testes cobrem normalização do texto e configuração segura do adaptador. A geração e a reprodução reais dependem do Windows e devem ser confirmadas com `npm run test:tts`.
+A lógica do controlador de cena cobre seleção de variante, transições, estado desconhecido e fallback restrito à mesma família visual.
 
-## Eventos do MVP 1
+## Critério de aprovação do teste local do MVP 4
 
-Durante a live, eventos aparecem aproximadamente assim:
+Considerar o primeiro teste integrado do Bob aprovado quando for observado:
 
-```text
-[COMENTÁRIO] @usuario: mensagem
-[ENTRADA] @usuario
-[LIKE] @usuario | quantidade=5
-[PRESENTE] @usuario | giftId=1234
-```
+- `idle` reproduzindo normalmente no início;
+- mudança clara para `thinking`;
+- mudança para `speaking` próxima do início da voz;
+- MP4s sem áudio próprio audível;
+- `speaking` permanecendo visualmente ativo durante o TTS;
+- retorno automático para `idle` ao fim da voz;
+- nenhuma quebra do processo caso um ativo esteja ausente — o controlador deve tratar o erro/fallback de forma segura.
 
-## Resultado da validação final do MVP 2
-
-A bateria final confirmou cinco respostas bem-sucedidas com `nvidia/nemotron-3.5-lightning:free`:
-
-| Chamada | Latência |
-|---|---:|
-| 1 | 6890 ms |
-| 2 | 2653 ms |
-| 3 | 1548 ms |
-| 4 | 2283 ms |
-| 5 | 1621 ms |
-
-Critérios confirmados:
-- resposta curta, natural e coerente em PT-BR;
-- comentários comuns não geram chamada à IA;
-- eventos continuam chegando durante e depois da resposta;
-- medição automática de latência funciona;
-- uso de fallback é registrado separadamente;
-- reconexão manual à mesma LIVE funciona.
-
-## Próxima etapa — MVP 3 em LIVE real
-
-Ativar o TTS no `.env` e executar a validação integrada em TikTok LIVE. O MVP 3 só será encerrado quando um comentário elegível gerar texto e voz, um comentário comum não chamar IA/TTS e os eventos continuarem chegando durante e depois do áudio.
+Somente depois desse teste local deve ser ligada a cena visual ao fluxo real de comentários da TikTok LIVE.
