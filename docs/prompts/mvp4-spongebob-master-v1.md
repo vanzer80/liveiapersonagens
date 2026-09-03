@@ -1,6 +1,10 @@
 # MVP 4 — Prompt mestre V1 — Bob Esponja
 
-Status: **candidato para geração da primeira imagem mestre**. Não considerar aprovado até revisão visual do usuário.
+Status: **APROVADO em 2026-09-03**. A opção 1 enviada pelo usuário é a imagem mestre oficial da variante Bob Esponja.
+
+Ativo oficial no Google Drive do projeto: `mvp4-spongebob-master-v1-approved.jpeg`.
+
+A partir desta aprovação, todos os clipes `spongebob-idle-v1.mp4`, `spongebob-thinking-v1.mp4` e `spongebob-speaking-v1.mp4` devem usar essa imagem como referência visual estrita. Não regenerar uma nova identidade mestre sem nova decisão registrada.
 
 ## Objetivo
 
@@ -27,3 +31,7 @@ Continuity lock for all future assets: this exact SpongeBob face, eye shape, bod
 IMPORTANT CONSTRAINTS: one SpongeBob only; no Patrick, Squidward, Sandy, Mr. Krabs or any other character; no text; no subtitles; no captions; no logos; no watermark; no UI; no speech bubble; no microphone blocking the face; no headset covering the face; no costume changes; no extra limbs; no duplicated hands; no deformed fingers; no distorted eyes; no asymmetric teeth; no background character silhouettes; no camera movement; no extreme facial expression.
 
 Final result should look like a clean, premium master promotional frame for an interactive SpongeBob AI livestream: instantly recognizable, friendly, colorful, technically stable, easy to animate, and suitable as the strict visual reference for idle, thinking and speaking video states.
+
+## Próximo passo
+
+Gerar `spongebob-idle-v1.mp4` no Flow/Veo usando exclusivamente a imagem mestre aprovada como ingredient/referência principal. Depois revisar consistência visual antes de avançar para `thinking` e `speaking`.
