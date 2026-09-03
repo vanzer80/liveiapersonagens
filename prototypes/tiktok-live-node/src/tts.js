@@ -99,7 +99,6 @@ function runPowerShell(script, extraEnv = {}) {
       }
       resolve(stdout.trim());
     });
-
   });
 }
 
@@ -196,7 +195,20 @@ async function readTtsMetadata(metadataPath) {
   }
 }
 
-export async function speakText(value, { force = false } = {}) {
+async function invokeLifecycleHook(hook, payload, hookName) {
+  if (typeof hook !== 'function') return;
+  try {
+    await hook(payload);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[ERRO TTS] callback=${hookName} | ${message}`);
+  }
+}
+
+export async function speakText(
+  value,
+  { force = false, onPlaybackStart = null, onPlaybackEnd = null } = {},
+) {
   const operationStartedAt = performance.now();
   let temporaryDirectory = null;
   const config = getTtsConfig();
@@ -244,6 +256,15 @@ export async function speakText(value, { force = false } = {}) {
     console.log(
       `[TTS] áudio gerado | provedor=${config.provider} voz=${voiceInfo.voice} idioma=${voiceInfo.culture} latencia_ms=${generationLatencyMs}`,
     );
+
+    const playbackContext = {
+      provider: config.provider,
+      voice: voiceInfo.voice,
+      culture: voiceInfo.culture,
+      generationLatencyMs,
+    };
+
+    await invokeLifecycleHook(onPlaybackStart, playbackContext, 'onPlaybackStart');
     console.log('[TTS] reproduzindo...');
 
     const playbackStartedAt = performance.now();
@@ -251,6 +272,11 @@ export async function speakText(value, { force = false } = {}) {
     const playbackDurationMs = Math.round(performance.now() - playbackStartedAt);
 
     console.log(`[TTS] concluído | duracao_ms=${playbackDurationMs}`);
+    await invokeLifecycleHook(
+      onPlaybackEnd,
+      { ...playbackContext, playbackDurationMs },
+      'onPlaybackEnd',
+    );
 
     return {
       ok: true,
