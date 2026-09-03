@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getTtsConfig, normalizeTextForSpeech, speakText } from '../src/tts.js';
+import {
+  getTtsConfig,
+  normalizeTextForSpeech,
+  parseTtsMetadata,
+  speakText,
+} from '../src/tts.js';
 
 test('normaliza Markdown, emoji e URL sem perder o sentido', () => {
   const input = '**Olá** `pessoal`! Veja [o projeto](https://example.com/projeto) 🚀 https://example.com';
@@ -10,6 +15,17 @@ test('normaliza Markdown, emoji e URL sem perder o sentido', () => {
 test('remove bloco de código e normaliza espaços', () => {
   const input = 'Resposta: ```js\nconst segredo = 1;\n``` tudo certo.';
   assert.equal(normalizeTextForSpeech(input), 'Resposta: tudo certo.');
+});
+
+test('interpreta metadados de voz gravados em UTF-8', () => {
+  assert.deepEqual(parseTtsMetadata('\uFEFF{"voice":"Microsoft Maria","culture":"pt-BR"}\r\n'), {
+    voice: 'Microsoft Maria',
+    culture: 'pt-BR',
+  });
+});
+
+test('rejeita metadados sem identificação da voz', () => {
+  assert.throws(() => parseTtsMetadata('{"culture":"pt-BR"}'), /Metadados inesperados/);
 });
 
 test('usa configuração padrão segura quando TTS não foi habilitado', () => {

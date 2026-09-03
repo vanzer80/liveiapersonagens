@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -106,6 +106,7 @@ Add-Type -AssemblyName System.Speech
 
 $text = [Environment]::GetEnvironmentVariable('LIVEIA_TTS_TEXT')
 $outputPath = [Environment]::GetEnvironmentVariable('LIVEIA_TTS_OUTPUT')
+$metadataPath = [Environment]::GetEnvironmentVariable('LIVEIA_TTS_METADATA')
 $requestedVoice = [Environment]::GetEnvironmentVariable('LIVEIA_TTS_VOICE')
 $rate = [int][Environment]::GetEnvironmentVariable('LIVEIA_TTS_RATE')
 
@@ -138,10 +139,16 @@ try {
   $synth.Speak($text)
   $synth.SetOutputToNull()
 
-  [ordered]@{
+  $metadata = [ordered]@{
     voice = $voiceName
     culture = $voiceCulture
   } | ConvertTo-Json -Compress
+
+  [System.IO.File]::WriteAllText(
+    $metadataPath,
+    $metadata,
+    [System.Text.UTF8Encoding]::new($false)
+  )
 }
 finally {
   $synth.Dispose()
@@ -161,14 +168,27 @@ finally {
 }
 `;
 
-function parsePowerShellJson(output) {
-  const line = output.split(/\r?\n/gu).filter(Boolean).at(-1);
-  if (!line) throw new Error('O TTS não informou a voz utilizada.');
+export function parseTtsMetadata(output) {
+  const content = String(output || '').replace(/^\uFEFF/u, '').trim();
+  if (!content) throw new Error('O TTS não informou a voz utilizada.');
 
   try {
-    return JSON.parse(line);
+    const metadata = JSON.parse(content);
+    if (!metadata?.voice) throw new Error('metadata-without-voice');
+    return metadata;
   } catch {
-    throw new Error(`Resposta inesperada do TTS: ${line}`);
+    throw new Error(`Metadados inesperados do TTS: ${content}`);
+  }
+}
+
+async function readTtsMetadata(metadataPath) {
+  try {
+    return parseTtsMetadata(await readFile(metadataPath, 'utf8'));
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      throw new Error('O PowerShell concluiu sem gravar os metadados da voz.');
+    }
+    throw error;
   }
 }
 
@@ -205,15 +225,17 @@ export async function speakText(value, { force = false } = {}) {
   try {
     temporaryDirectory = await mkdtemp(join(tmpdir(), 'liveia-tts-'));
     const audioPath = join(temporaryDirectory, 'speech.wav');
+    const metadataPath = join(temporaryDirectory, 'metadata.json');
     const generationStartedAt = performance.now();
-    const output = await runPowerShell(GENERATE_WAV_SCRIPT, {
+    await runPowerShell(GENERATE_WAV_SCRIPT, {
       LIVEIA_TTS_TEXT: text,
       LIVEIA_TTS_OUTPUT: audioPath,
+      LIVEIA_TTS_METADATA: metadataPath,
       LIVEIA_TTS_VOICE: config.voice,
       LIVEIA_TTS_RATE: String(config.rate),
     });
     const generationLatencyMs = Math.round(performance.now() - generationStartedAt);
-    const voiceInfo = parsePowerShellJson(output);
+    const voiceInfo = await readTtsMetadata(metadataPath);
 
     console.log(
       `[TTS] áudio gerado | provedor=${config.provider} voz=${voiceInfo.voice} idioma=${voiceInfo.culture} latencia_ms=${generationLatencyMs}`,
