@@ -6,7 +6,12 @@ import {
   isAiConfigured,
   validateAiAuthentication,
 } from './ai.js';
-import { createLiveInteractionEngine, getInteractionConfig } from './interaction.js';
+import {
+  createLiveInteractionEngine,
+  getInteractionConfig,
+  loadInteractionLines,
+  shouldThankGift,
+} from './interaction.js';
 import { createLiveSceneRuntime, getLiveSceneConfig } from './live-scene.js';
 import { getTtsConfig, speakText } from './tts.js';
 
@@ -25,6 +30,7 @@ const aiKeyInfo = getSafeAiKeyInfo();
 const ttsConfig = getTtsConfig();
 const sceneConfig = getLiveSceneConfig();
 const interactionConfig = getInteractionConfig();
+const interactionLines = loadInteractionLines({ filePath: interactionConfig.linesFile });
 const liveScene = createLiveSceneRuntime({ config: sceneConfig });
 const connectRetryEnabled = ['1', 'true', 'yes', 'sim', 'on'].includes(
   String(process.env.TIKTOK_CONNECT_RETRY || '').trim().toLowerCase(),
@@ -49,7 +55,11 @@ console.log(
 console.log(
   `Interação: ${interactionConfig.enabled ? 'ativada' : 'modo básico'} | ` +
     `boas-vindas=${interactionConfig.welcomeEnabled ? 'sim' : 'não'} ` +
-    `fala-ambiente=${interactionConfig.ambientEnabled ? `${interactionConfig.ambientSilenceMs / 1000}s` : 'não'}`,
+    `fala-ambiente=${interactionConfig.ambientEnabled ? `${interactionConfig.ambientMinSilenceMs / 1000}-${interactionConfig.ambientMaxSilenceMs / 1000}s` : 'não'}`,
+);
+console.log(
+  `Falas: ${interactionLines.opening.length} de abertura + ` +
+    `${interactionLines.ambient.length} de ambiente | fonte=${interactionLines.source}`,
 );
 if (ttsConfig.error) {
   console.error(`[ERRO TTS] latencia_ms=0 | ${ttsConfig.error}`);
@@ -168,13 +178,14 @@ async function processAiReply({ user, comment: selectedText }) {
 
 const interactions = createLiveInteractionEngine({
   config: interactionConfig,
+  openingLines: interactionLines.opening,
+  ambientLines: interactionLines.ambient,
   speak: (text, metadata) => liveScene.speak(text, {
     speaker: speakText,
     metadata,
   }),
   answerQuestion: processAiReply,
 });
-interactions.start();
 
 function maybeQueueAiReply(user, comment) {
   const matchedTrigger = matchAiTrigger(comment);
@@ -234,7 +245,19 @@ connection.on(WebcastEvent.MEMBER, (data) => {
 connection.on(WebcastEvent.GIFT, (data) => {
   const user = data?.user?.uniqueId || data?.user?.nickname || data?.uniqueId || 'usuario-desconhecido';
   const giftId = data?.giftId ?? 'desconhecido';
-  console.log(`[PRESENTE] @${user} | giftId=${giftId}`);
+  const giftType = data?.giftDetails?.giftType ?? data?.giftType;
+  const repeatEnd = data?.repeatEnd;
+  const repeatCount = data?.repeatCount ?? 1;
+  console.log(
+    `[PRESENTE] @${user} | giftId=${giftId} repeticoes=${repeatCount} ` +
+      `sequencia_finalizada=${repeatEnd ?? 'não-aplicável'}`,
+  );
+
+  if (!shouldThankGift({ giftType, repeatEnd })) {
+    console.log(`[PRESENTE] @${user} | aguardando o fim da sequência antes de agradecer.`);
+    return;
+  }
+
   interactions.onGift({
     user: data?.user?.nickname || user,
     giftName: data?.giftDetails?.giftName || data?.giftName || 'presente',
@@ -292,3 +315,4 @@ async function connectToLive() {
 }
 
 await connectToLive();
+interactions.start();

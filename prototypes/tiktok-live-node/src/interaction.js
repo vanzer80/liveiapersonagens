@@ -1,3 +1,11 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
+const DEFAULT_OPENING_LINES = [
+  'Oi, pessoal! A live começou e eu já estou pronto para conversar com vocês!',
+  'Sejam bem-vindos! Escrevam ia e depois a pergunta para falar comigo ao vivo!',
+];
+
 const DEFAULT_AMBIENT_LINES = [
   'Quem acabou de chegar, conta pra gente de onde está assistindo!',
   'Pergunta do momento: qual seria o seu trabalho na Fenda do Biquíni?',
@@ -12,6 +20,7 @@ const DEFAULT_AMBIENT_LINES = [
 export const INTERACTION_PRIORITIES = Object.freeze({
   ambient: 10,
   like: 30,
+  opening: 50,
   member: 60,
   question: 80,
   gift: 100,
@@ -29,8 +38,26 @@ function parseInteger(value, fallback, { min, max }) {
 }
 
 export function getInteractionConfig(env = process.env) {
+  const legacyAmbientSilence = env.INTERACTION_AMBIENT_SILENCE_MS;
+  const ambientMinSilenceMs = parseInteger(
+    env.INTERACTION_AMBIENT_MIN_SILENCE_MS ?? legacyAmbientSilence,
+    30000,
+    { min: 10000, max: 300000 },
+  );
+  const configuredAmbientMax = parseInteger(
+    env.INTERACTION_AMBIENT_MAX_SILENCE_MS ?? legacyAmbientSilence,
+    45000,
+    { min: 10000, max: 300000 },
+  );
+
   return {
     enabled: parseBoolean(env.INTERACTION_ENABLED, false),
+    linesFile: String(env.INTERACTION_LINES_FILE || 'config/live-lines.json').trim(),
+    openingEnabled: parseBoolean(env.INTERACTION_OPENING_ENABLED, true),
+    openingDelayMs: parseInteger(env.INTERACTION_OPENING_DELAY_MS, 3000, {
+      min: 0,
+      max: 60000,
+    }),
     welcomeEnabled: parseBoolean(env.INTERACTION_WELCOME_ENABLED, true),
     welcomeBatchMs: parseInteger(env.INTERACTION_WELCOME_BATCH_MS, 10000, {
       min: 1000,
@@ -45,15 +72,58 @@ export function getInteractionConfig(env = process.env) {
       max: 5,
     }),
     ambientEnabled: parseBoolean(env.INTERACTION_AMBIENT_ENABLED, true),
-    ambientSilenceMs: parseInteger(env.INTERACTION_AMBIENT_SILENCE_MS, 35000, {
-      min: 10000,
-      max: 300000,
-    }),
+    ambientMinSilenceMs,
+    ambientMaxSilenceMs: Math.max(ambientMinSilenceMs, configuredAmbientMax),
+    // Mantido para configurações e testes antigos que ainda usam um intervalo fixo.
+    ambientSilenceMs: legacyAmbientSilence === undefined ? undefined : ambientMinSilenceMs,
     maxPending: parseInteger(env.INTERACTION_MAX_PENDING, 12, {
       min: 1,
       max: 100,
     }),
   };
+}
+
+function normalizeLines(lines, field) {
+  if (!Array.isArray(lines)) throw new Error(`o campo ${field} precisa ser uma lista`);
+
+  const normalized = [...new Set(
+    lines
+      .filter((line) => typeof line === 'string')
+      .map((line) => line.replace(/\s+/gu, ' ').trim().slice(0, 280))
+      .filter(Boolean),
+  )];
+
+  if (!normalized.length) throw new Error(`o campo ${field} não pode ficar vazio`);
+  return normalized;
+}
+
+export function loadInteractionLines({
+  filePath = 'config/live-lines.json',
+  cwd = process.cwd(),
+  logger = console,
+} = {}) {
+  const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(cwd, filePath);
+
+  try {
+    const parsed = JSON.parse(readFileSync(resolvedPath, 'utf8'));
+    return {
+      opening: normalizeLines(parsed.opening, 'opening'),
+      ambient: normalizeLines(parsed.ambient, 'ambient'),
+      source: resolvedPath,
+      fallbackUsed: false,
+    };
+  } catch (error) {
+    logger.warn?.(
+      `[INTERAÇÃO] não foi possível carregar ${resolvedPath}; usando falas internas. ` +
+        `${error instanceof Error ? error.message : error}`,
+    );
+    return {
+      opening: [...DEFAULT_OPENING_LINES],
+      ambient: [...DEFAULT_AMBIENT_LINES],
+      source: 'falas-internas',
+      fallbackUsed: true,
+    };
+  }
 }
 
 export function sanitizeSpokenName(value) {
@@ -66,6 +136,10 @@ export function sanitizeSpokenName(value) {
     .slice(0, 32);
 
   return normalized || 'pessoal';
+}
+
+export function shouldThankGift({ giftType, repeatEnd } = {}) {
+  return Number(giftType) !== 1 || repeatEnd === true;
 }
 
 export function formatWelcome(names, total, maxNames = 3) {
@@ -148,11 +222,13 @@ export function createLiveInteractionEngine({
   config = getInteractionConfig(),
   speak,
   answerQuestion,
+  openingLines = DEFAULT_OPENING_LINES,
   ambientLines = DEFAULT_AMBIENT_LINES,
   logger = console,
   now = () => Date.now(),
   setTimer = setTimeout,
   clearTimer = clearTimeout,
+  random = Math.random,
 } = {}) {
   if (typeof speak !== 'function') throw new Error('A função speak é obrigatória.');
   if (typeof answerQuestion !== 'function') throw new Error('A função answerQuestion é obrigatória.');
@@ -160,11 +236,34 @@ export function createLiveInteractionEngine({
   const queue = createPriorityTaskQueue({ maxPending: config.maxPending, logger });
   const pendingMembers = new Map();
   let welcomeTimer = null;
+  let openingTimer = null;
   let ambientTimer = null;
   let ambientCursor = 0;
   let lastActivityAt = now();
   let lastWelcomeAt = 0;
+  let started = false;
   let stopped = false;
+
+  function getAmbientDelayBounds() {
+    const legacyDelay = Number(config.ambientSilenceMs);
+    const configuredMin = Number(config.ambientMinSilenceMs);
+    const configuredMax = Number(config.ambientMaxSilenceMs);
+    const min = Number.isFinite(configuredMin)
+      ? configuredMin
+      : Number.isFinite(legacyDelay) ? legacyDelay : 35000;
+    const max = Math.max(
+      min,
+      Number.isFinite(configuredMax)
+        ? configuredMax
+        : Number.isFinite(legacyDelay) ? legacyDelay : min,
+    );
+    return { min, max };
+  }
+
+  function getAmbientDelayMs() {
+    const { min, max } = getAmbientDelayBounds();
+    return Math.round(min + (max - min) * Math.min(1, Math.max(0, random())));
+  }
 
   function cancelAmbientTimer() {
     if (ambientTimer) clearTimer(ambientTimer);
@@ -173,10 +272,10 @@ export function createLiveInteractionEngine({
 
   function scheduleAmbient() {
     cancelAmbientTimer();
-    if (stopped || !config.enabled || !config.ambientEnabled || !ambientLines.length) return;
+    if (!started || stopped || !config.enabled || !config.ambientEnabled || !ambientLines.length) return;
 
     const elapsed = Math.max(0, now() - lastActivityAt);
-    const delay = Math.max(1000, config.ambientSilenceMs - elapsed);
+    const delay = Math.max(1000, getAmbientDelayMs() - elapsed);
     ambientTimer = setTimer(() => {
       ambientTimer = null;
       if (stopped) return;
@@ -189,6 +288,23 @@ export function createLiveInteractionEngine({
       ambientCursor += 1;
       enqueueSpeech({ kind: 'ambient', text, priority: INTERACTION_PRIORITIES.ambient });
     }, delay);
+  }
+
+  function scheduleOpening() {
+    if (!started || stopped || !config.openingEnabled || !openingLines.length) return;
+    openingTimer = setTimer(() => {
+      openingTimer = null;
+      if (stopped) return;
+      const openingIndex = Math.min(
+        openingLines.length - 1,
+        Math.floor(Math.min(1, Math.max(0, random())) * openingLines.length),
+      );
+      enqueueSpeech({
+        kind: 'opening',
+        text: openingLines[openingIndex],
+        priority: INTERACTION_PRIORITIES.opening,
+      });
+    }, config.openingDelayMs);
   }
 
   function touchActivity() {
@@ -290,11 +406,16 @@ export function createLiveInteractionEngine({
   }
 
   function start() {
-    if (config.enabled) {
+    if (config.enabled && !started && !stopped) {
+      started = true;
+      lastActivityAt = now();
+      const ambientBounds = getAmbientDelayBounds();
       logger.log?.(
         `[INTERAÇÃO] ativa | boas-vindas=${config.welcomeEnabled ? 'sim' : 'não'} ` +
-          `ambiente=${config.ambientEnabled ? `${config.ambientSilenceMs}ms` : 'não'}`,
+          `abertura=${config.openingEnabled ? `${config.openingDelayMs}ms` : 'não'} ` +
+          `ambiente=${config.ambientEnabled ? `${ambientBounds.min}-${ambientBounds.max}ms` : 'não'}`,
       );
+      scheduleOpening();
       scheduleAmbient();
     }
   }
@@ -302,6 +423,8 @@ export function createLiveInteractionEngine({
   function stop() {
     stopped = true;
     cancelAmbientTimer();
+    if (openingTimer) clearTimer(openingTimer);
+    openingTimer = null;
     if (welcomeTimer) clearTimer(welcomeTimer);
     welcomeTimer = null;
   }
