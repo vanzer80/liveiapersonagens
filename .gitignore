@@ -25,3 +25,8 @@ temp/
 prototypes/tiktok-live-node/assets/mvp4/*.mp4
 prototypes/tiktok-live-node/assets/mvp4/*.mov
 prototypes/tiktok-live-node/assets/mvp4/*.wav
+
+# Five prerecorded trigger videos are synced from the official Google Drive.
+prototypes/tiktok-live-node/assets/mvp6/*.mp4
+prototypes/tiktok-live-node/assets/mvp6/*.mov
+prototypes/tiktok-live-node/assets/mvp6/*.wav
