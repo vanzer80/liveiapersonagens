@@ -107,6 +107,14 @@ Para sincronização verdadeira, o compositor deve receber o áudio gerado e con
 
 O Fish Audio oferece um fluxo com áudio e alinhamento temporal, documentado em [TTS com timestamps](https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech-stream-with-timestamps), mas alinhamento de texto não equivale automaticamente a formas de boca. A etapa visual ainda precisa de um mapa de fonema para boca ou de um alinhador dedicado.
 
+## Piloto híbrido com vídeos acionáveis
+
+Foi aprovada a produção de cinco vídeos pré-gravados antes da implementação dos gatilhos. Eles cobrem boas-vindas, hambúrguer, Fenda do Biquíni, Patrick e convite para perguntas com `ia`. A fala e o áudio ficam embutidos nesses clipes para buscar melhor voz e lip sync nas frases fixas; nomes, presentes e perguntas inéditas permanecem dinâmicos.
+
+A prioridade planejada é `presente > pergunta dinâmica > vídeo acionado > entrada > ambiente`, com palavras inteiras, normalização de acentos, cooldown de 60 segundos e uma única mídia por vez. Ativos e código continuam pendentes.
+
+Especificação, gatilhos, prompts e critérios: [`docs/mvp6-prerecorded-video-pilot.md`](mvp6-prerecorded-video-pilot.md).
+
 ## Validação no Windows
 
 1. Atualizar o repositório e executar `npm ci`.
