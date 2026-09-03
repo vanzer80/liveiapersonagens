@@ -18,6 +18,11 @@ const DEFAULT_PERSONA = [
   'Se não souber algo, responda de forma simples e conversacional.',
 ].join(' ');
 
+function parseBoolean(value, fallback = false) {
+  if (value === undefined || value === null || String(value).trim() === '') return fallback;
+  return ['1', 'true', 'yes', 'sim', 'on'].includes(String(value).trim().toLowerCase());
+}
+
 function normalizeApiKey(value) {
   let key = String(value || '').trim();
 
@@ -54,7 +59,60 @@ export function getAiConfig() {
       ...(configuredFallbacks.length ? configuredFallbacks : DEFAULT_FALLBACK_MODELS),
     ]).filter((candidate) => candidate !== configuredModel),
     trigger: (process.env.AI_TRIGGER || '!ia').trim(),
+    respondAll: parseBoolean(process.env.AI_RESPOND_ALL, false),
   };
+}
+
+// Detecta o gatilho (ex.: "ia" ou "!ia") no início do comentário.
+// Retorna o gatilho reconhecido ou null. Função pura para permitir teste isolado.
+export function matchAiTrigger(comment, trigger) {
+  const configured = String(trigger || '').trim();
+  const withoutPunctuation = configured.replace(/^\W+/u, '');
+  const candidates = [...new Set([configured, withoutPunctuation].filter(Boolean))];
+  const normalizedComment = String(comment || '').trimStart().toLowerCase();
+
+  for (const candidate of candidates) {
+    const normalizedCandidate = candidate.toLowerCase();
+    if (
+      normalizedComment === normalizedCandidate ||
+      normalizedComment.startsWith(`${normalizedCandidate} `)
+    ) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+const HAS_LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
+
+// Decide se um comentário deve virar uma resposta da IA e qual texto usar.
+// - respondAll=true: responde a qualquer comentário com conteúdo real (letra/dígito),
+//   ignorando o gatilho e mantendo o texto completo. Pula só emoji/pontuação.
+// - respondAll=false: mantém o comportamento de gatilho (ex.: "!ia mensagem").
+// Função pura, sem efeitos colaterais, para ser coberta por teste.
+export function resolveCommentForAi({ comment, trigger = '!ia', respondAll = false } = {}) {
+  const raw = String(comment || '');
+
+  if (respondAll) {
+    const text = raw.trim();
+    if (!text || !HAS_LETTER_OR_DIGIT.test(text)) {
+      return { shouldAnswer: false, reason: 'empty-or-noise', text: '' };
+    }
+    return { shouldAnswer: true, reason: 'respond-all', text };
+  }
+
+  const matched = matchAiTrigger(raw, trigger);
+  if (!matched) {
+    return { shouldAnswer: false, reason: 'no-trigger', text: '' };
+  }
+
+  const text = raw.trimStart().slice(matched.length).trim();
+  if (!text) {
+    return { shouldAnswer: false, reason: 'trigger-without-message', text: '' };
+  }
+
+  return { shouldAnswer: true, reason: 'trigger', text };
 }
 
 export function isAiConfigured() {

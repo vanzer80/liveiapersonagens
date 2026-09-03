@@ -179,6 +179,18 @@ npm start -- nome_do_usuario
 
 Comentários iniciados por `!ia` ou `ia` acionam o fluxo de IA. Comentários comuns continuam sendo apenas registrados no terminal.
 
+### Modo experimental: responder a todos os comentários
+
+Para o personagem responder a **qualquer** comentário, sem exigir o gatilho, defina no `.env`:
+
+```env
+AI_RESPOND_ALL=true
+```
+
+Nesse modo, todo comentário com conteúdo real vira uma resposta da IA (comentários vazios ou só de emoji/pontuação são ignorados). O gatilho `AI_TRIGGER` continua funcionando como padrão quando `AI_RESPOND_ALL=false`.
+
+> **Experimento não validado (HIPÓTESE).** A fala é serial: uma voz por vez, com ~8 a 12 s por resposta. Em chat movimentado, a fila (máx. 12 itens) acumula atraso e o personagem passa a responder comentários antigos. Presentes e a regra de uma pergunta pendente por usuário continuam ativos. Só uma LIVE real confirma se esse ritmo funciona; se atrapalhar, o próximo passo é uma seleção que priorize o comentário mais recente/relevante.
+
 ## Executar o Bob integrado à LIVE
 
 Use o comando único:

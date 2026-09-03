@@ -4,6 +4,7 @@ import {
   getAiConfig,
   getSafeAiKeyInfo,
   isAiConfigured,
+  resolveCommentForAi,
   validateAiAuthentication,
 } from './ai.js';
 import {
@@ -42,7 +43,11 @@ const connectRetryMs = Number.isFinite(configuredConnectRetryMs)
 
 console.log('Live IA — Protótipo TikTok LIVE');
 console.log(`Tentando conectar em @${username}...`);
-console.log(`Modo IA: comentários iniciados por ${aiConfig.trigger} ou ${aiConfig.trigger.replace(/^\W+/, '')}`);
+if (aiConfig.respondAll) {
+  console.log('Modo IA: responde a TODOS os comentários (experimental — sem gatilho).');
+} else {
+  console.log(`Modo IA: comentários iniciados por ${aiConfig.trigger} ou ${aiConfig.trigger.replace(/^\W+/, '')}`);
+}
 console.log(`Modelo IA: ${aiConfig.model}`);
 console.log(
   `TTS: ${ttsConfig.enabled ? 'ativado' : 'desativado'} | provedor=${ttsConfig.provider} ` +
@@ -121,25 +126,6 @@ function extractChatText(data) {
   return candidates.find(([, value]) => typeof value === 'string' && value.trim().length > 0) || [null, ''];
 }
 
-function matchAiTrigger(comment) {
-  const configured = aiConfig.trigger.trim();
-  const withoutPunctuation = configured.replace(/^\W+/, '');
-  const candidates = [...new Set([configured, withoutPunctuation].filter(Boolean))];
-  const normalizedComment = comment.trimStart().toLowerCase();
-
-  for (const candidate of candidates) {
-    const normalizedCandidate = candidate.toLowerCase();
-    if (
-      normalizedComment === normalizedCandidate ||
-      normalizedComment.startsWith(`${normalizedCandidate} `)
-    ) {
-      return candidate;
-    }
-  }
-
-  return null;
-}
-
 let detectedChatTextField = null;
 let directAiBusy = false;
 
@@ -188,17 +174,20 @@ const interactions = createLiveInteractionEngine({
 });
 
 function maybeQueueAiReply(user, comment) {
-  const matchedTrigger = matchAiTrigger(comment);
+  const decision = resolveCommentForAi({
+    comment,
+    trigger: aiConfig.trigger,
+    respondAll: aiConfig.respondAll,
+  });
 
-  if (!matchedTrigger) return;
-
-  const trimmedComment = comment.trimStart();
-  const selectedText = trimmedComment.slice(matchedTrigger.length).trim();
-
-  if (!selectedText) {
-    console.log(`[DECISÃO IA] @${user}: ignorado — gatilho sem mensagem.`);
+  if (!decision.shouldAnswer) {
+    if (decision.reason === 'trigger-without-message') {
+      console.log(`[DECISÃO IA] @${user}: ignorado — gatilho sem mensagem.`);
+    }
     return;
   }
+
+  const selectedText = decision.text;
 
   console.log(`[DECISÃO IA] @${user}: selecionado.`);
   if (interactionConfig.enabled) {
