@@ -28,6 +28,28 @@ A fala que já começou não é interrompida. A prioridade escolhe o próximo it
 
 Falar “constantemente” não significa falar sem pausa. A regra de silêncio existe para manter movimento sem cobrir comentários, presentes ou respostas.
 
+## Respostas sem gatilho (AI_RESPOND_ALL) — 03/09/2026
+
+Foi adicionado um modo **experimental e opcional** que permite ao Bob responder a comentários **sem** o espectador escrever `ia`/`!ia`.
+
+- **Padrão:** `AI_RESPOND_ALL=false` — o gatilho `ia`/`!ia` continua sendo o comportamento padrão e o fallback.
+- **Ativado:** `AI_RESPOND_ALL=true` — todo comentário com conteúdo real (ao menos uma letra ou dígito) entra no fluxo de resposta; comentários vazios ou só de emoji/pontuação são descartados. O texto completo do comentário é usado, sem exigir prefixo.
+- **Reversível:** basta alternar a variável no `.env`; nenhum código precisa mudar para voltar ao modo com gatilho.
+
+A decisão de responder ou não a cada comentário fica isolada na função pura `resolveCommentForAi` em `src/ai.js`, coberta por testes automatizados nos dois modos.
+
+### RESULTADO DE TESTE — 03/09/2026
+
+Em uma **TikTok LIVE real** com `AI_RESPOND_ALL=true`, o Bob respondeu a comentário(s) **sem** o prefixo `ia`. Classificação: **validação inicial positiva em LIVE real**.
+
+O que foi comprovado: `AI_RESPOND_ALL=true` funciona em LIVE real; um comentário sem `ia` entra no fluxo de resposta; o modo não depende mais obrigatoriamente do gatilho.
+
+O que **não** foi comprovado (permanece PENDENTE): comportamento com vários espectadores simultâneos, comentários em alta frequência, atraso acumulado, respostas a comentários antigos, saturação da fila e limites do provedor de IA. Como a fala/TTS é **serial** (uma voz por vez), em chat movimentado os comentários podem acumular e as respostas chegar atrasadas — RISCO ainda não medido.
+
+Se o teste sob carga demonstrar necessidade, a próxima alternativa (HIPÓTESE) é uma seleção inteligente que priorize o comentário mais recente/relevante, com descarte de comentários antigos e/ou cooldown. Ainda não decidido se `responder-a-todos` será padrão ou permanecerá apenas como modo opcional.
+
+Suíte automatizada após esta integração: **42/42 testes passando** no Windows.
+
 ## Falas editáveis
 
 As falas deixaram de ficar presas no código e agora estão em:
