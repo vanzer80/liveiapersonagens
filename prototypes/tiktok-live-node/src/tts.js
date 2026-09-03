@@ -55,15 +55,20 @@ export function normalizeTextForSpeech(value) {
     .trim();
 }
 
+export function encodePowerShellCommand(script) {
+  return Buffer.from(String(script), 'utf16le').toString('base64');
+}
+
 function runPowerShell(script, extraEnv = {}) {
   return new Promise((resolve, reject) => {
+    const encodedCommand = encodePowerShellCommand(script);
     const child = spawn(
       'powershell.exe',
-      ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', '-'],
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', encodedCommand],
       {
         env: { ...process.env, ...extraEnv },
         windowsHide: true,
-        stdio: ['pipe', 'pipe', 'pipe'],
+        stdio: ['ignore', 'pipe', 'pipe'],
       },
     );
 
@@ -95,7 +100,6 @@ function runPowerShell(script, extraEnv = {}) {
       resolve(stdout.trim());
     });
 
-    child.stdin.end(script);
   });
 }
 

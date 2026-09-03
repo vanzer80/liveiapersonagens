@@ -1,11 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  encodePowerShellCommand,
   getTtsConfig,
   normalizeTextForSpeech,
   parseTtsMetadata,
   speakText,
 } from '../src/tts.js';
+
+test('codifica o script completo no formato esperado pelo Windows PowerShell', () => {
+  const script = "$texto = 'Olá'\nWrite-Output $texto";
+  const encoded = encodePowerShellCommand(script);
+
+  assert.equal(Buffer.from(encoded, 'base64').toString('utf16le'), script);
+});
 
 test('normaliza Markdown, emoji e URL sem perder o sentido', () => {
   const input = '**Olá** `pessoal`! Veja [o projeto](https://example.com/projeto) 🚀 https://example.com';
