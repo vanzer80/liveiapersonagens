@@ -12,16 +12,19 @@ O objetivo imediato não é construir um SaaS completo. Primeiro precisamos vali
 
 - MVP 1 — captura de eventos: validado em LIVE real.
 - MVP 2 — resposta textual com IA: validado em LIVE real e encerrado na Issue #2.
-- MVP 3 — TTS local: geração e reprodução validadas no Windows; teste integrado em LIVE real pendente na Issue #3.
+- MVP 3 — TTS local: validado no Windows e integrado em LIVE real; concluído na Issue #3.
+- MVP 4 — cena visual com personagem: especificado e aberto na Issue #4.
 
-O protótipo converte a resposta textual em WAV e reproduz o áudio localmente com uma voz instalada no Windows. O teste real selecionou `Microsoft Maria Desktop` em `pt-BR`, gerou o áudio em 884 ms e concluiu uma reprodução audível. Essa escolha continua sendo uma hipótese gratuita para validação, não o fornecedor definitivo do produto.
+O protótipo converte a resposta textual em WAV e reproduz o áudio localmente com uma voz instalada no Windows. O teste controlado selecionou `Microsoft Maria Desktop` em `pt-BR`, gerou o áudio em 884 ms e concluiu uma reprodução audível. Em LIVE real, duas respostas foram faladas com geração de 455 ms e 377 ms e reprodução de 7699 ms e 7072 ms. A captura continuou ativa. Essa escolha continua sendo uma hipótese gratuita para validação, não o fornecedor definitivo do produto.
+
+O áudio ouvido somente no PC é o comportamento esperado desta fase: ainda não existe composição audiovisual nem envio da saída do computador ao TikTok. O MVP 4 validará a cena visual local; o roteamento por OBS/TikTok LIVE Studio permanece para a etapa de transmissão completa.
 
 ## Ordem de implementação
 
 1. Leitura de comentários/eventos.
 2. Resposta textual.
 3. TTS.
-4. Avatar.
+4. Cena visual com personagem e clipes de reação.
 5. Presentes e prioridades.
 6. Live real.
 7. Produto para testadores.
@@ -61,4 +64,5 @@ O GitHub deve registrar principalmente código, testes, experimentos técnicos, 
 Issues de validação:
 
 - [#2 — MVP 2: resposta textual](https://github.com/vanzer80/liveiapersonagens/issues/2) — concluída;
-- [#3 — MVP 3: TTS local](https://github.com/vanzer80/liveiapersonagens/issues/3) — aberta até o teste integrado em LIVE real.
+- [#3 — MVP 3: TTS local](https://github.com/vanzer80/liveiapersonagens/issues/3) — concluída;
+- [#4 — MVP 4: cena visual com clipes Flow/Veo](https://github.com/vanzer80/liveiapersonagens/issues/4) — próxima etapa.
