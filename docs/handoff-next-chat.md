@@ -17,9 +17,13 @@ Google Drive: `00 - Documento Mestre - Visão do Produto`, `03 - Registro de Dec
 - Sincronização final por callbacks: início do `speaking` 1 ms após o callback; retorno a `idle` confirmado.
 - Microsoft Maria Desktop funciona, mas foi percebida como robotizada.
 - Influencer: adiada para segunda etapa.
-- Presentes, fila e prioridades: ainda não implementados.
+- Presentes, fila e prioridades: implementados no código; teste real pendente.
+- Entradas: agrupadas por 10 segundos, com até três nomes por fala.
+- Fala de ambiente: uma frase curta após 35 segundos sem atividade.
+- Voz neural Fish Audio: adaptador implementado; precisa de chave e referência autorizada no `.env`.
+- Lip sync: callbacks acertam o início/fim da fala, mas o MP4 pré-renderizado não sincroniza fonemas; exige novos ativos de boca.
 - Transmissão audiovisual para espectadores: implementação preparada; teste real pendente.
-- Composição no LIVE Studio: Bob enquadrado corretamente com captura de janela `msedge.exe`, cena `Câmera em tela cheia` e modo `Ajustar`.
+- Composição no LIVE Studio: Bob enquadrado corretamente com captura de janela `msedge.exe`, cena vertical `Em branco` e modo `Ajustar`, sem câmera real.
 - A fonte `Adicionar link` rejeitou o endereço HTTP local na versão testada do LIVE Studio.
 
 ## Implementação atual
@@ -42,7 +46,7 @@ comentário ia/!ia
   → idle
 ```
 
-A prévia fica em `http://127.0.0.1:3333`. Os MP4s são reproduzidos sem áudio; o TTS do Windows é a única voz.
+A prévia fica em `http://127.0.0.1:3333`. Os MP4s são reproduzidos sem áudio; a voz vem exclusivamente do provedor TTS selecionado.
 
 ## Próximo teste obrigatório no Windows
 
@@ -50,17 +54,18 @@ A prévia fica em `http://127.0.0.1:3333`. Os MP4s são reproduzidos sem áudio;
 2. confirmar os três MP4s em `assets\mvp4\`;
 3. executar `npm run live:bob -- <usuario>`;
 4. abrir a prévia no Edge e capturar a janela `msedge.exe`;
-5. usar visualização vertical, cena `Câmera em tela cheia` e modo `Ajustar`;
-6. incluir o áudio do sistema e confirmar movimento no medidor quando o TTS falar;
-7. iniciar a LIVE;
-8. em outro celular/conta, enviar duas perguntas começando com `ia`;
-9. confirmar imagem, voz, `thinking → speaking → idle` e continuidade dos eventos.
+5. usar visualização vertical, cena `Em branco` e modo `Ajustar`, sem adicionar câmera real;
+6. configurar e testar `fish-audio` ou manter temporariamente `windows-sapi`;
+7. incluir o áudio do sistema e confirmar movimento no medidor quando o TTS falar;
+8. iniciar a LIVE;
+9. em outro celular/conta, validar uma entrada, um presente e duas perguntas começando com `ia`;
+10. confirmar imagem, voz, ordem da fila, `thinking → speaking → idle` e continuidade dos eventos.
 
 Não declarar a transmissão validada sem confirmação no dispositivo do espectador.
 
 ## Depois do teste
 
-Se funcionar, documentar latência percebida, qualidade de imagem/áudio e qualquer falha. Em seguida, implementar agradecimento a presentes com fila e prioridade. Se não funcionar, separar o diagnóstico entre fonte visual, captura de áudio, conexão TikTok e lógica da aplicação.
+Se funcionar, documentar latência percebida, qualidade de imagem/áudio e qualquer falha. Depois, produzir os ativos de boca e implementar sincronização por fonemas/visemas. Se não funcionar, separar o diagnóstico entre fonte visual, captura de áudio, provedor TTS, conexão TikTok e lógica da aplicação.
 
 ## Restrições
 
@@ -70,6 +75,8 @@ Se funcionar, documentar latência percebida, qualidade de imagem/áudio e qualq
 - não retomar influencer, SaaS ou escala antes do teste real atual.
 
 Procedimento detalhado: [`mvp5-live-bob.md`](mvp5-live-bob.md).
+
+Interação, voz e lip sync: [`mvp6-interaction-voice-lipsync.md`](mvp6-interaction-voice-lipsync.md).
 
 Retrospectiva do LIVE Studio: [`mvp5-live-studio-retrospective.md`](mvp5-live-studio-retrospective.md).
 

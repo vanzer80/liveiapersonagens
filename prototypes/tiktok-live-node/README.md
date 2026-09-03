@@ -10,7 +10,8 @@ Objetivo: validar incrementalmente o fluxo `TikTok LIVE → IA → TTS → cena 
 - **MVP 2 — resposta textual com IA:** VALIDADO em LIVE real.
 - **MVP 3 — TTS local:** VALIDADO no Windows e em LIVE real com voz pt-BR.
 - **MVP 4 — cena visual:** RAMO BOB VALIDADO localmente; influencer adiada para uma segunda etapa.
-- **MVP 5 — Bob em LIVE real:** integração pronta no código; confirmação audiovisual por um espectador pendente.
+- **MVP 5 — Bob em LIVE real:** composição visual funcionou no LIVE Studio; confirmação do áudio por um espectador ainda pendente.
+- **MVP 6 — interação e voz neural:** fila, boas-vindas, presentes, fala de ambiente e adaptador Fish Audio implementados; validação real pendente.
 
 O controlador ainda suporta duas variantes, mas a direção vigente prioriza `spongebob`. A imagem mestre e os três clipes iniciais do Bob foram aprovados no Google Drive oficial:
 
@@ -59,7 +60,9 @@ O ciclo local do Bob está concluído para o protótipo e não deve ser repetido
 
 ### Qualidade da voz
 
-O usuário descreveu `Microsoft Maria Desktop` como **robotizada**. Isso não invalida o fluxo técnico; `windows-sapi` continua útil como fallback/prova de arquitetura. A próxima comparação de TTS deve usar uma opção neural em PT-BR considerando naturalidade, latência, custo e facilidade de integração.
+O usuário descreveu `Microsoft Maria Desktop` como **robotizada**. Ela permanece como fallback. O protótipo agora também aceita `fish-audio`, com chave e referência de voz mantidas somente no `.env`. A API neural ainda precisa ser validada no Windows e recebida por outro celular antes de substituir o fallback.
+
+O clipe `speaking` sincroniza o começo e o fim da fala, mas sua boca foi pré-renderizada e não conhece os fonemas do TTS. Sincronização labial verdadeira exigirá bocas controláveis e marcas temporais; detalhes em [`../../docs/mvp6-interaction-voice-lipsync.md`](../../docs/mvp6-interaction-voice-lipsync.md).
 
 ## Requisitos
 
@@ -89,6 +92,16 @@ TTS_RATE=0
 ```
 
 Com `TTS_VOICE` vazio, o adaptador prefere uma voz `pt-BR` instalada no Windows.
+
+Para testar uma voz neural autorizada pelo Fish Audio:
+
+```env
+TTS_PROVIDER=fish-audio
+FISH_AUDIO_API_KEY=cole_sua_chave_aqui
+FISH_AUDIO_REFERENCE_ID=id_da_voz_autorizada
+FISH_AUDIO_MODEL=s2.1-pro-free
+FISH_AUDIO_LATENCY=balanced
+```
 
 ## Teste controlado do TTS
 
@@ -182,9 +195,12 @@ O comando:
 4. tenta conectar ao TikTok a cada cinco segundos enquanto a conta ainda não estiver ao vivo;
 5. entra em `thinking` quando um comentário `ia`/`!ia` é selecionado;
 6. entra em `speaking` no callback real de início do TTS;
-7. retorna a `idle` ao terminar ou se ocorrer falha.
+7. retorna a `idle` ao terminar ou se ocorrer falha;
+8. agrupa entradas por 10 segundos e pronuncia até três nomes;
+9. enfileira perguntas, boas-vindas e presentes por prioridade;
+10. após 35 segundos sem atividade, usa uma frase curta para movimentar o chat.
 
-Na versão testada do TikTok LIVE Studio, `Adicionar link` rejeitou a URL HTTP local. Use captura de janela, selecione a prévia do Edge, escolha a cena `Câmera em tela cheia` e mantenha o modo `Ajustar`. A cena `4:3 | Câmera abaixo` deixa a fonte em um espaço horizontal; `Preencher` corta o Bob e `Expandir` deforma a imagem. Ative o áudio do sistema no mixer para que o TTS chegue aos espectadores.
+Na versão testada do TikTok LIVE Studio, `Adicionar link` rejeitou a URL HTTP local. Use captura de janela, selecione a prévia do Edge, escolha uma cena vertical **em branco** e mantenha o modo `Ajustar`. O layout `Câmera em tela cheia` enquadrou o vídeo, mas exigiu uma câmera visível ao iniciar a LIVE; a cena em branco eliminou essa exigência e manteve apenas o personagem. A cena `4:3 | Câmera abaixo` deixa a fonte em um espaço horizontal; `Preencher` corta o Bob e `Expandir` deforma a imagem. Ative o áudio do sistema no mixer para que o TTS chegue aos espectadores.
 
 A transmissão só estará validada depois que outro dispositivo confirmar imagem e voz em LIVE real. Procedimento: [`../../docs/mvp5-live-bob.md`](../../docs/mvp5-live-bob.md). Erros e acertos da primeira configuração: [`../../docs/mvp5-live-studio-retrospective.md`](../../docs/mvp5-live-studio-retrospective.md).
 
@@ -198,8 +214,7 @@ A lógica do controlador de cena cobre seleção de variante, transições, esta
 
 ## Próximos critérios
 
-- executar a transmissão pelo TikTok LIVE Studio;
-- confirmar imagem e voz em outro celular;
-- validar duas respostas consecutivas;
-- depois implementar agradecimento de presentes, fila e prioridade;
-- comparar TTS neural e retomar a influencer em etapa posterior.
+- confirmar a voz Fish Audio primeiro no computador e depois em outro celular;
+- validar boas-vindas agrupadas, presente e duas perguntas consecutivas;
+- criar os ativos de boca para lip sync verdadeiro;
+- retomar a influencer somente em etapa posterior.

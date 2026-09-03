@@ -18,6 +18,8 @@ Esta retrospectiva registra a primeira preparação real do Bob Esponja no Windo
 7. A reconexão automática tentou novamente enquanto a conta estava offline e conectou na quarta tentativa.
 8. A sala conectada foi `roomId=7681365263506066192`, e eventos de entrada e like começaram a chegar.
 9. O TikTok LIVE Studio capturou a janela do Edge e exibiu o Bob corretamente após a troca para a cena `Câmera em tela cheia`.
+10. Ao iniciar a LIVE, esse layout bloqueou o avanço porque a câmera real estava oculta.
+11. A troca para uma cena vertical `Em branco` manteve somente o Bob e permitiu operar sem aparecer na LIVE.
 
 ## Erros, causas e correções
 
@@ -31,7 +33,8 @@ Esta retrospectiva registra a primeira preparação real do Bob Esponja no Windo
 | captura `chrome.exe` mostrou o Bob pequeno | personagem ocupava apenas uma faixa | a cena estava em `4:3 | Câmera abaixo`, com um espaço horizontal fixo | trocar a cena para `Câmera em tela cheia` |
 | `Preencher` | Bob apareceu cortado | o vídeo vertical estava sendo recortado para caber no espaço horizontal 4:3 | não usar `Preencher` enquanto a cena estiver com proporção incompatível |
 | `Expandir` ou redimensionamento lateral | personagem deformado | a fonte foi esticada fora da proporção original | preservar proporção e usar `Ajustar` em uma cena vertical compatível |
-| Edge em modo aplicativo | removeu a barra, mas não corrigiu sozinho o corte | o formato da janela não era a causa principal; a cena 4:3 continuava limitando a fonte | modo aplicativo é útil para uma captura limpa, mas a correção decisiva é `Câmera em tela cheia` |
+| Edge em modo aplicativo | removeu a barra, mas não corrigiu sozinho o corte | o formato da janela não era a causa principal; a cena 4:3 continuava limitando a fonte | modo aplicativo é útil para uma captura limpa, mas a correção decisiva é usar uma cena vertical compatível; a configuração final foi `Em branco` |
+| aviso “Sua fonte de câmera está oculta” | o LIVE Studio não permitiu iniciar sem mostrar a webcam | `Câmera em tela cheia` é um layout que exige uma fonte de câmera visível | trocar para uma cena vertical `Em branco` e manter apenas a captura `msedge.exe` |
 
 ## Configuração que funcionou
 
@@ -39,7 +42,7 @@ Esta retrospectiva registra a primeira preparação real do Bob Esponja no Windo
 - Edge aberto em modo aplicativo para evitar barra de endereço;
 - fonte de captura de **janela**, identificada como `msedge.exe`;
 - somente a janela do Bob mantida como fonte visual;
-- cena do LIVE Studio: **`Câmera em tela cheia`**;
+- cena do LIVE Studio: **`Em branco`**, vertical e sem câmera real;
 - modo de encaixe: **`Ajustar`**;
 - Bob inteiro, vertical e sem deformação na prévia do Studio.
 
@@ -66,7 +69,7 @@ Se o PowerShell já estiver em `C:\liveiapersonagens\prototypes\tiktok-live-node
 No TikTok LIVE Studio:
 
 1. selecionar uma visualização vertical;
-2. escolher a cena `Câmera em tela cheia`;
+2. escolher uma cena `Em branco`, sem câmera real;
 3. adicionar uma captura de janela;
 4. selecionar `msedge.exe` com a prévia do Bob;
 5. usar `Ajustar` e manter a proporção original;

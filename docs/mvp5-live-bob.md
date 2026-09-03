@@ -43,14 +43,15 @@ O suporte atual do TikTok indica o LIVE Studio como a rota para transmitir a par
 
 1. Iniciar o comando do Bob antes de entrar ao vivo.
 2. Abrir a prévia no Edge, preferencialmente em modo aplicativo.
-3. Selecionar uma visualização vertical e a cena `Câmera em tela cheia`.
+3. Selecionar uma visualização vertical e uma cena `Em branco`, sem fonte de câmera.
 4. Adicionar uma captura de **janela**, selecionar `msedge.exe` e usar `Ajustar`.
-5. Não usar a cena `4:3 | Câmera abaixo`: ela prende a fonte em um espaço horizontal.
-6. Não usar `Preencher` para corrigir esse espaço, pois corta o personagem; não usar `Expandir`, pois deforma a proporção.
-7. Remover fontes antigas de tela inteira e confirmar que somente o Bob aparece.
-8. No mixer, ativar o áudio do sistema/dispositivo de saída usado pelo TTS.
-9. Manter microfone e outras fontes mutados no primeiro teste quando não forem necessários.
-10. Iniciar a LIVE e aguardar a conexão automática do programa.
+5. Não usar `Câmera em tela cheia` como configuração final: ela pode bloquear o início da LIVE quando a câmera real está oculta.
+6. Não usar a cena `4:3 | Câmera abaixo`: ela prende a fonte em um espaço horizontal.
+7. Não usar `Preencher` para corrigir esse espaço, pois corta o personagem; não usar `Expandir`, pois deforma a proporção.
+8. Remover fontes antigas de tela inteira e confirmar que somente o Bob aparece.
+9. No mixer, ativar o áudio do sistema/dispositivo de saída usado pelo TTS.
+10. Manter microfone e outras fontes mutados no primeiro teste quando não forem necessários.
+11. Iniciar a LIVE e aguardar a conexão automática do programa.
 
 Referência oficial: [TikTok Support — LIVE pelo navegador usa LIVE Studio no Windows ou OBS](https://support.tiktok.com/en/live-gifts-wallet/tiktok-live/moderating-on-tiktok-live).
 

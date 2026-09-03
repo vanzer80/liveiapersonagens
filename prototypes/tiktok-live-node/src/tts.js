@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -10,6 +10,9 @@ try {
 }
 
 const DEFAULT_PROVIDER = 'windows-sapi';
+const FISH_PROVIDER = 'fish-audio';
+const DEFAULT_FISH_API_URL = 'https://api.fish.audio/v1/tts';
+const DEFAULT_FISH_MODEL = 's2.1-pro-free';
 
 function parseBoolean(value, fallback = false) {
   if (value === undefined || value === null || String(value).trim() === '') return fallback;
@@ -30,15 +33,42 @@ function parseRate(value) {
   return { rate, error: null };
 }
 
+function normalizeFishApiKey(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^FISH_AUDIO_API_KEY\s*=\s*/iu, '')
+    .replace(/^Bearer\s+/iu, '')
+    .trim();
+}
+
 export function getTtsConfig() {
   const rateConfig = parseRate(process.env.TTS_RATE);
+  const provider = (process.env.TTS_PROVIDER || DEFAULT_PROVIDER).trim().toLowerCase();
+  const fishApiKey = normalizeFishApiKey(process.env.FISH_AUDIO_API_KEY);
+  const fishReferenceId = String(process.env.FISH_AUDIO_REFERENCE_ID || '').trim();
+  let error = rateConfig.error;
+
+  if (!error && provider === FISH_PROVIDER) {
+    if (!fishApiKey || fishApiKey === 'cole_sua_chave_aqui') {
+      error = 'FISH_AUDIO_API_KEY ausente. Preencha a chave no arquivo .env.';
+    } else if (!fishReferenceId) {
+      error = 'FISH_AUDIO_REFERENCE_ID ausente. Informe a voz autorizada no arquivo .env.';
+    }
+  }
 
   return {
     enabled: parseBoolean(process.env.TTS_ENABLED, false),
-    provider: (process.env.TTS_PROVIDER || DEFAULT_PROVIDER).trim().toLowerCase(),
+    provider,
     voice: (process.env.TTS_VOICE || '').trim(),
     rate: rateConfig.rate,
-    error: rateConfig.error,
+    error,
+    fish: {
+      apiUrl: String(process.env.FISH_AUDIO_API_URL || DEFAULT_FISH_API_URL).trim(),
+      apiKey: fishApiKey,
+      referenceId: fishReferenceId,
+      model: String(process.env.FISH_AUDIO_MODEL || DEFAULT_FISH_MODEL).trim(),
+      latency: String(process.env.FISH_AUDIO_LATENCY || 'balanced').trim(),
+    },
   };
 }
 
@@ -184,6 +214,48 @@ export function parseTtsMetadata(output) {
   }
 }
 
+export function buildFishTtsRequest(text, config = getTtsConfig()) {
+  return {
+    url: config.fish.apiUrl,
+    options: {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.fish.apiKey}`,
+        'Content-Type': 'application/json',
+        model: config.fish.model,
+      },
+      body: JSON.stringify({
+        text,
+        reference_id: config.fish.referenceId,
+        format: 'wav',
+        latency: config.fish.latency,
+        normalize: true,
+      }),
+      signal: AbortSignal.timeout(30000),
+    },
+  };
+}
+
+async function generateFishWav(text, audioPath, config) {
+  const request = buildFishTtsRequest(text, config);
+  const response = await fetch(request.url, request.options);
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const detail = payload?.message || payload?.error?.message || `HTTP ${response.status}`;
+    throw new Error(`Fish Audio recusou a síntese: ${detail}`);
+  }
+
+  const audio = Buffer.from(await response.arrayBuffer());
+  if (!audio.length) throw new Error('Fish Audio respondeu sem dados de áudio.');
+  await writeFile(audioPath, audio);
+
+  return {
+    voice: `Fish ${config.fish.referenceId.slice(0, 8)}`,
+    culture: 'pt-BR',
+  };
+}
+
 async function readTtsMetadata(metadataPath) {
   try {
     return parseTtsMetadata(await readFile(metadataPath, 'utf8'));
@@ -222,8 +294,8 @@ export async function speakText(
     return { ok: false, error: config.error };
   }
 
-  if (config.provider !== DEFAULT_PROVIDER) {
-    const error = `Provedor TTS não suportado: ${config.provider}.`;
+  if (![DEFAULT_PROVIDER, FISH_PROVIDER].includes(config.provider)) {
+    const error = `Provedor TTS não suportado: ${config.provider}. Use windows-sapi ou fish-audio.`;
     console.error(`[ERRO TTS] latencia_ms=0 | ${error}`);
     return { ok: false, error };
   }
@@ -235,7 +307,9 @@ export async function speakText(
     return { ok: false, error };
   }
 
-  const requestedVoice = config.voice || 'automática-pt-BR';
+  const requestedVoice = config.provider === FISH_PROVIDER
+    ? `referência ${config.fish.referenceId.slice(0, 8)}`
+    : config.voice || 'automática-pt-BR';
   console.log(`[TTS] gerando | provedor=${config.provider} voz=${requestedVoice}`);
 
   try {
@@ -243,15 +317,21 @@ export async function speakText(
     const audioPath = join(temporaryDirectory, 'speech.wav');
     const metadataPath = join(temporaryDirectory, 'metadata.json');
     const generationStartedAt = performance.now();
-    await runPowerShell(GENERATE_WAV_SCRIPT, {
-      LIVEIA_TTS_TEXT: text,
-      LIVEIA_TTS_OUTPUT: audioPath,
-      LIVEIA_TTS_METADATA: metadataPath,
-      LIVEIA_TTS_VOICE: config.voice,
-      LIVEIA_TTS_RATE: String(config.rate),
-    });
+    let voiceInfo;
+
+    if (config.provider === FISH_PROVIDER) {
+      voiceInfo = await generateFishWav(text, audioPath, config);
+    } else {
+      await runPowerShell(GENERATE_WAV_SCRIPT, {
+        LIVEIA_TTS_TEXT: text,
+        LIVEIA_TTS_OUTPUT: audioPath,
+        LIVEIA_TTS_METADATA: metadataPath,
+        LIVEIA_TTS_VOICE: config.voice,
+        LIVEIA_TTS_RATE: String(config.rate),
+      });
+      voiceInfo = await readTtsMetadata(metadataPath);
+    }
     const generationLatencyMs = Math.round(performance.now() - generationStartedAt);
-    const voiceInfo = await readTtsMetadata(metadataPath);
 
     console.log(
       `[TTS] áudio gerado | provedor=${config.provider} voz=${voiceInfo.voice} idioma=${voiceInfo.culture} latencia_ms=${generationLatencyMs}`,

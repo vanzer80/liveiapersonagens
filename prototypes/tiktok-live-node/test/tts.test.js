@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  buildFishTtsRequest,
   encodePowerShellCommand,
   getTtsConfig,
   normalizeTextForSpeech,
@@ -56,6 +57,13 @@ test('usa configuração padrão segura quando TTS não foi habilitado', () => {
       voice: '',
       rate: 0,
       error: null,
+      fish: {
+        apiUrl: 'https://api.fish.audio/v1/tts',
+        apiKey: '',
+        referenceId: '',
+        model: 's2.1-pro-free',
+        latency: 'balanced',
+      },
     });
   } finally {
     if (previous.enabled === undefined) delete process.env.TTS_ENABLED;
@@ -80,10 +88,61 @@ test('marca velocidade inválida sem derrubar o processo', () => {
       voice: '',
       rate: 0,
       error: 'TTS_RATE deve ser um número inteiro entre -10 e 10.',
+      fish: {
+        apiUrl: 'https://api.fish.audio/v1/tts',
+        apiKey: '',
+        referenceId: '',
+        model: 's2.1-pro-free',
+        latency: 'balanced',
+      },
     });
   } finally {
     if (previous === undefined) delete process.env.TTS_RATE;
     else process.env.TTS_RATE = previous;
+  }
+});
+
+test('monta a solicitação Fish Audio sem colocar a chave no corpo', () => {
+  const config = {
+    fish: {
+      apiUrl: 'https://api.fish.audio/v1/tts',
+      apiKey: 'segredo-de-teste',
+      referenceId: 'referencia-123',
+      model: 's2.1-pro-free',
+      latency: 'balanced',
+    },
+  };
+  const request = buildFishTtsRequest('Olá ao vivo', config);
+  const body = JSON.parse(request.options.body);
+
+  assert.equal(request.options.headers.Authorization, 'Bearer segredo-de-teste');
+  assert.equal(request.options.headers.model, 's2.1-pro-free');
+  assert.equal(body.reference_id, 'referencia-123');
+  assert.equal(body.text, 'Olá ao vivo');
+  assert.equal(request.options.body.includes('segredo-de-teste'), false);
+});
+
+test('Fish Audio informa claramente quando falta chave ou referência', () => {
+  const previous = {
+    provider: process.env.TTS_PROVIDER,
+    apiKey: process.env.FISH_AUDIO_API_KEY,
+    referenceId: process.env.FISH_AUDIO_REFERENCE_ID,
+  };
+  process.env.TTS_PROVIDER = 'fish-audio';
+  delete process.env.FISH_AUDIO_API_KEY;
+  delete process.env.FISH_AUDIO_REFERENCE_ID;
+
+  try {
+    assert.match(getTtsConfig().error, /FISH_AUDIO_API_KEY ausente/);
+    process.env.FISH_AUDIO_API_KEY = 'chave-de-teste';
+    assert.match(getTtsConfig().error, /FISH_AUDIO_REFERENCE_ID ausente/);
+  } finally {
+    if (previous.provider === undefined) delete process.env.TTS_PROVIDER;
+    else process.env.TTS_PROVIDER = previous.provider;
+    if (previous.apiKey === undefined) delete process.env.FISH_AUDIO_API_KEY;
+    else process.env.FISH_AUDIO_API_KEY = previous.apiKey;
+    if (previous.referenceId === undefined) delete process.env.FISH_AUDIO_REFERENCE_ID;
+    else process.env.FISH_AUDIO_REFERENCE_ID = previous.referenceId;
   }
 });
 

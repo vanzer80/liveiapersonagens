@@ -143,7 +143,13 @@ O ramo Bob cumpriu o primeiro resultado: prévia vertical com ativos reais, `idl
 Validar a composição pelo TikTok LIVE Studio e confirmar em um celular de espectador que imagem e TTS chegam juntos. O primeiro teste usa somente comentários iniciados por `ia` ou `!ia`.
 
 ### Etapa 6 — Presentes e prioridades
-Adicionar agradecimento de presentes, fila e regras de prioridade somente depois da validação audiovisual da Etapa 5.
+**Status: IMPLEMENTADA NO CÓDIGO; VALIDAÇÃO REAL PENDENTE.**
+
+Foi implementada uma fila serial com prioridade para presentes, perguntas, boas-vindas e falas de ambiente. Entradas são agrupadas por 10 segundos, a fila limita acúmulo e frases de ambiente só são usadas após 35 segundos sem atividade. O adaptador de TTS agora aceita Fish Audio como opção neural, sem versionar chave ou referência privada.
+
+A limitação visual ficou explícita: o início e o fim do clipe `speaking` seguem o playback, mas um MP4 pré-renderizado não consegue sincronizar fonemas de uma fala dinâmica. Lip sync verdadeiro será um incremento separado com bocas controláveis e marcas temporais.
+
+Plano e critérios: [`mvp6-interaction-voice-lipsync.md`](mvp6-interaction-voice-lipsync.md).
 
 ## Princípios
 

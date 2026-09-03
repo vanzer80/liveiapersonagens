@@ -6,6 +6,7 @@ import {
   isAiConfigured,
   validateAiAuthentication,
 } from './ai.js';
+import { createLiveInteractionEngine, getInteractionConfig } from './interaction.js';
 import { createLiveSceneRuntime, getLiveSceneConfig } from './live-scene.js';
 import { getTtsConfig, speakText } from './tts.js';
 
@@ -23,6 +24,7 @@ const aiConfig = getAiConfig();
 const aiKeyInfo = getSafeAiKeyInfo();
 const ttsConfig = getTtsConfig();
 const sceneConfig = getLiveSceneConfig();
+const interactionConfig = getInteractionConfig();
 const liveScene = createLiveSceneRuntime({ config: sceneConfig });
 const connectRetryEnabled = ['1', 'true', 'yes', 'sim', 'on'].includes(
   String(process.env.TIKTOK_CONNECT_RETRY || '').trim().toLowerCase(),
@@ -37,10 +39,17 @@ console.log(`Tentando conectar em @${username}...`);
 console.log(`Modo IA: comentários iniciados por ${aiConfig.trigger} ou ${aiConfig.trigger.replace(/^\W+/, '')}`);
 console.log(`Modelo IA: ${aiConfig.model}`);
 console.log(
-  `TTS: ${ttsConfig.enabled ? 'ativado' : 'desativado'} | provedor=${ttsConfig.provider} voz=${ttsConfig.voice || 'automática-pt-BR'} velocidade=${ttsConfig.rate}`,
+  `TTS: ${ttsConfig.enabled ? 'ativado' : 'desativado'} | provedor=${ttsConfig.provider} ` +
+    `voz=${ttsConfig.provider === 'fish-audio' ? `referência-${ttsConfig.fish.referenceId.slice(0, 8) || 'ausente'}` : ttsConfig.voice || 'automática-pt-BR'} ` +
+    `velocidade=${ttsConfig.rate}`,
 );
 console.log(
   `Cena LIVE: ${sceneConfig.enabled ? 'ativada' : 'desativada'} | variante=${sceneConfig.variant}`,
+);
+console.log(
+  `Interação: ${interactionConfig.enabled ? 'ativada' : 'modo básico'} | ` +
+    `boas-vindas=${interactionConfig.welcomeEnabled ? 'sim' : 'não'} ` +
+    `fala-ambiente=${interactionConfig.ambientEnabled ? `${interactionConfig.ambientSilenceMs / 1000}s` : 'não'}`,
 );
 if (ttsConfig.error) {
   console.error(`[ERRO TTS] latencia_ms=0 | ${ttsConfig.error}`);
@@ -122,32 +131,10 @@ function matchAiTrigger(comment) {
 }
 
 let detectedChatTextField = null;
-let aiBusy = false;
+let directAiBusy = false;
 
-async function maybeGenerateAiReply(user, comment) {
-  const matchedTrigger = matchAiTrigger(comment);
-
-  if (!matchedTrigger) {
-    return;
-  }
-
-  const trimmedComment = comment.trimStart();
-  const selectedText = trimmedComment.slice(matchedTrigger.length).trim();
-
-  if (!selectedText) {
-    console.log(`[DECISÃO IA] @${user}: ignorado — gatilho sem mensagem.`);
-    return;
-  }
-
-  if (aiBusy) {
-    console.log(`[DECISÃO IA] @${user}: ignorado — IA já está processando outro comentário.`);
-    return;
-  }
-
-  console.log(`[DECISÃO IA] @${user}: selecionado.`);
+async function processAiReply({ user, comment: selectedText }) {
   console.log(`[ENTRADA IA] @${user}: ${selectedText}`);
-
-  aiBusy = true;
   const aiStartedAt = performance.now();
 
   try {
@@ -176,12 +163,52 @@ async function maybeGenerateAiReply(user, comment) {
     } catch (error) {
       console.error(`[ERRO CENA LIVE] falha ao retornar para idle: ${error instanceof Error ? error.message : error}`);
     }
-    aiBusy = false;
   }
+}
+
+const interactions = createLiveInteractionEngine({
+  config: interactionConfig,
+  speak: (text, metadata) => liveScene.speak(text, {
+    speaker: speakText,
+    metadata,
+  }),
+  answerQuestion: processAiReply,
+});
+interactions.start();
+
+function maybeQueueAiReply(user, comment) {
+  const matchedTrigger = matchAiTrigger(comment);
+
+  if (!matchedTrigger) return;
+
+  const trimmedComment = comment.trimStart();
+  const selectedText = trimmedComment.slice(matchedTrigger.length).trim();
+
+  if (!selectedText) {
+    console.log(`[DECISÃO IA] @${user}: ignorado — gatilho sem mensagem.`);
+    return;
+  }
+
+  console.log(`[DECISÃO IA] @${user}: selecionado.`);
+  if (interactionConfig.enabled) {
+    interactions.onQuestion({ user, comment: selectedText });
+    return;
+  }
+
+  if (directAiBusy) {
+    console.log(`[DECISÃO IA] @${user}: ignorado — IA já está processando outro comentário.`);
+    return;
+  }
+
+  directAiBusy = true;
+  void processAiReply({ user, comment: selectedText }).finally(() => {
+    directAiBusy = false;
+  });
 }
 
 connection.on(WebcastEvent.CHAT, (data) => {
   const user = data?.user?.uniqueId || data?.user?.nickname || data?.uniqueId || 'usuario-desconhecido';
+  const displayName = data?.user?.nickname || user;
   const [field, comment] = extractChatText(data);
 
   if (field && !detectedChatTextField) {
@@ -190,21 +217,28 @@ connection.on(WebcastEvent.CHAT, (data) => {
   }
 
   console.log(`[COMENTÁRIO] @${user}: ${comment || '(texto vazio)'}`);
+  interactions.onAudienceActivity();
 
   if (comment) {
-    void maybeGenerateAiReply(user, comment);
+    maybeQueueAiReply(displayName, comment);
   }
 });
 
 connection.on(WebcastEvent.MEMBER, (data) => {
-  const user = data?.user?.uniqueId || data?.user?.nickname || data?.uniqueId || 'usuario-desconhecido';
-  console.log(`[ENTRADA] @${user}`);
+  const userId = data?.user?.uniqueId || data?.uniqueId || data?.user?.nickname || 'usuario-desconhecido';
+  const displayName = data?.user?.nickname || data?.user?.uniqueId || data?.uniqueId || 'pessoal';
+  console.log(`[ENTRADA] @${userId}`);
+  interactions.onMember({ id: userId, name: displayName });
 });
 
 connection.on(WebcastEvent.GIFT, (data) => {
   const user = data?.user?.uniqueId || data?.user?.nickname || data?.uniqueId || 'usuario-desconhecido';
   const giftId = data?.giftId ?? 'desconhecido';
   console.log(`[PRESENTE] @${user} | giftId=${giftId}`);
+  interactions.onGift({
+    user: data?.user?.nickname || user,
+    giftName: data?.giftDetails?.giftName || data?.giftName || 'presente',
+  });
 });
 
 connection.on(WebcastEvent.LIKE, (data) => {
@@ -217,6 +251,7 @@ async function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log('\nEncerrando conexão...');
+  interactions.stop();
   try {
     await connection.disconnect();
   } catch {
