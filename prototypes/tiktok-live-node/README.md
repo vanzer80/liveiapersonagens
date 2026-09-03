@@ -38,11 +38,18 @@ speaking_visivel_ms=14083
 
 O áudio dos MP4s ficou mutado e o TTS externo foi ouvido no PC. O usuário confirmou que o fluxo funcionou.
 
-### Pendência de sincronização
+### Sincronização — ajuste implementado, reteste pendente
 
-O smoke test atual usa `SCENE_TTS_LEAD_MS=450` para aproximar o início do `speaking` do áudio. Nesta execução, porém, a geração do TTS levou `1813 ms`. Pelos tempos registrados, o estado visual pode ter começado cerca de `1,36 s` antes da voz. Portanto, o carregamento dos ativos, as transições e o retorno ao `idle` estão validados para o ramo Bob, mas o critério de **início do speaking junto do playback** ainda precisa ser refinado.
+A primeira versão do smoke test usava `450 ms` como atraso estimado antes de entrar em `speaking`. Como a geração real nessa execução levou `1813 ms`, o visual podia começar aproximadamente `1,36 s` antes da voz.
 
-O próximo ajuste técnico deve substituir o atraso fixo por sinalização real de início/fim do playback do TTS.
+O `scene-smoke.js` foi atualizado para não depender mais desse atraso fixo no caminho do teste: agora ele observa o sinal de que o TTS entrou em reprodução e só então solicita o estado `speaking`. O próximo `npm run preview:spongebob` deve registrar:
+
+```text
+[TESTE CENA] sync_mode=tts-playback-signal
+[TESTE CENA] speaking_inicio_apos_playback_ms=...
+```
+
+Esse ajuste é provisório para o smoke test e ainda precisa ser validado no Windows. A arquitetura final deve expor um evento/callback explícito de playback no adaptador TTS, em vez de acoplar a cena a mensagens de log.
 
 ### Qualidade da voz
 
@@ -122,9 +129,9 @@ O comando:
 2. abre automaticamente uma prévia vertical no navegador em `http://127.0.0.1:3333`;
 3. inicia em `idle`;
 4. troca para `thinking`, simulando que uma pergunta chegou;
-5. inicia o TTS de uma frase de teste;
-6. troca para `speaking` usando a temporização provisória atual;
-7. mantém o vídeo `speaking` enquanto o TTS reproduz;
+5. gera o TTS de uma frase de teste;
+6. ao sinal de início da reprodução do TTS, troca para `speaking`;
+7. mantém o vídeo `speaking` durante a reprodução;
 8. volta automaticamente ao `idle` quando o TTS termina;
 9. deixa a prévia aberta em `idle` até `Ctrl+C`.
 
@@ -140,11 +147,10 @@ npm run preview:spongebob -- "Oi! Estou respondendo a uma pergunta da live agora
 
 ```env
 SCENE_THINKING_MS=3000
-SCENE_TTS_LEAD_MS=450
 SCENE_PREVIEW_PORT=3333
 ```
 
-`SCENE_TTS_LEAD_MS` permanece provisório e será removido/substituído por evento real de playback após a evidência desta execução.
+`SCENE_TTS_LEAD_MS` não é mais necessário no smoke test atualizado.
 
 ## Executar captura/IA/TTS em TikTok LIVE
 
@@ -164,8 +170,8 @@ A lógica do controlador de cena cobre seleção de variante, transições, esta
 
 ## Próximos critérios do MVP 4
 
-- substituir a temporização fixa por início/fim reais do playback do TTS;
-- repetir o preview e confirmar `speaking` iniciando junto da voz;
+- repetir o preview no Windows com a sinalização de playback e confirmar `speaking` iniciando junto da voz;
+- substituir depois o sinal provisório por evento/callback explícito no adaptador TTS;
 - comparar uma alternativa neural PT-BR para reduzir a sensação de voz robotizada;
 - gerar/aprovar imagem mestre e três clipes da influencer original;
 - validar a mesma arquitetura nas duas variantes antes de transmissão real.
