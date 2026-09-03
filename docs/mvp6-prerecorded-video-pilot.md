@@ -1,12 +1,28 @@
 # Piloto híbrido — cinco vídeos acionáveis por comentário
 
-Status: **DESENHO APROVADO; ATIVOS, GATILHOS E TESTE REAL PENDENTES**.
+Status: **CINCO ATIVOS PRODUZIDOS E ORGANIZADOS; GATILHOS E VALIDAÇÃO INTEGRADA PENDENTES**.
 
 ## Objetivo
 
 Validar cinco falas pré-gravadas com áudio e sincronização labial produzidos no próprio vídeo. Esses clipes cobrem situações repetíveis da LIVE e convivem com a conversa dinâmica já implementada.
 
 O piloto existe para responder a uma limitação confirmada: o MP4 `speaking` troca de estado junto com o TTS, mas a boca pré-renderizada não conhece os fonemas da fala gerada depois. Um clipe criado com sua fala fixa pode sincronizar melhor voz e boca, porém somente para aquela frase.
+
+## Resultado dos ativos
+
+O usuário informou que produziu e validou os cinco clipes. Nesta etapa, cópias foram organizadas na pasta oficial `MVP 6 - Vídeos Acionáveis`, no Google Drive do projeto, com nomes estáveis para uso pelo código. Os arquivos de origem foram preservados.
+
+| Uso | Arquivo oficial | Estado |
+|---|---|---|
+| Boas-vindas | `bob-boas-vindas-v1.mp4` | produzido e validado pelo usuário |
+| Hambúrguer | `bob-hamburguer-v1.mp4` | produzido e validado pelo usuário |
+| Fenda do Biquíni | `bob-fenda-biquini-v1.mp4` | produzido e validado pelo usuário |
+| Patrick | `bob-patrick-v1.mp4` | produzido e validado pelo usuário |
+| Convite para IA | `bob-convite-ia-v1.mp4` | produzido e validado pelo usuário |
+
+Classificação da evidência: aprovação audiovisual declarada pelo usuário; presença, formato, nomes e pasta conferidos no Drive. Os conteúdos não foram reproduzidos novamente por esta automação.
+
+Os binários permanecem no Drive e devem ser copiados, em cada máquina de execução, para `prototypes/tiktok-live-node/assets/mvp6/`. O GitHub versiona somente o manifesto, a documentação e as regras que impedem o envio acidental dos MP4s.
 
 ## Decisão de arquitetura
 
@@ -129,7 +145,7 @@ Use the uploaded approved master image as the exact visual reference for the cha
 
 ## Critérios de aceite dos ativos
 
-Cada arquivo precisa ser revisto do início ao fim e aprovado individualmente:
+Resultado desta etapa: os cinco arquivos foram aprovados pelo usuário. Os critérios abaixo permanecem como referência para revalidação e substituição futura de qualquer clipe:
 
 - personagem completo, sem deformação ou corte;
 - cenário e enquadramento coerentes entre os cinco;
@@ -142,7 +158,7 @@ Cada arquivo precisa ser revisto do início ao fim e aprovado individualmente:
 
 ## Critérios de validação integrada
 
-Após a aprovação dos cinco MP4s:
+Com os cinco MP4s aprovados e organizados:
 
 - implementar configuração e seleção por gatilho;
 - criar testes de normalização, palavras inteiras, cooldown, prioridade e deduplicação;
