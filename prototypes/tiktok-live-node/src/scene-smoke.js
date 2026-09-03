@@ -58,34 +58,6 @@ async function show(state, metadata = {}) {
   return selection;
 }
 
-// Ponte provisória do smoke test: detecta o momento em que o adaptador TTS
-// anuncia que iniciará o playback. O contrato definitivo deverá expor um
-// callback/evento explícito no próprio adaptador, sem depender de logs.
-function createPlaybackSignal() {
-  let resolveStart;
-  const started = new Promise((resolveStarted) => {
-    resolveStart = resolveStarted;
-  });
-
-  const originalLog = console.log;
-  let triggered = false;
-
-  console.log = (...args) => {
-    originalLog(...args);
-    if (!triggered && String(args[0] || '').startsWith('[TTS] reproduzindo')) {
-      triggered = true;
-      resolveStart(performance.now());
-    }
-  };
-
-  return {
-    started,
-    restore() {
-      console.log = originalLog;
-    },
-  };
-}
-
 async function run() {
   if (!(await requireApprovedAssets())) return;
 
@@ -95,7 +67,7 @@ async function run() {
   console.log('\nMVP 4 — teste local integrado Bob Esponja');
   console.log('Fluxo: idle -> thinking -> speaking + TTS -> idle');
   console.log('O áudio embutido dos MP4s fica mutado no navegador.');
-  console.log('Sincronização: speaking muda quando o TTS informa início real de reprodução.\n');
+  console.log('Sincronização: speaking é acionado por callback explícito do adaptador TTS.\n');
 
   await show(SCENE_STATES.IDLE, { reason: 'test-start' });
   await wait(initialIdleMs);
@@ -105,34 +77,28 @@ async function run() {
 
   console.log(`[TESTE CENA] TTS de teste: ${testText}`);
 
-  const playbackSignal = createPlaybackSignal();
-  let playbackStartedAt = null;
+  let callbackReceivedAt = null;
   let speakingStartedAt = null;
-  let ttsResult;
+  let speakingFinishedAt = null;
 
-  try {
-    const ttsPromise = speakText(testText, { force: true });
-    playbackStartedAt = await Promise.race([
-      playbackSignal.started,
-      ttsPromise.then(() => null),
-    ]);
-
-    if (playbackStartedAt !== null) {
-      await show(SCENE_STATES.SPEAKING, { reason: 'tts-playback-start' });
+  const ttsResult = await speakText(testText, {
+    force: true,
+    onPlaybackStart: async () => {
+      callbackReceivedAt = performance.now();
+      await show(SCENE_STATES.SPEAKING, { reason: 'tts-playback-callback' });
       speakingStartedAt = performance.now();
-    }
+    },
+    onPlaybackEnd: async () => {
+      speakingFinishedAt = performance.now();
+    },
+  });
 
-    ttsResult = await ttsPromise;
-  } finally {
-    playbackSignal.restore();
-  }
-
+  const speakingCallbackLagMs = callbackReceivedAt === null || speakingStartedAt === null
+    ? null
+    : Math.round(speakingStartedAt - callbackReceivedAt);
   const speakingVisibleMs = speakingStartedAt === null
     ? 0
-    : Math.round(performance.now() - speakingStartedAt);
-  const speakingStartLagMs = playbackStartedAt === null || speakingStartedAt === null
-    ? null
-    : Math.round(speakingStartedAt - playbackStartedAt);
+    : Math.round((speakingFinishedAt || performance.now()) - speakingStartedAt);
 
   await show(SCENE_STATES.IDLE, {
     reason: ttsResult?.ok ? 'tts-finished' : 'tts-failed',
@@ -140,9 +106,9 @@ async function run() {
   await wait(finalIdleMs);
 
   console.log('\n[TESTE CENA] sequência concluída.');
-  console.log('[TESTE CENA] sync_mode=tts-playback-signal');
-  if (speakingStartLagMs !== null) {
-    console.log(`[TESTE CENA] speaking_inicio_apos_playback_ms=${speakingStartLagMs}`);
+  console.log('[TESTE CENA] sync_mode=tts-playback-callback');
+  if (speakingCallbackLagMs !== null) {
+    console.log(`[TESTE CENA] speaking_inicio_apos_callback_ms=${speakingCallbackLagMs}`);
   }
   console.log(`[TESTE CENA] speaking_visivel_ms=${speakingVisibleMs}`);
   if (ttsResult?.ok) {
