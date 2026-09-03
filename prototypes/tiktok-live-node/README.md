@@ -9,7 +9,7 @@ Objetivo: validar incrementalmente o fluxo `TikTok LIVE → IA → TTS → cena 
 - **MVP 1 — captura TikTok LIVE:** VALIDADO em LIVE real.
 - **MVP 2 — resposta textual com IA:** VALIDADO em LIVE real.
 - **MVP 3 — TTS local:** VALIDADO no Windows e em LIVE real com voz pt-BR.
-- **MVP 4 — cena visual:** EM IMPLEMENTAÇÃO.
+- **MVP 4 — cena visual:** EM IMPLEMENTAÇÃO; o primeiro preview local real do ramo Bob já executou `idle → thinking → speaking → idle` com os três MP4s aprovados e TTS externo.
 
 No MVP 4, o controlador suporta duas variantes (`spongebob` e `influencer`) e os testes isolados da lógica de cena estão aprovados. Para a variante Bob Esponja, a imagem mestre e os três clipes iniciais já foram aprovados no Google Drive oficial:
 
@@ -17,7 +17,36 @@ No MVP 4, o controlador suporta duas variantes (`spongebob` e `influencer`) e os
 - `spongebob-thinking-v1.mp4`
 - `spongebob-speaking-v1.mp4`
 
-O próximo critério é executar a prévia local real `idle → thinking → speaking + TTS → idle`.
+## Primeiro preview local real — 2026-09-03
+
+O usuário executou `npm run preview:spongebob` no Windows com os três ativos reais. A prévia abriu no navegador e os logs registraram:
+
+```text
+idle -> thinking -> speaking -> idle
+estado_final=idle
+```
+
+Medições:
+
+```text
+voz=Microsoft Maria Desktop
+idioma=pt-BR
+geracao_ms=1813
+reproducao_ms=12714
+speaking_visivel_ms=14083
+```
+
+O áudio dos MP4s ficou mutado e o TTS externo foi ouvido no PC. O usuário confirmou que o fluxo funcionou.
+
+### Pendência de sincronização
+
+O smoke test atual usa `SCENE_TTS_LEAD_MS=450` para aproximar o início do `speaking` do áudio. Nesta execução, porém, a geração do TTS levou `1813 ms`. Pelos tempos registrados, o estado visual pode ter começado cerca de `1,36 s` antes da voz. Portanto, o carregamento dos ativos, as transições e o retorno ao `idle` estão validados para o ramo Bob, mas o critério de **início do speaking junto do playback** ainda precisa ser refinado.
+
+O próximo ajuste técnico deve substituir o atraso fixo por sinalização real de início/fim do playback do TTS.
+
+### Qualidade da voz
+
+O usuário descreveu `Microsoft Maria Desktop` como **robotizada**. Isso não invalida o fluxo técnico; `windows-sapi` continua útil como fallback/prova de arquitetura. Depois do ajuste de sincronização, deve ser comparada uma opção neural em PT-BR considerando naturalidade, latência, custo e facilidade de integração.
 
 ## Requisitos
 
@@ -94,12 +123,12 @@ O comando:
 3. inicia em `idle`;
 4. troca para `thinking`, simulando que uma pergunta chegou;
 5. inicia o TTS de uma frase de teste;
-6. troca aproximadamente junto do áudio para `speaking`;
+6. troca para `speaking` usando a temporização provisória atual;
 7. mantém o vídeo `speaking` enquanto o TTS reproduz;
 8. volta automaticamente ao `idle` quando o TTS termina;
 9. deixa a prévia aberta em `idle` até `Ctrl+C`.
 
-O áudio existente dentro dos MP4s fica **mutado no navegador**. A única voz que deve ser considerada no teste é o TTS externo.
+O áudio existente dentro dos MP4s fica **mutado no navegador**. A única voz considerada no teste é o TTS externo.
 
 Uma frase diferente pode ser passada diretamente:
 
@@ -109,15 +138,13 @@ npm run preview:spongebob -- "Oi! Estou respondendo a uma pergunta da live agora
 
 ### Ajustes opcionais
 
-Se necessário, os tempos podem ser ajustados por variáveis de ambiente:
-
 ```env
 SCENE_THINKING_MS=3000
 SCENE_TTS_LEAD_MS=450
 SCENE_PREVIEW_PORT=3333
 ```
 
-`SCENE_TTS_LEAD_MS` é provisório: usa como referência as latências de geração observadas no TTS já validado para aproximar o início do `speaking` do início da reprodução da voz. Se o teste mostrar diferença perceptível, esse ponto será refinado antes da integração em LIVE real.
+`SCENE_TTS_LEAD_MS` permanece provisório e será removido/substituído por evento real de playback após a evidência desta execução.
 
 ## Executar captura/IA/TTS em TikTok LIVE
 
@@ -135,16 +162,10 @@ npm test
 
 A lógica do controlador de cena cobre seleção de variante, transições, estado desconhecido e fallback restrito à mesma família visual.
 
-## Critério de aprovação do teste local do MVP 4
+## Próximos critérios do MVP 4
 
-Considerar o primeiro teste integrado do Bob aprovado quando for observado:
-
-- `idle` reproduzindo normalmente no início;
-- mudança clara para `thinking`;
-- mudança para `speaking` próxima do início da voz;
-- MP4s sem áudio próprio audível;
-- `speaking` permanecendo visualmente ativo durante o TTS;
-- retorno automático para `idle` ao fim da voz;
-- nenhuma quebra do processo caso um ativo esteja ausente — o controlador deve tratar o erro/fallback de forma segura.
-
-Somente depois desse teste local deve ser ligada a cena visual ao fluxo real de comentários da TikTok LIVE.
+- substituir a temporização fixa por início/fim reais do playback do TTS;
+- repetir o preview e confirmar `speaking` iniciando junto da voz;
+- comparar uma alternativa neural PT-BR para reduzir a sensação de voz robotizada;
+- gerar/aprovar imagem mestre e três clipes da influencer original;
+- validar a mesma arquitetura nas duas variantes antes de transmissão real.
