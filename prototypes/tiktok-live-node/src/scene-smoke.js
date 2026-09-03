@@ -58,6 +58,9 @@ async function show(state, metadata = {}) {
   return selection;
 }
 
+// Ponte provisória do smoke test: detecta o momento em que o adaptador TTS
+// anuncia que iniciará o playback. O contrato definitivo deverá expor um
+// callback/evento explícito no próprio adaptador, sem depender de logs.
 function createPlaybackSignal() {
   let resolveStart;
   const started = new Promise((resolveStarted) => {
@@ -115,8 +118,8 @@ async function run() {
     ]);
 
     if (playbackStartedAt !== null) {
-      speakingStartedAt = performance.now();
       await show(SCENE_STATES.SPEAKING, { reason: 'tts-playback-start' });
+      speakingStartedAt = performance.now();
     }
 
     ttsResult = await ttsPromise;
