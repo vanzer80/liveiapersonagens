@@ -1,6 +1,6 @@
 # MVP 6 — Interação contínua, voz neural e sincronização labial
 
-Status: **ORQUESTRAÇÃO E ADAPTADOR DE VOZ IMPLEMENTADOS; TESTE REAL E LIP SYNC VERDADEIRO PENDENTES**.
+Status: **ORQUESTRAÇÃO IMPLEMENTADA E CINCO VÍDEOS FIXOS PRODUZIDOS; GATILHOS, TESTE INTEGRADO E LIP SYNC DINÂMICO PENDENTES**.
 
 ## Objetivo
 
@@ -133,7 +133,7 @@ O Fish Audio oferece um fluxo com áudio e alinhamento temporal, documentado em 
 
 Foi aprovada a produção de cinco vídeos pré-gravados antes da implementação dos gatilhos. Eles cobrem boas-vindas, hambúrguer, Fenda do Biquíni, Patrick e convite para perguntas com `ia`. A fala e o áudio ficam embutidos nesses clipes para buscar melhor voz e lip sync nas frases fixas; nomes, presentes e perguntas inéditas permanecem dinâmicos.
 
-A prioridade planejada é `presente > pergunta dinâmica > vídeo acionado > entrada > ambiente`, com palavras inteiras, normalização de acentos, cooldown de 60 segundos e uma única mídia por vez. Ativos e código continuam pendentes.
+A prioridade planejada é `presente > pergunta dinâmica > vídeo acionado > entrada > ambiente`, com palavras inteiras, normalização de acentos, cooldown de 60 segundos e uma única mídia por vez. Os cinco ativos foram produzidos, validados pelo usuário e organizados no Drive oficial; a configuração de gatilhos, a reprodução e o teste integrado continuam pendentes.
 
 Especificação, gatilhos, prompts e critérios: [`docs/mvp6-prerecorded-video-pilot.md`](mvp6-prerecorded-video-pilot.md).
 
