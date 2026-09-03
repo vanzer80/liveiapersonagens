@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/index.js",
     "test": "node --test",
-    "test:tts": "node src/tts-smoke.js"
+    "test:tts": "node src/tts-smoke.js",
+    "preview:spongebob": "node src/scene-smoke.js"
   },
   "engines": {
     "node": ">=20"
