@@ -15,6 +15,7 @@ O objetivo imediato não é construir um SaaS completo. Primeiro precisamos vali
 - MVP 3 — TTS local: validado no Windows e integrado em LIVE real; concluído na Issue #3.
 - MVP 4 — cena visual: ramo Bob Esponja validado localmente com ativos reais e callbacks do TTS; influencer adiada por decisão do usuário.
 - MVP 5 — transmissão do Bob em LIVE real: integração implementada no protótipo; validação audiovisual por espectador ainda pendente.
+- MVP 6 — interação contínua e voz neural: orquestração implementada; piloto híbrido de cinco vídeos acionáveis aprovado, com ativos, gatilhos e teste real pendentes.
 
 O protótipo converte a resposta textual em WAV e reproduz o áudio localmente com uma voz instalada no Windows. O teste controlado selecionou `Microsoft Maria Desktop` em `pt-BR`, gerou o áudio em 884 ms e concluiu uma reprodução audível. Em LIVE real, duas respostas foram faladas com geração de 455 ms e 377 ms e reprodução de 7699 ms e 7072 ms. A captura continuou ativa. Essa escolha continua sendo uma hipótese gratuita para validação, não o fornecedor definitivo do produto.
 
@@ -68,5 +69,8 @@ Issues de validação:
 - [#3 — MVP 3: TTS local](https://github.com/vanzer80/liveiapersonagens/issues/3) — concluída;
 - [#4 — MVP 4: cena visual com clipes Flow/Veo](https://github.com/vanzer80/liveiapersonagens/issues/4) — concluída para o ramo Bob; influencer adiada;
 - [#8 — MVP 5: Bob Esponja em TikTok LIVE real](https://github.com/vanzer80/liveiapersonagens/issues/8) — etapa atual.
+- [#9 — MVP 6: interação, voz neural e lip sync](https://github.com/vanzer80/liveiapersonagens/issues/9) — orquestração pronta; validação e piloto de vídeos pendentes.
 
 Procedimento da etapa atual: [`docs/mvp5-live-bob.md`](docs/mvp5-live-bob.md). Retrospectiva de erros e acertos na configuração do LIVE Studio: [`docs/mvp5-live-studio-retrospective.md`](docs/mvp5-live-studio-retrospective.md).
+
+Interação e voz: [`docs/mvp6-interaction-voice-lipsync.md`](docs/mvp6-interaction-voice-lipsync.md). Piloto dos cinco vídeos acionáveis: [`docs/mvp6-prerecorded-video-pilot.md`](docs/mvp6-prerecorded-video-pilot.md).
