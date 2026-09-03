@@ -1,106 +1,163 @@
-# MVP 4 — imagem mestre e clipes visuais
+# MVP 4 — imagens mestre e clipes visuais
 
 ## Status
 
-Especificação visual inicial definida para gerar a primeira imagem mestre candidata e os três clipes mínimos do MVP 4. A identidade visual só deve ser tratada como **aprovada** depois de revisão visual do usuário.
+A direção visual do MVP 4 foi ampliada para um teste comparativo com **duas variantes**, usando o mesmo pipeline técnico `idle → thinking → speaking → idle`, o mesmo controlador de cena e o mesmo TTS.
 
-## Objetivo
+A especificação anterior do host humano masculino original fica substituída por esta comparação.
 
-Criar uma base visual simples, original e consistente para validar `idle → thinking → speaking → idle` antes de investir em avatar 3D em tempo real.
+## Governança de direitos
 
-## Personagem mestre — candidato V1
+- O usuário informou em 2026-09-03 que obteve licença para trabalhar com personagens da franquia Bob Esponja.
+- O contrato/licença não está armazenado neste repositório e seu escopo não foi verificado pelo projeto.
+- Antes de LIVE pública ou uso comercial, confirmar que a licença cobre o uso pretendido, incluindo quando aplicável TikTok/TikTok LIVE, conteúdo gerado ou alterado por IA, animação/representação visual, voz/interação dinâmica, monetização, territórios, prazo e regras de aprovação de marca.
+- Personagens protegidos sem autorização continuam fora da estratégia.
 
-### Identidade visual
+## Objetivo do teste comparativo
 
-- personagem humano adulto original, sem referência a personagem protegido;
-- apresentação masculina, aproximadamente 35 anos;
-- pele morena clara, rosto brasileiro/latino de aparência natural;
-- cabelo castanho-escuro curto, levemente ondulado, penteado simples;
-- barba curta e bem cuidada;
-- olhos castanhos quentes;
-- expressão amistosa, inteligente e levemente curiosa;
-- proporções humanas realistas, com acabamento de personagem 3D cinematográfico de alta qualidade, sem aparência cartunesca;
-- nada de cicatrizes, armaduras, símbolos, logos ou elementos que lembrem franquias conhecidas.
+Comparar dois gatilhos visuais muito diferentes sem alterar a arquitetura:
+
+1. **Variante A — Bob Esponja licenciado:** reconhecimento imediato, carisma e força de uma IP conhecida.
+2. **Variante B — influencer virtual original:** aparência humana realista, beleza, presença de câmera e potencial de atenção/relacionamento.
+
+O objetivo não é decidir o produto final apenas pela aparência. Primeiro mediremos consistência visual, qualidade das transições e adequação à interação; depois, em LIVE, poderemos comparar atenção, retenção e resposta do público.
+
+---
+
+# Variante A — Bob Esponja licenciado
+
+## Imagem mestre
+
+Usar o personagem Bob Esponja dentro do escopo da licença informada pelo usuário.
+
+### Direção visual
+
+- aparência reconhecível e consistente do personagem licenciado;
+- acabamento 3D cinematográfico de alta qualidade, preservando o caráter cartunesco;
+- expressão simpática, energética e convidativa;
+- cenário fixo de estúdio/livestream inspirado em ambiente submarino alegre, sem textos ou interfaces incorporadas;
+- vertical `9:16`;
+- enquadramento médio, personagem centralizado e com espaço para overlays futuros;
+- câmera fixa, sem zoom, pan ou cortes nos clipes básicos.
+
+### Prompt mestre — Bob Esponja
+
+> Create a high-quality vertical 9:16 cinematic 3D livestream portrait of SpongeBob SquarePants, preserving his licensed recognizable character identity and proportions. He is centered in a friendly underwater livestream studio, looking directly toward the viewer with an inviting cheerful expression. Use polished cinematic 3D rendering, soft warm key lighting, subtle rim light, clean underwater background details, moderate depth of field and enough negative space for future livestream overlays. Locked eye-level camera, stable framing. No text, no subtitles, no watermark, no UI, no extra characters.
+
+## Prompts dos estados — Bob Esponja
+
+### `idle`
+
+> Use the approved SpongeBob master image as the strict visual identity reference. Preserve exactly the same character appearance, colors, proportions, environment, lighting, framing and locked camera. SpongeBob calmly waits during a livestream with subtle breathing-like body motion, one natural blink, tiny eye movement and a small friendly neutral smile. No speaking, no large gestures, no camera movement, no text, no logo, no UI. Make the beginning and ending pose visually close for looping.
+
+### `thinking`
+
+> Use the approved SpongeBob master image as the strict visual identity reference. Preserve exactly the same character appearance, colors, proportions, environment, lighting, framing and locked camera. SpongeBob has just heard a viewer question and briefly thinks: slight head tilt, small thoughtful eye movement, subtle eyebrow/face change and a restrained thinking gesture, then returns attention toward camera. Mouth mostly closed. No audible speech, no camera movement, no text, no logo, no UI. Keep the action calm and loop-friendly.
+
+### `speaking`
+
+> Use the approved SpongeBob master image as the strict visual identity reference. Preserve exactly the same character appearance, colors, proportions, environment, lighting, framing and locked camera. SpongeBob speaks conversationally to the livestream audience using generic non-language-specific mouth motion, small expressive head movements and restrained hand gestures. No specific sentence or audible dialogue. Keep the motion suitable for looping while external dynamic TTS audio plays. No camera movement, no text, no logo, no UI.
+
+---
+
+# Variante B — influencer virtual feminina original
+
+## Identidade visual candidata V1
+
+- mulher adulta original, aproximadamente 25–30 anos;
+- aparência brasileira/latina, humana e fotorealista;
+- bonita e fotogênica sem aparência artificial exagerada;
+- cabelo castanho longo, saudável e levemente ondulado;
+- olhos castanhos, expressão confiante, simpática e inteligente;
+- maquiagem natural e elegante;
+- proporções humanas realistas;
+- nenhuma semelhança intencional com celebridade, influencer real ou pessoa pública;
+- roupa moderna e elegante, sem marcas ou logos;
+- personagem apresentada como influencer virtual/IA quando exigido pela plataforma.
 
 ### Roupa fixa
 
-- camiseta lisa grafite escura;
-- jaqueta leve verde-oliva escura, aberta, sem estampas nem logotipos;
-- roupa idêntica em todos os estados do primeiro conjunto.
+- top/camiseta elegante em tom neutro;
+- jaqueta ou blazer casual contemporâneo;
+- sem decote excessivo, logos, estampas ou elementos de marca;
+- roupa idêntica nos três estados do primeiro conjunto.
 
 ### Cenário fixo
 
-- estúdio acolhedor de transmissão com estética contemporânea;
-- fundo desfocado com madeira escura, luzes práticas quentes e poucos elementos abstratos;
-- sem texto, telas legíveis, marcas, logos ou elementos de interface incorporados ao vídeo;
-- iluminação principal suave e quente no rosto, recorte discreto no cabelo/ombros;
-- profundidade de campo moderada para separar o personagem do fundo.
+- estúdio contemporâneo de creator/livestream;
+- fundo elegante com iluminação quente e detalhes modernos desfocados;
+- sem telas legíveis, textos, marcas ou UI incorporada;
+- luz principal suave no rosto e recorte discreto no cabelo/ombros.
 
 ### Enquadramento fixo
 
 - vertical `9:16`;
-- personagem centralizado, do meio do tórax para cima;
+- plano médio fechado, do meio do tórax para cima;
 - câmera na altura dos olhos;
-- lente equivalente aproximada de retrato natural, sem grande angular;
-- espaço moderado acima da cabeça e nas laterais para futura sobreposição de UI;
-- câmera bloqueada: sem zoom, pan, tilt ou handheld.
+- personagem centralizada;
+- espaço para overlays futuros;
+- câmera bloqueada.
 
-## Prompt mestre para imagem
+### Prompt mestre — influencer virtual
 
-> Original adult male humanoid host, around 35 years old, light brown Brazilian/Latino skin tone, short slightly wavy dark brown hair, neatly trimmed short beard, warm brown eyes, friendly intelligent expression, realistic human facial proportions, high-end cinematic 3D character rendering with lifelike skin and hair, not cartoon, not stylized as any known franchise character. He wears a plain dark graphite t-shirt and an open dark olive lightweight jacket with no logos or patterns. Medium close-up from mid chest upward, centered, eye-level camera, vertical 9:16. Cozy contemporary livestream studio in the background with dark wood, subtle warm practical lights and soft abstract details, shallow depth of field, warm soft key light on face, subtle rim light, locked camera, clean composition with room for future overlays. No text, no watermark, no logo, no UI, no weapons, no armor, no costume changes.
+> Create an original adult female virtual influencer, around 25–30 years old, with a beautiful natural Brazilian/Latina appearance, warm brown eyes, long slightly wavy brown hair, elegant natural makeup, confident friendly intelligent expression and realistic human facial proportions. She must not resemble any real celebrity or known influencer. Photorealistic cinematic rendering with subtle high-end digital-human polish. She wears a tasteful modern neutral top with a casual elegant jacket or blazer, no logos or patterns. Medium close-up from mid chest upward, centered, eye-level camera, vertical 9:16. Contemporary creator livestream studio with warm practical lights, elegant blurred background, shallow depth of field, soft flattering key light and subtle rim light. Locked camera, clean composition with room for future overlays. No text, no watermark, no logo, no UI.
 
-## Regras de consistência para todos os clipes
+## Prompts dos estados — influencer
 
-1. Usar a imagem mestre como referência/ingredient principal em todas as gerações.
-2. Preservar exatamente rosto, cabelo, barba, roupa, cenário, luz, enquadramento e posição de câmera.
-3. Alterar apenas expressão, olhar, mãos e pequenos movimentos de tronco necessários ao estado.
-4. Não adicionar texto, interface, nomes, legendas, objetos novos ou mudanças de cenário.
-5. Não gerar fala audível, nomes ou frases. O áudio final vem do TTS dinâmico.
-6. Evitar movimentos grandes de câmera, entrada/saída de quadro e gestos que cruzem o rosto.
-7. Manter boca e mandíbula naturais. Em `speaking`, produzir movimento de fala genérico sem frase específica.
-8. Preferir movimentos suaves que possam repetir sem salto visual perceptível.
+### `idle`
 
-## Contrato dos ativos
+> Use the approved virtual influencer master image as the strict visual identity reference. Keep exactly the same face, hair, skin tone, clothing, studio, lighting, framing and locked camera. She calmly waits during a livestream with subtle breathing, one natural blink, tiny eye movement toward camera and minimal relaxed shoulder movement. Neutral friendly expression, mouth mostly closed. No speaking, no large gestures, no camera motion, no text, no logo, no UI. Make the ending pose close to the opening pose for looping.
 
-| Estado | Arquivo | Proporção | Alvo de duração | Loop | Fallback |
+### `thinking`
+
+> Use the approved virtual influencer master image as the strict visual identity reference. Keep exactly the same face, hair, skin tone, clothing, studio, lighting, framing and locked camera. She has just heard a viewer question and briefly thinks: attentive eyes, slight head tilt, small thoughtful eyebrow movement, brief glance a little off-center and back toward camera, subtle closed-mouth breath. No speaking, no exaggerated acting, no camera motion, no text, no logo, no UI. Keep the motion calm, realistic and loop-friendly.
+
+### `speaking`
+
+> Use the approved virtual influencer master image as the strict visual identity reference. Keep exactly the same face, hair, skin tone, clothing, studio, lighting, framing and locked camera. She speaks conversationally to the livestream audience without any specific recorded sentence: natural generic mouth and jaw movement, subtle facial expression changes, occasional blink, small believable head movements and restrained hand gestures below face level. Warm engaged energy, not theatrical. No audible dialogue, no names, no fixed phrases, no camera motion, no text, no logo, no UI. Suitable to loop while external dynamic TTS audio plays.
+
+---
+
+# Contrato dos ativos
+
+Cada variante usa seu próprio prefixo e os mesmos três estados.
+
+| Variante | Estado | Arquivo | Alvo | Loop | Fallback |
 | --- | --- | --- | --- | --- | --- |
-| `idle` | `mvp4-idle-v1.mp4` | 9:16 | 6–8 s | sim | ele mesmo |
-| `thinking` | `mvp4-thinking-v1.mp4` | 9:16 | 4–6 s | sim | `idle` |
-| `speaking` | `mvp4-speaking-v1.mp4` | 9:16 | 6–8 s | sim enquanto TTS toca | `idle` |
+| Bob Esponja | `idle` | `spongebob-idle-v1.mp4` | 6–8 s | sim | ele mesmo |
+| Bob Esponja | `thinking` | `spongebob-thinking-v1.mp4` | 4–6 s | sim | `idle` da mesma variante |
+| Bob Esponja | `speaking` | `spongebob-speaking-v1.mp4` | 6–8 s | sim durante TTS | `idle` da mesma variante |
+| Influencer | `idle` | `influencer-idle-v1.mp4` | 6–8 s | sim | ele mesmo |
+| Influencer | `thinking` | `influencer-thinking-v1.mp4` | 4–6 s | sim | `idle` da mesma variante |
+| Influencer | `speaking` | `influencer-speaking-v1.mp4` | 6–8 s | sim durante TTS | `idle` da mesma variante |
 
-Requisitos de entrega dos vídeos:
+Requisitos comuns:
 
-- resolução preferida: `1080x1920` quando disponível; aceitar `720x1280` para protótipo;
-- MP4 com codec amplamente reproduzível;
-- sem áudio de fala; ambiente deve ser removível ou muito discreto;
-- primeiro e último quadro visualmente próximos quando o estado for marcado como loop;
-- manter uma única versão aprovada por estado no conjunto ativo; variações futuras usam sufixo `v2`, `v3` etc.
+- vertical `9:16`, preferencialmente `1080x1920`;
+- MP4 amplamente reproduzível;
+- sem fala fixa incorporada;
+- TTS permanece externo e dinâmico;
+- primeiro e último quadro próximos quando marcado como loop;
+- nenhuma troca de câmera, cenário ou roupa dentro do conjunto base;
+- fallback nunca pode cruzar variantes: Bob volta para `spongebob-idle`, influencer volta para `influencer-idle`.
 
-## Prompt Flow/Veo — idle
+## Checklist antes de aceitar uma geração
 
-> Use the uploaded master character image as the strict visual identity reference. Keep exactly the same person, face, hair, beard, clothing, studio background, lighting, framing and locked eye-level camera. Vertical 9:16 medium close-up. The character is calmly waiting during a livestream: subtle breathing, one natural blink, tiny eye movement toward the camera, minimal relaxed shoulder movement, neutral friendly expression. No speaking, mouth mostly closed, no large gestures, no camera motion, no new objects, no text, no logo, no UI. Make the motion smooth and loop-friendly, with the ending pose close to the opening pose. Preserve photorealistic cinematic 3D rendering and natural human anatomy.
-
-## Prompt Flow/Veo — thinking
-
-> Use the uploaded master character image as the strict visual identity reference. Keep exactly the same person, face, hair, beard, clothing, studio background, lighting, framing and locked eye-level camera. Vertical 9:16 medium close-up. The character has just heard a viewer question and is briefly thinking: attentive eyes, a small thoughtful eyebrow movement, slight head tilt, brief glance a little off-center and back toward camera, subtle closed-mouth breath, one small restrained hand gesture near the lower edge of frame if natural. No speaking, no exaggerated acting, no camera motion, no new objects, no text, no logo, no UI. Motion should be calm, realistic and loop-friendly. Preserve photorealistic cinematic 3D rendering and natural human anatomy.
-
-## Prompt Flow/Veo — speaking
-
-> Use the uploaded master character image as the strict visual identity reference. Keep exactly the same person, face, hair, beard, clothing, studio background, lighting, framing and locked eye-level camera. Vertical 9:16 medium close-up. The character is speaking conversationally to the livestream audience without any specific recorded sentence: natural generic mouth and jaw movement, subtle facial expression changes, occasional blink, small believable head movements and restrained hand gestures below face level. Keep energy warm and engaged, not theatrical. No audible dialogue, no names, no fixed phrases, no camera motion, no new objects, no text, no logo, no UI. The movement should remain visually stable and be suitable to loop while an external dynamic TTS track plays. Preserve photorealistic cinematic 3D rendering and natural human anatomy.
-
-## Checklist visual antes de aceitar cada geração
-
-- rosto reconhecidamente igual à imagem mestre;
-- mesma barba, cabelo e cor de pele;
-- mesma roupa e cores;
-- mesmo cenário e iluminação;
-- mesma distância e altura de câmera;
-- mãos e dedos sem deformações evidentes;
-- ausência de texto/logos/UI;
-- nenhum diálogo fixo no áudio;
+- identidade reconhecidamente igual à imagem mestre da variante;
+- mesma roupa, cenário, luz, distância e altura de câmera;
+- ausência de texto, logos, UI e artefatos visuais graves;
 - movimento compatível com o estado;
-- emenda do loop aceitável para o protótipo.
+- nenhum diálogo fixo no áudio;
+- loop aceitável para o protótipo;
+- no caso de Bob Esponja, geração dentro do padrão visual e das restrições aplicáveis da licença;
+- no caso da influencer, nenhuma semelhança evidente com pessoa real conhecida.
 
-## Próximo passo após aprovação visual
+## Próxima execução
 
-Gerar os três arquivos no Flow/Veo com a mesma imagem mestre. Depois, colocá-los em `prototypes/tiktok-live-node/assets/mvp4/` usando exatamente os nomes definidos acima. Somente então o critério “três clipes iniciais consistentes” da Issue #4 pode ser marcado como concluído.
+1. gerar uma imagem mestre candidata de Bob Esponja;
+2. gerar uma imagem mestre candidata da influencer virtual;
+3. aprovar ou ajustar cada mestre;
+4. gerar `idle`, `thinking` e `speaking` para cada variante;
+5. adaptar o contrato/configuração do controlador para selecionar uma variante sem duplicar a lógica;
+6. executar a prévia local das duas variantes com o mesmo TTS;
+7. somente depois comparar desempenho em LIVE real.
