@@ -198,7 +198,38 @@ O comando:
 7. retorna a `idle` ao terminar ou se ocorrer falha;
 8. agrupa entradas por 10 segundos e pronuncia até três nomes;
 9. enfileira perguntas, boas-vindas e presentes por prioridade;
-10. após 35 segundos sem atividade, usa uma frase curta para movimentar o chat.
+10. depois que a conexão for confirmada, faz uma abertura após 3 segundos;
+11. após um intervalo variável de 30 a 45 segundos sem atividade, usa uma frase curta para movimentar o chat;
+12. lê as falas do arquivo `config/live-lines.json`, que pode ser editado sem alterar o código;
+13. em presentes enviados em sequência, agradece somente quando a sequência termina.
+
+### Personalizar as falas sem programar
+
+Abra no Bloco de Notas:
+
+```powershell
+notepad .\config\live-lines.json
+```
+
+O arquivo tem duas listas:
+
+- `opening`: uma das frases, escolhida a cada execução, é dita três segundos depois de o PowerShell mostrar `Conectado`;
+- `ambient`: frases percorridas em ordem quando o chat fica silencioso por 30 a 45 segundos.
+
+Cada frase precisa ficar entre aspas, separada da próxima por vírgula. Não coloque vírgula depois da última frase de cada lista. Salve o arquivo em UTF-8 e mantenha as chaves e os colchetes. Se o JSON estiver inválido, o programa registra um aviso e usa falas internas de segurança.
+
+Os tempos podem ser ajustados somente no `.env`:
+
+```env
+INTERACTION_LINES_FILE=config/live-lines.json
+INTERACTION_OPENING_ENABLED=true
+INTERACTION_OPENING_DELAY_MS=3000
+INTERACTION_AMBIENT_ENABLED=true
+INTERACTION_AMBIENT_MIN_SILENCE_MS=30000
+INTERACTION_AMBIENT_MAX_SILENCE_MS=45000
+```
+
+Valores menores que 10 segundos para falas de ambiente são limitados pelo programa para evitar fala excessiva. Entradas, perguntas e presentes continuam tendo prioridade sobre as frases de ambiente.
 
 Na versão testada do TikTok LIVE Studio, `Adicionar link` rejeitou a URL HTTP local. Use captura de janela, selecione a prévia do Edge, escolha uma cena vertical **em branco** e mantenha o modo `Ajustar`. O layout `Câmera em tela cheia` enquadrou o vídeo, mas exigiu uma câmera visível ao iniciar a LIVE; a cena em branco eliminou essa exigência e manteve apenas o personagem. A cena `4:3 | Câmera abaixo` deixa a fonte em um espaço horizontal; `Preencher` corta o Bob e `Expandir` deforma a imagem. Ative o áudio do sistema no mixer para que o TTS chegue aos espectadores.
 

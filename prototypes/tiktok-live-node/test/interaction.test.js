@@ -6,17 +6,23 @@ import {
   createPriorityTaskQueue,
   formatWelcome,
   getInteractionConfig,
+  loadInteractionLines,
   sanitizeSpokenName,
+  shouldThankGift,
 } from '../src/interaction.js';
 
 const enabledConfig = {
   enabled: true,
+  linesFile: 'config/live-lines.json',
+  openingEnabled: false,
+  openingDelayMs: 3000,
   welcomeEnabled: true,
   welcomeBatchMs: 10000,
   welcomeCooldownMs: 15000,
   welcomeMaxNames: 3,
   ambientEnabled: false,
-  ambientSilenceMs: 35000,
+  ambientMinSilenceMs: 30000,
+  ambientMaxSilenceMs: 45000,
   maxPending: 12,
 };
 
@@ -36,11 +42,40 @@ test('configura a interação com limites seguros', () => {
   assert.equal(config.welcomeBatchMs, 1000);
   assert.equal(config.welcomeMaxNames, 5);
   assert.equal(config.ambientSilenceMs, 10000);
+  assert.equal(config.ambientMinSilenceMs, 10000);
+  assert.equal(config.ambientMaxSilenceMs, 10000);
+});
+
+test('carrega falas editáveis do arquivo de configuração', () => {
+  const lines = loadInteractionLines({
+    filePath: 'config/live-lines.json',
+    logger: { warn() {} },
+  });
+
+  assert.equal(lines.fallbackUsed, false);
+  assert.ok(lines.opening.length >= 1);
+  assert.ok(lines.ambient.length >= 20);
+});
+
+test('usa falas internas se o arquivo editável não existir', () => {
+  const lines = loadInteractionLines({
+    filePath: 'config/arquivo-inexistente.json',
+    logger: { warn() {} },
+  });
+
+  assert.equal(lines.fallbackUsed, true);
+  assert.ok(lines.ambient.length >= 1);
 });
 
 test('limpa nomes antes de pronunciá-los', () => {
   assert.equal(sanitizeSpokenName('@luis_boss-80!'), 'luis boss 80');
   assert.equal(sanitizeSpokenName('💥'), 'pessoal');
+});
+
+test('agradece presente em sequência apenas quando a sequência termina', () => {
+  assert.equal(shouldThankGift({ giftType: 1, repeatEnd: false }), false);
+  assert.equal(shouldThankGift({ giftType: 1, repeatEnd: true }), true);
+  assert.equal(shouldThankGift({ giftType: 2, repeatEnd: false }), true);
 });
 
 test('agrupa boas-vindas sem narrar uma entrada por vez', () => {
@@ -122,7 +157,12 @@ test('fala de ambiente só entra depois do período de silêncio', async () => {
   const spoken = [];
   let currentTime = 0;
   const engine = createLiveInteractionEngine({
-    config: { ...enabledConfig, ambientEnabled: true, ambientSilenceMs: 35000 },
+    config: {
+      ...enabledConfig,
+      ambientEnabled: true,
+      ambientMinSilenceMs: 35000,
+      ambientMaxSilenceMs: 35000,
+    },
     ambientLines: ['Fala de teste para o silêncio.'],
     speak: async (text) => spoken.push(text),
     answerQuestion: async () => {},
@@ -144,5 +184,35 @@ test('fala de ambiente só entra depois do período de silêncio', async () => {
   scheduled[0].handler();
   await waitForQueue();
   assert.deepEqual(spoken, ['Fala de teste para o silêncio.']);
+  engine.stop();
+});
+
+test('fala de abertura começa somente quando o motor é iniciado', async () => {
+  const scheduled = [];
+  const spoken = [];
+  const engine = createLiveInteractionEngine({
+    config: {
+      ...enabledConfig,
+      openingEnabled: true,
+      openingDelayMs: 3000,
+    },
+    openingLines: ['A LIVE começou de verdade.'],
+    speak: async (text) => spoken.push(text),
+    answerQuestion: async () => {},
+    logger: { log() {}, error() {} },
+    setTimer: (handler, delay) => {
+      const timer = { handler, delay, cancelled: false };
+      scheduled.push(timer);
+      return timer;
+    },
+    clearTimer: (timer) => { timer.cancelled = true; },
+  });
+
+  assert.deepEqual(scheduled, []);
+  engine.start();
+  assert.equal(scheduled[0].delay, 3000);
+  scheduled[0].handler();
+  await waitForQueue();
+  assert.deepEqual(spoken, ['A LIVE começou de verdade.']);
   engine.stop();
 });
