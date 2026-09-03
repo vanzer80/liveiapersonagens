@@ -69,4 +69,4 @@ Issues de validação:
 - [#4 — MVP 4: cena visual com clipes Flow/Veo](https://github.com/vanzer80/liveiapersonagens/issues/4) — concluída para o ramo Bob; influencer adiada;
 - [#8 — MVP 5: Bob Esponja em TikTok LIVE real](https://github.com/vanzer80/liveiapersonagens/issues/8) — etapa atual.
 
-Procedimento da etapa atual: [`docs/mvp5-live-bob.md`](docs/mvp5-live-bob.md).
+Procedimento da etapa atual: [`docs/mvp5-live-bob.md`](docs/mvp5-live-bob.md). Retrospectiva de erros e acertos na configuração do LIVE Studio: [`docs/mvp5-live-studio-retrospective.md`](docs/mvp5-live-studio-retrospective.md).

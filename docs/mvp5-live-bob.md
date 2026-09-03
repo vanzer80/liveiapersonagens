@@ -39,17 +39,22 @@ Em 2026-09-03, o usuário decidiu adiar a influencer e avançar diretamente para
 
 ## Preparação no TikTok LIVE Studio
 
-O suporte atual do TikTok indica o LIVE Studio como a rota para transmitir a partir do Windows. A integração exata da fonte local ainda é uma hipótese de operação que precisa ser verificada na versão instalada do aplicativo.
+O suporte atual do TikTok indica o LIVE Studio como a rota para transmitir a partir do Windows. Na versão instalada durante o primeiro teste, a fonte `Adicionar link` rejeitou `http://127.0.0.1:3333` com a mensagem “Digite o URL correto”. A rota operacional validada para a composição local é captura de janela.
 
 1. Iniciar o comando do Bob antes de entrar ao vivo.
-2. No editor da cena vertical, adicionar uma fonte de link com `http://127.0.0.1:3333` e ajustar para preencher 9:16.
-3. Se a fonte de link não estiver disponível ou não carregar `localhost`, abrir a URL no Edge, usar tela cheia e adicionar uma captura dessa janela.
-4. No mixer, ativar o áudio do sistema/dispositivo de saída usado pelo TTS.
-5. Manter microfone e outras fontes mutados no primeiro teste quando não forem necessários.
-6. Confirmar na prévia que o Bob está em `idle` e que não aparece texto de depuração.
-7. Iniciar a LIVE e aguardar a conexão automática do programa.
+2. Abrir a prévia no Edge, preferencialmente em modo aplicativo.
+3. Selecionar uma visualização vertical e a cena `Câmera em tela cheia`.
+4. Adicionar uma captura de **janela**, selecionar `msedge.exe` e usar `Ajustar`.
+5. Não usar a cena `4:3 | Câmera abaixo`: ela prende a fonte em um espaço horizontal.
+6. Não usar `Preencher` para corrigir esse espaço, pois corta o personagem; não usar `Expandir`, pois deforma a proporção.
+7. Remover fontes antigas de tela inteira e confirmar que somente o Bob aparece.
+8. No mixer, ativar o áudio do sistema/dispositivo de saída usado pelo TTS.
+9. Manter microfone e outras fontes mutados no primeiro teste quando não forem necessários.
+10. Iniciar a LIVE e aguardar a conexão automática do programa.
 
 Referência oficial: [TikTok Support — LIVE pelo navegador usa LIVE Studio no Windows ou OBS](https://support.tiktok.com/en/live-gifts-wallet/tiktok-live/moderating-on-tiktok-live).
+
+Retrospectiva completa da preparação: [`mvp5-live-studio-retrospective.md`](mvp5-live-studio-retrospective.md).
 
 ## Teste do espectador
 

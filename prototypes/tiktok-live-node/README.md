@@ -184,9 +184,9 @@ O comando:
 6. entra em `speaking` no callback real de início do TTS;
 7. retorna a `idle` ao terminar ou se ocorrer falha.
 
-No TikTok LIVE Studio, use a URL local como fonte de link em uma cena vertical. Se a fonte não carregar, abra a URL no Edge em tela cheia e capture essa janela. Ative o áudio do sistema no mixer para que o TTS chegue aos espectadores.
+Na versão testada do TikTok LIVE Studio, `Adicionar link` rejeitou a URL HTTP local. Use captura de janela, selecione a prévia do Edge, escolha a cena `Câmera em tela cheia` e mantenha o modo `Ajustar`. A cena `4:3 | Câmera abaixo` deixa a fonte em um espaço horizontal; `Preencher` corta o Bob e `Expandir` deforma a imagem. Ative o áudio do sistema no mixer para que o TTS chegue aos espectadores.
 
-A transmissão só estará validada depois que outro dispositivo confirmar imagem e voz em LIVE real. Procedimento completo: [`../../docs/mvp5-live-bob.md`](../../docs/mvp5-live-bob.md).
+A transmissão só estará validada depois que outro dispositivo confirmar imagem e voz em LIVE real. Procedimento: [`../../docs/mvp5-live-bob.md`](../../docs/mvp5-live-bob.md). Erros e acertos da primeira configuração: [`../../docs/mvp5-live-studio-retrospective.md`](../../docs/mvp5-live-studio-retrospective.md).
 
 ## Testes automatizados
 
