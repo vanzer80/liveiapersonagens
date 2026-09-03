@@ -12,7 +12,6 @@ try {
 
 const assetsDirectory = resolve('assets', 'mvp4');
 const thinkingMs = Math.max(500, Number(process.env.SCENE_THINKING_MS || 3000));
-const ttsLeadMs = Math.max(0, Number(process.env.SCENE_TTS_LEAD_MS || 450));
 const initialIdleMs = Math.max(500, Number(process.env.SCENE_INITIAL_IDLE_MS || 2000));
 const finalIdleMs = Math.max(500, Number(process.env.SCENE_FINAL_IDLE_MS || 3000));
 const exitAfterTest = ['1', 'true', 'yes', 'sim', 'on'].includes(
@@ -59,6 +58,31 @@ async function show(state, metadata = {}) {
   return selection;
 }
 
+function createPlaybackSignal() {
+  let resolveStart;
+  const started = new Promise((resolveStarted) => {
+    resolveStart = resolveStarted;
+  });
+
+  const originalLog = console.log;
+  let triggered = false;
+
+  console.log = (...args) => {
+    originalLog(...args);
+    if (!triggered && String(args[0] || '').startsWith('[TTS] reproduzindo')) {
+      triggered = true;
+      resolveStart(performance.now());
+    }
+  };
+
+  return {
+    started,
+    restore() {
+      console.log = originalLog;
+    },
+  };
+}
+
 async function run() {
   if (!(await requireApprovedAssets())) return;
 
@@ -67,7 +91,8 @@ async function run() {
 
   console.log('\nMVP 4 — teste local integrado Bob Esponja');
   console.log('Fluxo: idle -> thinking -> speaking + TTS -> idle');
-  console.log('O áudio embutido dos MP4s fica mutado no navegador.\n');
+  console.log('O áudio embutido dos MP4s fica mutado no navegador.');
+  console.log('Sincronização: speaking muda quando o TTS informa início real de reprodução.\n');
 
   await show(SCENE_STATES.IDLE, { reason: 'test-start' });
   await wait(initialIdleMs);
@@ -76,23 +101,51 @@ async function run() {
   await wait(thinkingMs);
 
   console.log(`[TESTE CENA] TTS de teste: ${testText}`);
-  const ttsPromise = speakText(testText, { force: true });
-  await wait(ttsLeadMs);
-  const speakingStartedAt = performance.now();
-  await show(SCENE_STATES.SPEAKING, { reason: 'tts-playback-approx' });
 
-  const ttsResult = await ttsPromise;
-  const speakingVisibleMs = Math.round(performance.now() - speakingStartedAt);
+  const playbackSignal = createPlaybackSignal();
+  let playbackStartedAt = null;
+  let speakingStartedAt = null;
+  let ttsResult;
 
-  await show(SCENE_STATES.IDLE, { reason: 'tts-finished' });
+  try {
+    const ttsPromise = speakText(testText, { force: true });
+    playbackStartedAt = await Promise.race([
+      playbackSignal.started,
+      ttsPromise.then(() => null),
+    ]);
+
+    if (playbackStartedAt !== null) {
+      speakingStartedAt = performance.now();
+      await show(SCENE_STATES.SPEAKING, { reason: 'tts-playback-start' });
+    }
+
+    ttsResult = await ttsPromise;
+  } finally {
+    playbackSignal.restore();
+  }
+
+  const speakingVisibleMs = speakingStartedAt === null
+    ? 0
+    : Math.round(performance.now() - speakingStartedAt);
+  const speakingStartLagMs = playbackStartedAt === null || speakingStartedAt === null
+    ? null
+    : Math.round(speakingStartedAt - playbackStartedAt);
+
+  await show(SCENE_STATES.IDLE, {
+    reason: ttsResult?.ok ? 'tts-finished' : 'tts-failed',
+  });
   await wait(finalIdleMs);
 
   console.log('\n[TESTE CENA] sequência concluída.');
+  console.log('[TESTE CENA] sync_mode=tts-playback-signal');
+  if (speakingStartLagMs !== null) {
+    console.log(`[TESTE CENA] speaking_inicio_apos_playback_ms=${speakingStartLagMs}`);
+  }
   console.log(`[TESTE CENA] speaking_visivel_ms=${speakingVisibleMs}`);
-  if (ttsResult.ok) {
+  if (ttsResult?.ok) {
     console.log(`[TESTE CENA] TTS ok | voz=${ttsResult.voice} idioma=${ttsResult.culture} geracao_ms=${ttsResult.generationLatencyMs} reproducao_ms=${ttsResult.playbackDurationMs}`);
   } else {
-    console.error(`[TESTE CENA] TTS falhou | ${ttsResult.error}`);
+    console.error(`[TESTE CENA] TTS falhou | ${ttsResult?.error || 'sem resultado'}`);
   }
   console.log(`[TESTE CENA] estado_final=${controller.getState()}`);
 
