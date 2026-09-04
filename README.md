@@ -15,7 +15,7 @@ O objetivo imediato não é construir um SaaS completo. Primeiro precisamos vali
 - MVP 3 — TTS local: validado no Windows e integrado em LIVE real; concluído na Issue #3.
 - MVP 4 — cena visual: ramo Bob Esponja validado localmente com ativos reais e callbacks do TTS; influencer adiada por decisão do usuário.
 - MVP 5 — transmissão do Bob em LIVE real: integração implementada no protótipo; validação audiovisual por espectador ainda pendente.
-- MVP 6 — interação contínua e voz neural: orquestração implementada; modo experimental `AI_RESPOND_ALL` (responder a comentários sem o gatilho `ia`) com validação inicial positiva em LIVE real em 03/09/2026, ainda sem teste sob carga; piloto híbrido com cinco vídeos produzidos e acionáveis por palavra do chat — gatilhos, cooldown, fila e reprodução com áudio implementados e testados localmente no Windows em 03/09/2026; sete MASTERs visuais aprovados em 04/09/2026 para Bob, Gary, Lula Molusco, Patrick, Seu Siriguejo, Sandy e Plankton; validação em LIVE real ainda pendente.
+- MVP 6 — interação contínua e voz neural: orquestração implementada; modo experimental `AI_RESPOND_ALL` com validação inicial positiva em LIVE real; cinco vídeos acionáveis com gatilhos e reprodução testados localmente; sete MASTERs visuais aprovados; nove cenas de ambiente produzidas em três rotações e concatenadas em um vídeo de 90,01 s para teste de loop; a recomendação atual é usar as nove cenas como itens curtos de ambiente, não como uma única mídia ininterrupta; validação em LIVE real ainda pendente.
 
 O protótipo converte a resposta textual em WAV e reproduz o áudio localmente com uma voz instalada no Windows. O teste controlado selecionou `Microsoft Maria Desktop` em `pt-BR`, gerou o áudio em 884 ms e concluiu uma reprodução audível. Em LIVE real, duas respostas foram faladas com geração de 455 ms e 377 ms e reprodução de 7699 ms e 7072 ms. A captura continuou ativa. Essa escolha continua sendo uma hipótese gratuita para validação, não o fornecedor definitivo do produto.
 
@@ -74,3 +74,5 @@ Issues de validação:
 Procedimento da etapa atual: [`docs/mvp5-live-bob.md`](docs/mvp5-live-bob.md). Retrospectiva de erros e acertos na configuração do LIVE Studio: [`docs/mvp5-live-studio-retrospective.md`](docs/mvp5-live-studio-retrospective.md).
 
 Interação e voz: [`docs/mvp6-interaction-voice-lipsync.md`](docs/mvp6-interaction-voice-lipsync.md). Piloto dos cinco vídeos acionáveis: [`docs/mvp6-prerecorded-video-pilot.md`](docs/mvp6-prerecorded-video-pilot.md).
+
+Rotações de ambiente e análise do loop: [`docs/mvp6-live-ambient-rotations.md`](docs/mvp6-live-ambient-rotations.md).
