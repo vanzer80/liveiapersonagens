@@ -3,6 +3,8 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { buildVisemeTimeline, consolidateFishAlignment } from './lip-sync.js';
+
 try {
   process.loadEnvFile?.('.env');
 } catch {
@@ -41,11 +43,11 @@ function normalizeFishApiKey(value) {
     .trim();
 }
 
-export function getTtsConfig() {
-  const rateConfig = parseRate(process.env.TTS_RATE);
-  const provider = (process.env.TTS_PROVIDER || DEFAULT_PROVIDER).trim().toLowerCase();
-  const fishApiKey = normalizeFishApiKey(process.env.FISH_AUDIO_API_KEY);
-  const fishReferenceId = String(process.env.FISH_AUDIO_REFERENCE_ID || '').trim();
+export function getTtsConfig(env = process.env) {
+  const rateConfig = parseRate(env.TTS_RATE);
+  const provider = (env.TTS_PROVIDER || DEFAULT_PROVIDER).trim().toLowerCase();
+  const fishApiKey = normalizeFishApiKey(env.FISH_AUDIO_API_KEY);
+  const fishReferenceId = String(env.FISH_AUDIO_REFERENCE_ID || '').trim();
   let error = rateConfig.error;
 
   if (!error && provider === FISH_PROVIDER) {
@@ -57,17 +59,22 @@ export function getTtsConfig() {
   }
 
   return {
-    enabled: parseBoolean(process.env.TTS_ENABLED, false),
+    enabled: parseBoolean(env.TTS_ENABLED, false),
     provider,
-    voice: (process.env.TTS_VOICE || '').trim(),
+    voice: (env.TTS_VOICE || '').trim(),
     rate: rateConfig.rate,
     error,
     fish: {
-      apiUrl: String(process.env.FISH_AUDIO_API_URL || DEFAULT_FISH_API_URL).trim(),
+      apiUrl: String(env.FISH_AUDIO_API_URL || DEFAULT_FISH_API_URL).trim(),
       apiKey: fishApiKey,
       referenceId: fishReferenceId,
-      model: String(process.env.FISH_AUDIO_MODEL || DEFAULT_FISH_MODEL).trim(),
-      latency: String(process.env.FISH_AUDIO_LATENCY || 'balanced').trim(),
+      model: String(env.FISH_AUDIO_MODEL || DEFAULT_FISH_MODEL).trim(),
+      latency: String(env.FISH_AUDIO_LATENCY || 'balanced').trim(),
+    },
+    lipSync: {
+      enabled: parseBoolean(env.LIP_SYNC_ENABLED, false),
+      assetsDirectory: String(env.LIP_SYNC_ASSETS_DIRECTORY || 'assets/mvp7/lipsync').trim(),
+      minHoldMs: Math.max(30, Number(env.LIP_SYNC_MIN_HOLD_MS) || 65),
     },
   };
 }
@@ -89,7 +96,7 @@ export function encodePowerShellCommand(script) {
   return Buffer.from(String(script), 'utf16le').toString('base64');
 }
 
-function runPowerShell(script, extraEnv = {}) {
+function runPowerShell(script, extraEnv = {}, onSignal = null) {
   return new Promise((resolve, reject) => {
     const encodedCommand = encodePowerShellCommand(script);
     const child = spawn(
@@ -109,6 +116,9 @@ function runPowerShell(script, extraEnv = {}) {
     child.stderr.setEncoding('utf8');
     child.stdout.on('data', (chunk) => {
       stdout += chunk;
+      if (typeof onSignal === 'function' && chunk.includes('AUDIO_PLAYBACK_START')) {
+        onSignal();
+      }
     });
     child.stderr.on('data', (chunk) => {
       stderr += chunk;
@@ -194,6 +204,8 @@ $audioPath = [Environment]::GetEnvironmentVariable('LIVEIA_TTS_OUTPUT')
 $player = [System.Media.SoundPlayer]::new($audioPath)
 try {
   $player.Load()
+  [Console]::Out.WriteLine('AUDIO_PLAYBACK_START')
+  [Console]::Out.Flush()
   $player.PlaySync()
 }
 finally {
@@ -236,6 +248,31 @@ export function buildFishTtsRequest(text, config = getTtsConfig()) {
   };
 }
 
+export function buildFishTimestampedRequest(text, config = getTtsConfig()) {
+  const base = String(config.fish.apiUrl || DEFAULT_FISH_API_URL).replace(/\/tts\/?$/i, '');
+  const url = `${base}/tts/stream/with-timestamp`;
+
+  return {
+    url,
+    options: {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.fish.apiKey}`,
+        'Content-Type': 'application/json',
+        model: config.fish.model,
+      },
+      body: JSON.stringify({
+        text,
+        reference_id: config.fish.referenceId,
+        format: 'wav',
+        latency: config.fish.latency,
+        normalize: true,
+      }),
+      signal: AbortSignal.timeout(35000),
+    },
+  };
+}
+
 export function sanitizeWavHeader(audio) {
   if (!Buffer.isBuffer(audio) || audio.length < 44) return audio;
   if (audio.toString('ascii', 0, 4) === 'RIFF' && audio.toString('ascii', 8, 12) === 'WAVE') {
@@ -260,23 +297,126 @@ export function sanitizeWavHeader(audio) {
   return audio;
 }
 
-async function generateFishWav(text, audioPath, config) {
-  const request = buildFishTtsRequest(text, config);
+export function getWavDurationMs(audio) {
+  if (!Buffer.isBuffer(audio) || audio.length < 44) return 0;
+  try {
+    const byteRate = audio.readUInt32LE(28);
+    let pos = 12;
+    while (pos < audio.length - 8) {
+      const id = audio.toString('ascii', pos, pos + 4);
+      const len = audio.readUInt32LE(pos + 4);
+      if (id === 'data') {
+        if (byteRate > 0) {
+          return Math.round((len / byteRate) * 1000);
+        }
+        break;
+      }
+      pos += 8 + len;
+      if (len % 2 !== 0) pos++;
+    }
+  } catch {}
+  return 0;
+}
+
+export async function fetchFishTtsStreamWithTimestamps(text, config = getTtsConfig()) {
+  const request = buildFishTimestampedRequest(text, config);
   const response = await fetch(request.url, request.options);
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     const detail = payload?.message || payload?.error?.message || `HTTP ${response.status}`;
-    throw new Error(`Fish Audio recusou a síntese: ${detail}`);
+    throw new Error(`Fish Audio recusou stream com timestamps: ${detail}`);
   }
 
-  const audio = Buffer.from(await response.arrayBuffer());
-  if (!audio.length) throw new Error('Fish Audio respondeu sem dados de áudio.');
-  await writeFile(audioPath, sanitizeWavHeader(audio));
+  const audioChunks = [];
+  const alignmentByChunk = new Map();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  for await (const chunk of response.body) {
+    buffer += decoder.decode(chunk, { stream: true });
+    const events = buffer.split('\n\n');
+    buffer = events.pop() ?? '';
+
+    for (const eventText of events) {
+      const dataLine = eventText.split('\n').find((line) => line.startsWith('data: '));
+      if (!dataLine) continue;
+
+      try {
+        const event = JSON.parse(dataLine.slice(6));
+        if (event.audio_base64) {
+          audioChunks.push(Buffer.from(event.audio_base64, 'base64'));
+        }
+        if (event.alignment !== undefined && event.alignment !== null && typeof event.chunk_seq === 'number') {
+          alignmentByChunk.set(event.chunk_seq, {
+            content: event.content,
+            offset: Number(event.chunk_audio_offset_sec || 0),
+            alignment: event.alignment,
+          });
+        }
+      } catch {}
+    }
+  }
+
+  const audio = sanitizeWavHeader(Buffer.concat(audioChunks));
+  if (!audio.length) {
+    throw new Error('Fish Audio respondeu sem dados de áudio no stream.');
+  }
+
+  const segments = consolidateFishAlignment(alignmentByChunk);
+  return { audio, segments, alignmentByChunk };
+}
+
+async function generateFishWav(text, audioPath, config) {
+  let audio;
+  let segments = [];
+
+  if (config.lipSync?.enabled) {
+    try {
+      const streamResult = await fetchFishTtsStreamWithTimestamps(text, config);
+      audio = streamResult.audio;
+      segments = streamResult.segments;
+      console.log(`[LIP] alignment recebido | segmentos=${segments.length}`);
+    } catch (streamError) {
+      console.warn(`[LIP] aviso: falha no stream com timestamps (${streamError.message}). Usando /v1/tts padrão.`);
+    }
+  }
+
+  // Se o stream com timestamps não foi usado ou falhou, usar o endpoint tradicional
+  if (!audio) {
+    const request = buildFishTtsRequest(text, config);
+    const response = await fetch(request.url, request.options);
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      const detail = payload?.message || payload?.error?.message || `HTTP ${response.status}`;
+      throw new Error(`Fish Audio recusou a síntese: ${detail}`);
+    }
+
+    audio = sanitizeWavHeader(Buffer.from(await response.arrayBuffer()));
+    if (!audio.length) throw new Error('Fish Audio respondeu sem dados de áudio.');
+  }
+
+  await writeFile(audioPath, audio);
+
+  const durationMs = getWavDurationMs(audio);
+  let timeline = null;
+
+  if (config.lipSync?.enabled) {
+    timeline = buildVisemeTimeline({
+      segments,
+      text,
+      audioDurationMs: durationMs,
+      minHoldMs: config.lipSync.minHoldMs,
+    });
+    console.log(`[LIP] timeline gerada | visemes=${timeline.length} duracao_ms=${durationMs}`);
+  }
 
   return {
     voice: `Fish ${config.fish.referenceId.slice(0, 8)}`,
     culture: 'pt-BR',
+    timeline,
+    durationMs,
   };
 }
 
@@ -354,6 +494,16 @@ export async function speakText(
         LIVEIA_TTS_RATE: String(config.rate),
       });
       voiceInfo = await readTtsMetadata(metadataPath);
+      // Fallback timeline para windows-sapi se lip-sync estiver ativado
+      if (config.lipSync?.enabled) {
+        const audioBuf = await readFile(audioPath).catch(() => null);
+        const durationMs = audioBuf ? getWavDurationMs(audioBuf) : 0;
+        voiceInfo.timeline = buildVisemeTimeline({
+          text,
+          audioDurationMs: durationMs,
+          minHoldMs: config.lipSync.minHoldMs,
+        });
+      }
     }
     const generationLatencyMs = Math.round(performance.now() - generationStartedAt);
 
@@ -366,13 +516,33 @@ export async function speakText(
       voice: voiceInfo.voice,
       culture: voiceInfo.culture,
       generationLatencyMs,
+      timeline: voiceInfo.timeline || null,
+      lipSyncEnabled: Boolean(config.lipSync?.enabled && voiceInfo.timeline),
     };
 
-    await invokeLifecycleHook(onPlaybackStart, playbackContext, 'onPlaybackStart');
-    console.log('[TTS] reproduzindo...');
+    let playbackStartedInvoked = false;
+    const triggerPlaybackStart = async () => {
+      if (playbackStartedInvoked) return;
+      playbackStartedInvoked = true;
+      await invokeLifecycleHook(
+        onPlaybackStart,
+        { ...playbackContext, startedAt: Date.now() },
+        'onPlaybackStart',
+      );
+    };
 
+    console.log('[TTS] reproduzindo...');
     const playbackStartedAt = performance.now();
-    await runPowerShell(PLAY_WAV_SCRIPT, { LIVEIA_TTS_OUTPUT: audioPath });
+
+    await runPowerShell(PLAY_WAV_SCRIPT, { LIVEIA_TTS_OUTPUT: audioPath }, () => {
+      void triggerPlaybackStart();
+    });
+
+    // Rede de segurança caso o sinal não tenha vindo pelo stdout
+    if (!playbackStartedInvoked) {
+      await triggerPlaybackStart();
+    }
+
     const playbackDurationMs = Math.round(performance.now() - playbackStartedAt);
 
     console.log(`[TTS] concluído | duracao_ms=${playbackDurationMs}`);
@@ -390,6 +560,7 @@ export async function speakText(
       culture: voiceInfo.culture,
       generationLatencyMs,
       playbackDurationMs,
+      timeline: voiceInfo.timeline || null,
     };
   } catch (error) {
     const latencyMs = Math.round(performance.now() - operationStartedAt);
@@ -408,3 +579,4 @@ export async function speakText(
     }
   }
 }
+

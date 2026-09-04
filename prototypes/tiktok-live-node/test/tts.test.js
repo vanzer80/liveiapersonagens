@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  buildFishTimestampedRequest,
   buildFishTtsRequest,
   encodePowerShellCommand,
   getTtsConfig,
+  getWavDurationMs,
   normalizeTextForSpeech,
   parseTtsMetadata,
   sanitizeWavHeader,
@@ -48,6 +50,9 @@ const TTS_ENV_VARS = [
   'FISH_AUDIO_MODEL',
   'FISH_AUDIO_API_URL',
   'FISH_AUDIO_LATENCY',
+  'LIP_SYNC_ENABLED',
+  'LIP_SYNC_ASSETS_DIRECTORY',
+  'LIP_SYNC_MIN_HOLD_MS',
 ];
 
 function withIsolatedTtsEnv(fn) {
@@ -82,6 +87,11 @@ test('usa configuração padrão segura quando TTS não foi habilitado', () => {
         model: 's2.1-pro-free',
         latency: 'balanced',
       },
+      lipSync: {
+        enabled: false,
+        assetsDirectory: 'assets/mvp7/lipsync',
+        minHoldMs: 65,
+      },
     });
   });
 });
@@ -101,6 +111,11 @@ test('marca velocidade inválida sem derrubar o processo', () => {
         referenceId: '',
         model: 's2.1-pro-free',
         latency: 'balanced',
+      },
+      lipSync: {
+        enabled: false,
+        assetsDirectory: 'assets/mvp7/lipsync',
+        minHoldMs: 65,
       },
     });
   });
@@ -199,4 +214,46 @@ test('sanitizeWavHeader corrige tamanho dos chunks data e RIFF em streaming WAV'
   assert.equal(sanitized.readUInt32LE(40), 56);
   assert.equal(sanitized.readUInt32LE(4), 92);
 });
+
+test('buildFishTimestampedRequest aponta para /tts/stream/with-timestamp sem expor chave no corpo', () => {
+  const config = {
+    fish: {
+      apiUrl: 'https://api.fish.audio/v1/tts',
+      apiKey: 'chave-secreta',
+      referenceId: 'voz-teste',
+      model: 's2.1-pro-free',
+      latency: 'balanced',
+    },
+  };
+  const request = buildFishTimestampedRequest('Texto de teste', config);
+  assert.equal(request.url, 'https://api.fish.audio/v1/tts/stream/with-timestamp');
+  assert.equal(request.options.headers.Authorization, 'Bearer chave-secreta');
+  assert.equal(request.options.headers.model, 's2.1-pro-free');
+  const body = JSON.parse(request.options.body);
+  assert.equal(body.text, 'Texto de teste');
+  assert.equal(body.reference_id, 'voz-teste');
+  assert.equal(body.format, 'wav');
+  assert.equal(request.options.body.includes('chave-secreta'), false);
+});
+
+test('getWavDurationMs calcula duração a partir do cabeçalho WAV', () => {
+  const buf = Buffer.alloc(44 + 32000);
+  buf.write('RIFF', 0);
+  buf.writeUInt32LE(32036, 4);
+  buf.write('WAVE', 8);
+  buf.write('fmt ', 12);
+  buf.writeUInt32LE(16, 16);
+  buf.writeUInt16LE(1, 20); // PCM
+  buf.writeUInt16LE(1, 22); // mono
+  buf.writeUInt32LE(16000, 24); // sample rate
+  buf.writeUInt32LE(32000, 28); // byte rate (32000 bytes/sec)
+  buf.writeUInt16LE(2, 32);
+  buf.writeUInt16LE(16, 34);
+  buf.write('data', 36);
+  buf.writeUInt32LE(32000, 40); // 32000 bytes = 1000ms
+
+  const durationMs = getWavDurationMs(buf);
+  assert.equal(durationMs, 1000);
+});
+
 
