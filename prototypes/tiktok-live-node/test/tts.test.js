@@ -54,6 +54,7 @@ const TTS_ENV_VARS = [
   'LIP_SYNC_ASSETS_DIRECTORY',
   'LIP_SYNC_MIN_HOLD_MS',
   'LIP_SYNC_AUDIO_OFFSET_MS',
+  'LIP_SYNC_APPROXIMATE_FALLBACK',
 ];
 
 function withIsolatedTtsEnv(fn) {
@@ -93,6 +94,7 @@ test('usa configuração padrão segura quando TTS não foi habilitado', () => {
         assetsDirectory: 'assets/mvp7/lipsync',
         minHoldMs: 65,
         audioOffsetMs: 0,
+        approximateFallback: false,
       },
     });
   });
@@ -119,6 +121,7 @@ test('marca velocidade inválida sem derrubar o processo', () => {
         assetsDirectory: 'assets/mvp7/lipsync',
         minHoldMs: 65,
         audioOffsetMs: 0,
+        approximateFallback: false,
       },
     });
   });
@@ -265,9 +268,9 @@ test('AUDIO_PLAYBACK_START chega ao Node em tempo real antes do término da repr
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
 
-  // Cria WAV de 250ms de silêncio para teste seguro e rápido
+  // Cria WAV de 500ms de silêncio para teste seguro e mensurável
   const sampleRate = 8000;
-  const dataSize = sampleRate * 2 * 0.25;
+  const dataSize = Math.round(sampleRate * 2 * 0.5);
   const buf = Buffer.alloc(44 + dataSize);
   buf.write('RIFF', 0);
   buf.writeUInt32LE(36 + dataSize, 4);
@@ -328,9 +331,74 @@ try {
 
   assert.ok(signalReceivedAt !== null, 'Marcador AUDIO_PLAYBACK_START deve ser recebido');
   assert.ok(closedAt !== null, 'PowerShell deve encerrar normalmente');
+  const deltaMs = closedAt - signalReceivedAt;
   assert.ok(
-    closedAt >= signalReceivedAt,
-    `O sinal deve chegar antes do encerramento (sinal=${signalReceivedAt}, fim=${closedAt})`,
+    deltaMs >= 100,
+    `O sinal deve chegar enquanto PlaySync ainda está executando (delta observado: ${deltaMs}ms >= 100ms)`,
   );
 });
+
+test('quando endpoint timestamped falha, speakText recorre ao /v1/tts regular, preserva a voz e desativa lip-sync visual', async () => {
+  const originalFetch = globalThis.fetch;
+  const sampleRate = 8000;
+  const dataSize = sampleRate * 2 * 0.1;
+  const silentWav = Buffer.alloc(44 + dataSize);
+  silentWav.write('RIFF', 0);
+  silentWav.writeUInt32LE(36 + dataSize, 4);
+  silentWav.write('WAVE', 8);
+  silentWav.write('fmt ', 12);
+  silentWav.writeUInt32LE(16, 16);
+  silentWav.writeUInt16LE(1, 20);
+  silentWav.writeUInt16LE(1, 22);
+  silentWav.writeUInt32LE(sampleRate, 24);
+  silentWav.writeUInt32LE(sampleRate * 2, 28);
+  silentWav.writeUInt16LE(2, 32);
+  silentWav.writeUInt16LE(16, 34);
+  silentWav.write('data', 36);
+  silentWav.writeUInt32LE(dataSize, 40);
+
+  let streamAttempted = false;
+  let regularTtsUsed = false;
+  let receivedPlaybackContext = null;
+
+  globalThis.fetch = async (url, options) => {
+    const urlStr = String(url);
+    if (urlStr.includes('/tts/stream/with-timestamp')) {
+      streamAttempted = true;
+      throw new Error('Simulated network error on timestamped stream');
+    }
+    if (urlStr.includes('/v1/tts')) {
+      regularTtsUsed = true;
+      return new Response(silentWav, { status: 200, headers: { 'Content-Type': 'audio/wav' } });
+    }
+    return originalFetch(url, options);
+  };
+
+  const prevLipSync = process.env.LIP_SYNC_ENABLED;
+  const prevApprox = process.env.LIP_SYNC_APPROXIMATE_FALLBACK;
+  process.env.LIP_SYNC_ENABLED = 'true';
+  process.env.LIP_SYNC_APPROXIMATE_FALLBACK = 'false';
+
+  try {
+    const result = await speakText('Teste de fallback sem timestamps', {
+      force: true,
+      onPlaybackStart: (ctx) => {
+        receivedPlaybackContext = ctx;
+      },
+    });
+
+    assert.equal(streamAttempted, true, 'deve tentar o endpoint com timestamps primeiro');
+    assert.equal(regularTtsUsed, true, 'deve recorrer ao /v1/tts regular');
+    assert.equal(result.ok, true, 'voz deve ser gerada e reproduzida com sucesso');
+    assert.equal(result.timeline, null, 'timeline deve ser nula no fallback padrão sem alignment');
+    assert.equal(receivedPlaybackContext?.lipSyncEnabled, false, 'lipSync visual deve estar desativado');
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (prevLipSync === undefined) delete process.env.LIP_SYNC_ENABLED;
+    else process.env.LIP_SYNC_ENABLED = prevLipSync;
+    if (prevApprox === undefined) delete process.env.LIP_SYNC_APPROXIMATE_FALLBACK;
+    else process.env.LIP_SYNC_APPROXIMATE_FALLBACK = prevApprox;
+  }
+});
+
 

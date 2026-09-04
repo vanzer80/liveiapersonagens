@@ -76,6 +76,7 @@ export function getTtsConfig(env = process.env) {
       assetsDirectory: String(env.LIP_SYNC_ASSETS_DIRECTORY || 'assets/mvp7/lipsync').trim(),
       minHoldMs: Math.max(30, Number(env.LIP_SYNC_MIN_HOLD_MS) || 65),
       audioOffsetMs: Number(env.LIP_SYNC_AUDIO_OFFSET_MS) || 0,
+      approximateFallback: parseBoolean(env.LIP_SYNC_APPROXIMATE_FALLBACK, false),
     },
   };
 }
@@ -404,13 +405,18 @@ async function generateFishWav(text, audioPath, config) {
   let timeline = null;
 
   if (config.lipSync?.enabled) {
-    timeline = buildVisemeTimeline({
-      segments,
-      text,
-      audioDurationMs: durationMs,
-      minHoldMs: config.lipSync.minHoldMs,
-    });
-    console.log(`[LIP] timeline gerada | visemes=${timeline.length} duracao_ms=${durationMs}`);
+    const hasValidSegments = Array.isArray(segments) && segments.length > 0;
+    if (hasValidSegments || config.lipSync.approximateFallback) {
+      timeline = buildVisemeTimeline({
+        segments: hasValidSegments ? segments : [],
+        text,
+        audioDurationMs: durationMs,
+        minHoldMs: config.lipSync.minHoldMs,
+      });
+      console.log(`[LIP] timeline gerada | visemes=${timeline.length} duracao_ms=${durationMs}${!hasValidSegments ? ' (fallback aproximado)' : ''}`);
+    } else {
+      console.log('[LIP] timestamps ausentes e fallback aproximado desativado; lip sync visual desativado (speaking tradicional).');
+    }
   }
 
   return {
@@ -495,8 +501,8 @@ export async function speakText(
         LIVEIA_TTS_RATE: String(config.rate),
       });
       voiceInfo = await readTtsMetadata(metadataPath);
-      // Fallback timeline para windows-sapi se lip-sync estiver ativado
-      if (config.lipSync?.enabled) {
+      // Fallback timeline para windows-sapi somente se approximateFallback for true
+      if (config.lipSync?.enabled && config.lipSync.approximateFallback) {
         const audioBuf = await readFile(audioPath).catch(() => null);
         const durationMs = audioBuf ? getWavDurationMs(audioBuf) : 0;
         voiceInfo.timeline = buildVisemeTimeline({

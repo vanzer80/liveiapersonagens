@@ -166,16 +166,17 @@ Em 04/09/2026, foi implementada e validada de ponta a ponta a sincronização la
    - Durante a fala dinâmica com lip-sync, o elemento `<video>` é ocultado/pausado.
    - Entra em cena a base neutra com boca fechada (`assets/mvp7/lipsync/bob-neutral-base.png`).
    - As camadas de boca (`mouth-*.png`) são renderizadas em canvas idêntico (720x1280 transparente), garantindo alinhamento pixel-a-pixel sem frestas ou deslocamentos.
-   - O compositor no navegador (`src/scene-preview.js`) roda um loop de alta precisão via `requestAnimationFrame` (60 fps) com busca binária na timeline pré-carregada.
+   - O compositor no navegador (`src/scene-preview.js`) roda um único loop de alta precisão via `requestAnimationFrame` global permanente que executa continuamente e anima exclusivamente quando `activeLipSync && activeLipSync.enabled`, com busca binária na timeline pré-carregada. Fora de `speaking`, `activeLipSync` é nulo e o overlay permanece oculto.
+   - **Janela de Polling Visual:** o navegador consulta o estado do backend via `setInterval(tick, 150)`. O compositor utiliza o `startedAt` absoluto e compensa a defasagem no relógio da timeline. No início visual imediato da fala, existe uma janela teórica de atraso de até ~150 ms para o primeiro frame de boca aparecer no browser.
    - Ao final do áudio, a sobreposição é imediatamente ocultada e a prévia retorna ao vídeo em loop `idle`.
 
-4. **Sincronização Acústica Real no Windows:**
+4. **Sincronização com Áudio no Windows:**
    - O player nativo PowerShell (`System.Media.SoundPlayer`) emite o marcador `AUDIO_PLAYBACK_START` no `stdout` imediatamente antes de `$player.PlaySync()`.
-   - Isso elimina qualquer atraso de inicialização do processo PowerShell (~200 a 400 ms), alinhando o `startedAt` do compositor exatamente com a primeira vibração de áudio nos alto-falantes.
+   - O marcador é emitido imediatamente antes de `PlaySync` e usado como referência temporal de início da reprodução no processo, eliminando o atraso de spawn do PowerShell (~200 a 400 ms). Não representa a física vibração mecânica do cone do alto-falante, mas o início síncrono da execução da API de áudio no SO.
 
 5. **Fallbacks e Segurança:**
    - Protegido por feature flag: `LIP_SYNC_ENABLED=false` (padrão) preserva integralmente o comportamento tradicional com `spongebob-speaking-v1.mp4`.
-   - Se o Fish Audio stream falhar ou não retornar timestamps, o sistema recorre transparentemente ao `/v1/tts` regular sem nunca perder a voz do Bob.
+   - **Fallback sem alignment**: se o Fish Audio stream falhar ou não retornar timestamps válidos, o sistema recorre transparentemente ao `/v1/tts` regular. Por padrão (`LIP_SYNC_APPROXIMATE_FALLBACK=false`), o lip-sync visual permanece DESATIVADO (`activeLipSync = null`), caindo de forma 100% segura para o speaking tradicional sem nunca perder a voz do Bob nem falhar a interação.
    - Nenhuma interferência sobre os 5 vídeos acionáveis do MVP 6 (Patrick, Hambúrguer, etc.), que tocam áudio nativo intacto.
 
 ### Classificação dos Ativos Visuais (Regra de Transparência)
@@ -192,11 +193,11 @@ Executado em 04/09/2026 com as três frases de homologação:
 
 | Frase | Segmentos Fish | Visemas Gerados | Duração da Timeline | Latência de Síntese | Reprodução de Áudio | Resultado |
 |---|---:|---:|---:|---:|---:|---|
-| *"Oi, eu sou o Bob!"* | 5 | 12 | 1.811 ms | 803 ms | 5.008 ms | **Sucesso (idle → thinking → speaking → idle)** |
-| *"Olá, pessoal! Bem-vindos à nossa live na Fenda do Biquíni!"* | 11 | 40 | 4.505 ms | 1.267 ms | 5.743 ms | **Sucesso (idle → thinking → speaking → idle)** |
-| *"Bob preparou um hambúrguer para Patrick e foi visitar a Fenda do Biquíni."* | 13 | 47 | 4.644 ms | 1.249 ms | 5.746 ms | **Sucesso (idle → thinking → speaking → idle)** |
+| *"Oi, eu sou o Bob!"* | 5 | 10 | 1.672 ms | 728 ms | 3.195 ms | **Sucesso (idle → thinking → speaking → idle)** |
+| *"Olá, pessoal! Bem-vindos à nossa live na Fenda do Biquíni!"* | 11 | 40 | 4.830 ms | 1.323 ms | 5.523 ms | **Sucesso (idle → thinking → speaking → idle)** |
+| *"Bob preparou um hambúrguer para Patrick e foi visitar a Fenda do Biquíni."* | 13 | 50 | 4.365 ms | 1.705 ms | 4.941 ms | **Sucesso (idle → thinking → speaking → idle)** |
 
-- **Total de testes automatizados:** 158/158 testes passando (0 falhas, 33 novos testes adicionados para lip-sync e cena).
+- **Total de testes automatizados:** 160/160 testes passando (17 suítes, 0 falhas). Sendo 23 testes dedicados no motor de lip-sync (`test/lip-sync.test.js`), 7 testes de cena/compositor (`test/lip-sync-scene.test.js`), 17 testes de TTS e reprodução (`test/tts.test.js`), e 113 testes de regressão dos módulos de interação, rotação e presentes.
 - **Status do Lip Sync:** PIPELINE TÉCNICO E TESTE CONTROLADO NO WINDOWS 100% CONCLUÍDOS; VALIDAÇÃO EM TRANSMISSÃO AO VIVO REAL NO TIKTOK LIVE STUDIO COM ESPECTADOR CONFIRMANDO NO CELULAR: **PENDENTE**.
 
 ## Piloto híbrido com vídeos acionáveis
