@@ -68,8 +68,8 @@ Issues de validação:
 - [#2 — MVP 2: resposta textual](https://github.com/vanzer80/liveiapersonagens/issues/2) — concluída;
 - [#3 — MVP 3: TTS local](https://github.com/vanzer80/liveiapersonagens/issues/3) — concluída;
 - [#4 — MVP 4: cena visual com clipes Flow/Veo](https://github.com/vanzer80/liveiapersonagens/issues/4) — concluída para o ramo Bob; influencer adiada;
-- [#8 — MVP 5: Bob Esponja em TikTok LIVE real](https://github.com/vanzer80/liveiapersonagens/issues/8) — etapa atual.
-- [#9 — MVP 6: interação, voz neural e lip sync](https://github.com/vanzer80/liveiapersonagens/issues/9) — orquestração pronta; cinco vídeos com gatilhos e reprodução testados localmente; sete MASTERs visuais aprovados e organizados no Drive; nove clipes individuais de ambiente arquivados; validação integrada em LIVE real pendente.
+- [#8 — MVP 5: Bob Esponja em TikTok LIVE real](https://github.com/vanzer80/liveiapersonagens/issues/8) — validado em LIVE real com imagem e voz recebidas pelo espectador.
+- [#9 — MVP 6: interação, voz neural e lip sync](https://github.com/vanzer80/liveiapersonagens/issues/9) — orquestração pronta; AI_RESPOND_ALL e voz neural Fish Audio validados em LIVE real; Rosa/Sandy validada ponta a ponta; rotação curta integrada. Permanecem pendentes teste sob maior carga, validação completa dos cinco vídeos acionáveis e lip sync fonema/visema.
 
 Procedimento da etapa atual: [`docs/mvp5-live-bob.md`](docs/mvp5-live-bob.md). Retrospectiva de erros e acertos na configuração do LIVE Studio: [`docs/mvp5-live-studio-retrospective.md`](docs/mvp5-live-studio-retrospective.md).
 
