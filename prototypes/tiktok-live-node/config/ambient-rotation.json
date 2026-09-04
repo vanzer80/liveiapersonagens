@@ -1,0 +1,15 @@
+{
+  "cooldownSeconds": 5,
+  "shuffled": false,
+  "clips": [
+    { "id": "ambient-01", "file": "bob-ambient-01-live-final-v1.mp4" },
+    { "id": "ambient-02", "file": "bob-ambient-02-live-final-v1.mp4" },
+    { "id": "ambient-03", "file": "bob-ambient-03-live-final-v1.mp4" },
+    { "id": "ambient-04", "file": "bob-ambient-04-live-final-v1.mp4" },
+    { "id": "ambient-05", "file": "bob-ambient-05-live-final-v1.mp4" },
+    { "id": "ambient-06", "file": "bob-ambient-06-live-final-v1.mp4" },
+    { "id": "ambient-07", "file": "bob-ambient-07-live-final-v1.mp4" },
+    { "id": "ambient-08", "file": "bob-ambient-08-live-final-v1.mp4" },
+    { "id": "ambient-09", "file": "bob-ambient-09-live-final-v1.mp4" }
+  ]
+}

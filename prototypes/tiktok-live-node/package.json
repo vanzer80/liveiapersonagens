@@ -8,6 +8,9 @@
     "start": "node src/index.js",
     "live:bob": "node src/live-bob.js",
     "test": "node --test",
+    "test:orchestration": "node --test test/orchestration.test.js",
+    "test:ambient": "node --test test/ambient-rotation.test.js",
+    "test:gift": "node --test test/gift-videos.test.js",
     "test:tts": "node src/tts-smoke.js",
     "test:videos": "node src/video-smoke.js",
     "preview:spongebob": "node src/scene-smoke.js"

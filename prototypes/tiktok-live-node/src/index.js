@@ -6,7 +6,19 @@ import {
   isAiConfigured,
   validateAiAuthentication,
 } from './ai.js';
+import {
+  createAmbientRotationController,
+  getAmbientRotationConfig,
+  loadAmbientRotation,
+  validateAmbientAssets,
+} from './ambient-rotation.js';
 import { routeComment } from './comment-router.js';
+import {
+  createGiftVideoRouter,
+  getGiftVideoConfig,
+  loadGiftVideos,
+  validateGiftVideoAssets,
+} from './gift-videos.js';
 import {
   createLiveInteractionEngine,
   getInteractionConfig,
@@ -42,7 +54,8 @@ const videoConfig = getVideoTriggerConfig();
 const videoLibrary = videoConfig.enabled
   ? loadVideoTriggers({
       filePath: videoConfig.triggersFile,
-      cooldownSeconds: videoConfig.cooldownSeconds,
+      // Só sobrescreve o JSON quando o .env declara o valor explicitamente.
+      cooldownSeconds: videoConfig.cooldownSecondsFromEnv,
     })
   : { triggers: [], cooldownMs: 0, source: 'desativado', fallbackUsed: false };
 const videoAssets = videoConfig.enabled
@@ -55,6 +68,47 @@ const videoMatcher = videoConfig.enabled
   ? createVideoTriggerMatcher({
       triggers: videoLibrary.triggers,
       cooldownMs: videoLibrary.cooldownMs,
+    })
+  : null;
+
+// Rotação de vídeos de ambiente (MVP 6 — apresentação contínua).
+const ambientRotationConfig = getAmbientRotationConfig();
+const ambientRotationLibrary = ambientRotationConfig.enabled
+  ? loadAmbientRotation({
+      filePath: ambientRotationConfig.rotationFile,
+      cooldownSeconds: ambientRotationConfig.cooldownSeconds,
+    })
+  : { clips: [], cooldownMs: 0, source: 'desativado', fallbackUsed: false };
+const ambientRotationAssets = ambientRotationConfig.enabled && ambientRotationLibrary.clips.length
+  ? validateAmbientAssets({
+      clips: ambientRotationLibrary.clips,
+      assetsDirectory: ambientRotationConfig.assetsDirectory,
+    })
+  : { directory: ambientRotationConfig.assetsDirectory, present: [], missing: [], ok: true };
+const ambientRotationController = ambientRotationConfig.enabled
+  ? createAmbientRotationController({
+      clips: ambientRotationLibrary.clips,
+      presentFiles: new Set(ambientRotationAssets.present),
+      cooldownMs: ambientRotationLibrary.cooldownMs,
+      shuffled: ambientRotationConfig.shuffled || ambientRotationLibrary.shuffled,
+    })
+  : null;
+
+// Vídeos mapeados a presentes (MVP 6 — agradecimento pré-gravado).
+const giftVideoConfig = getGiftVideoConfig();
+const giftVideoLibrary = giftVideoConfig.enabled
+  ? loadGiftVideos({ filePath: giftVideoConfig.giftsFile })
+  : { entries: [], source: 'desativado', fallbackUsed: false };
+const giftVideoAssets = giftVideoConfig.enabled && giftVideoLibrary.entries.length
+  ? validateGiftVideoAssets({
+      entries: giftVideoLibrary.entries,
+      assetsDirectory: giftVideoConfig.assetsDirectory,
+    })
+  : { directory: giftVideoConfig.assetsDirectory, present: [], missing: [], ok: true };
+const giftVideoRouter = giftVideoConfig.enabled
+  ? createGiftVideoRouter({
+      entries: giftVideoLibrary.entries,
+      presentFiles: new Set(giftVideoAssets.present),
     })
   : null;
 const liveScene = createLiveSceneRuntime({ config: sceneConfig });
@@ -106,11 +160,44 @@ if (videoConfig.enabled) {
 } else {
   console.log('Vídeos acionáveis: desativados');
 }
+
+if (ambientRotationConfig.enabled) {
+  const availableCount = ambientRotationController?.clips?.length ?? 0;
+  console.log(
+    `Rotação ambiente: ${availableCount} de ${ambientRotationLibrary.clips.length} clipes disponíveis ` +
+      `| cooldown=${Math.round(ambientRotationLibrary.cooldownMs / 1000)}s ` +
+      `embaralhado=${ambientRotationConfig.shuffled ? 'sim' : 'não'}`,
+  );
+  if (ambientRotationAssets.missing.length) {
+    console.error(
+      `[ROTAÇÃO] clipes ausentes em ${ambientRotationAssets.directory}: ` +
+        `${ambientRotationAssets.missing.join(', ')}`,
+    );
+  }
+} else {
+  console.log('Rotação ambiente: desativada');
+}
+
+if (giftVideoConfig.enabled) {
+  const availableGiftVideos = giftVideoAssets.present.length;
+  console.log(
+    `Vídeos de presente: ${availableGiftVideos} de ${giftVideoLibrary.entries.length} disponíveis ` +
+      `| fonte=${giftVideoLibrary.source}`,
+  );
+  if (giftVideoAssets.missing.length) {
+    console.error(
+      `[PRESENTE] vídeos ausentes em ${giftVideoAssets.directory}: ` +
+        `${giftVideoAssets.missing.join(', ')}`,
+    );
+  }
+} else {
+  console.log('Vídeos de presente: desativados');
+}
 if (ttsConfig.error) {
   console.error(`[ERRO TTS] latencia_ms=0 | ${ttsConfig.error}`);
 }
 
-if (aiKeyInfo.placeholderDetected) {
+if (aiKeyInfo.placeholder) {
   console.log('Chave IA: NÃO configurada — o .env ainda contém cole_sua_chave_aqui');
 } else {
   console.log(`Chave IA: ${isAiConfigured() ? 'configurada' : 'NÃO configurada'}`);
@@ -167,7 +254,9 @@ function extractChatText(data) {
 }
 
 let detectedChatTextField = null;
-let directAiBusy = false;
+// Sem o motor de interação não existe fila, então UMA trava única garante
+// "uma mídia por vez": vídeo e resposta de IA nunca rodam em paralelo.
+let directBusy = false;
 
 async function processAiReply({ user, comment: selectedText }) {
   console.log(`[ENTRADA IA] @${user}: ${selectedText}`);
@@ -202,8 +291,6 @@ async function processAiReply({ user, comment: selectedText }) {
   }
 }
 
-let directMediaBusy = false;
-
 // Reproduz um clipe do MVP 6. O áudio é o do próprio MP4: nenhum TTS é gerado aqui.
 async function playTriggeredVideo({ id, video, user = null, phrase = null }) {
   console.log(
@@ -215,6 +302,10 @@ async function playTriggeredVideo({ id, video, user = null, phrase = null }) {
 
   if (result?.ok) {
     console.log(`[VÍDEO] concluído | gatilho=${id} | arquivo=${video}`);
+    // Registra término para o controlador de rotação de ambiente (se aplicável).
+    if (phrase === 'rotacao-ambiente' && ambientRotationController) {
+      ambientRotationController.markPlayed(id);
+    }
   }
 
   return result;
@@ -232,7 +323,17 @@ const interactions = createLiveInteractionEngine({
   playVideo: videoConfig.enabled ? playTriggeredVideo : null,
   findAmbientVideo:
     videoConfig.enabled && videoConfig.ambientEnabled && videoMatcher
-      ? () => videoMatcher.findAmbient()
+      ? () => {
+          const clip = videoMatcher.findAmbient();
+          // Marcar aqui evita que o convite toque em TODO beat de silêncio:
+          // o caminho de ambiente enfileira logo em seguida.
+          if (clip) videoMatcher.markFired(clip.id);
+          return clip;
+        }
+      : null,
+  findAmbientRotation:
+    ambientRotationConfig.enabled && ambientRotationController?.hasClips
+      ? () => ambientRotationController.next()
       : null,
 });
 
@@ -246,15 +347,15 @@ function queueTriggeredVideo(user, clip) {
     return;
   }
 
-  if (directMediaBusy) {
+  if (directBusy) {
     console.log(`[VÍDEO] gatilho=${id} ignorado — outra mídia já está em reprodução.`);
     return;
   }
 
   videoMatcher.markFired(id);
-  directMediaBusy = true;
+  directBusy = true;
   void playTriggeredVideo({ id, video, user, phrase }).finally(() => {
-    directMediaBusy = false;
+    directBusy = false;
   });
 }
 
@@ -286,14 +387,14 @@ function handleComment(user, comment) {
     return;
   }
 
-  if (directAiBusy) {
-    console.log(`[DECISÃO IA] @${user}: ignorado — IA já está processando outro comentário.`);
+  if (directBusy) {
+    console.log(`[DECISÃO IA] @${user}: ignorado — outra mídia já está em reprodução.`);
     return;
   }
 
-  directAiBusy = true;
+  directBusy = true;
   void processAiReply({ user, comment: selectedText }).finally(() => {
-    directAiBusy = false;
+    directBusy = false;
   });
 }
 
@@ -328,8 +429,9 @@ connection.on(WebcastEvent.GIFT, (data) => {
   const giftType = data?.giftDetails?.giftType ?? data?.giftType;
   const repeatEnd = data?.repeatEnd;
   const repeatCount = data?.repeatCount ?? 1;
+  const giftName = data?.giftDetails?.giftName || data?.giftName || 'presente';
   console.log(
-    `[PRESENTE] @${user} | giftId=${giftId} repeticoes=${repeatCount} ` +
+    `[PRESENTE] @${user} | giftId=${giftId} nome=${giftName} repeticoes=${repeatCount} ` +
       `sequencia_finalizada=${repeatEnd ?? 'não-aplicável'}`,
   );
 
@@ -338,9 +440,37 @@ connection.on(WebcastEvent.GIFT, (data) => {
     return;
   }
 
+  const displayName = data?.user?.nickname || user;
+
+  // Tenta usar vídeo pré-gravado; cai para TTS se não houver mapeamento ou arquivo.
+  if (giftVideoRouter?.hasEntries) {
+    const clip = giftVideoRouter.findVideo(giftName, String(giftId));
+    if (clip) {
+      console.log(`[PRESENTE] vídeo=${clip.id} | arquivo=${clip.video} | usuario=${displayName}`);
+      giftVideoRouter.markFired(clip.id);
+      if (interactionConfig.enabled) {
+        interactions.onGiftVideo({
+          user: displayName,
+          giftName,
+          clipId: clip.id,
+          clipFile: clip.video,
+        });
+      } else {
+        if (!directMediaBusy) {
+          directMediaBusy = true;
+          void playTriggeredVideo({ id: clip.id, video: clip.video, user: displayName, phrase: `presente:${giftName}` }).finally(() => {
+            directMediaBusy = false;
+          });
+        }
+      }
+      return;
+    }
+  }
+
+  // Fallback padrão: agradecimento dinâmico por TTS.
   interactions.onGift({
-    user: data?.user?.nickname || user,
-    giftName: data?.giftDetails?.giftName || data?.giftName || 'presente',
+    user: displayName,
+    giftName,
   });
 });
 

@@ -8,8 +8,10 @@ process.env.SCENE_ENABLED = 'true';
 process.env.SCENE_VARIANT = 'spongebob';
 process.env.TTS_ENABLED = 'true';
 process.env.TIKTOK_CONNECT_RETRY = 'true';
-process.env.INTERACTION_ENABLED = process.env.INTERACTION_ENABLED || 'true';
-process.env.VIDEO_TRIGGERS_ENABLED = process.env.VIDEO_TRIGGERS_ENABLED || 'true';
+// Atribuição direta, como em SCENE_ENABLED/TTS_ENABLED acima.
+// Com `||` a string 'false' vinda do .env seria truthy e nada seria ativado.
+process.env.INTERACTION_ENABLED = 'true';
+process.env.VIDEO_TRIGGERS_ENABLED = 'true';
 process.env.PERSONA_PROMPT = process.env.PERSONA_PROMPT || [
   'Você interpreta Bob Esponja em uma transmissão ao vivo interativa em português do Brasil.',
   'Seja alegre, inocente, otimista, divertido e adequado para todas as idades.',

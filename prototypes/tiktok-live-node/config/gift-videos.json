@@ -1,0 +1,17 @@
+{
+    "gifts":  [
+                  {
+                      "id":  "rosa-sandy",
+                      "video":  "bob-gift-rosa-sandy-v1.mp4",
+                      "giftNames":  [
+                                        "rosa",
+                                        "rose",
+                                        "rosinha"
+                                    ],
+                      "giftIds":  [
+                                      "5655"
+                                  ],
+                      "cooldownSeconds":  60
+                  }
+              ]
+}

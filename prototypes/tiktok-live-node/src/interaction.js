@@ -141,7 +141,32 @@ export function sanitizeSpokenName(value) {
 }
 
 export function shouldThankGift({ giftType, repeatEnd } = {}) {
-  return Number(giftType) !== 1 || repeatEnd === true;
+  const sequenceFinished =
+    repeatEnd === true ||
+    repeatEnd === 1 ||
+    repeatEnd === '1';
+
+  const sequencePending =
+    repeatEnd === false ||
+    repeatEnd === 0 ||
+    repeatEnd === '0';
+
+  const numericGiftType = Number(giftType);
+
+  if (numericGiftType === 1) {
+    return sequenceFinished;
+  }
+
+  const giftTypeMissing =
+    giftType === undefined ||
+    giftType === null ||
+    giftType === '';
+
+  if (giftTypeMissing && (sequenceFinished || sequencePending)) {
+    return sequenceFinished;
+  }
+
+  return true;
 }
 
 export function formatWelcome(names, total, maxNames = 3) {
@@ -226,6 +251,7 @@ export function createLiveInteractionEngine({
   answerQuestion,
   playVideo = null,
   findAmbientVideo = null,
+  findAmbientRotation = null,
   openingLines = DEFAULT_OPENING_LINES,
   ambientLines = DEFAULT_AMBIENT_LINES,
   logger = console,
@@ -288,7 +314,21 @@ export function createLiveInteractionEngine({
         return;
       }
 
-      // Opcional: usar o vídeo de convite como fala de ambiente (desligado por padrão).
+      // 1ª opção: rotação de vídeos curtos de ambiente (MVP 6 — nine clips).
+      if (typeof findAmbientRotation === 'function') {
+        const clip = findAmbientRotation();
+        if (clip?.id && clip?.file) {
+          enqueueVideo({
+            id: clip.id,
+            video: clip.file,
+            phrase: 'rotacao-ambiente',
+            priority: INTERACTION_PRIORITIES.ambient,
+          });
+          return;
+        }
+      }
+
+      // 2ª opção: vídeo de convite (opcional, desligado por padrão).
       if (typeof findAmbientVideo === 'function') {
         const clip = findAmbientVideo();
         if (clip?.id && clip?.video) {
@@ -302,6 +342,7 @@ export function createLiveInteractionEngine({
         }
       }
 
+      // Fallback: fala de ambiente por TTS.
       const text = ambientLines[ambientCursor % ambientLines.length];
       ambientCursor += 1;
       enqueueSpeech({ kind: 'ambient', text, priority: INTERACTION_PRIORITIES.ambient });
@@ -434,6 +475,29 @@ export function createLiveInteractionEngine({
     });
   }
 
+  /**
+   * Reação de presente com vídeo pré-gravado.
+   * Se clipId e clipFile forem fornecidos, enfileira o vídeo com prioridade máxima.
+   * Caso contrário, cai para onGift (TTS dinâmico).
+   * Nunca produz vídeo e TTS simultaneamente para o mesmo evento.
+   */
+  function onGiftVideo({ user, giftName, clipId, clipFile }) {
+    if (!config.enabled || stopped) return { accepted: false, reason: 'disabled' };
+    if (clipId && clipFile) {
+      touchActivity();
+      return enqueueVideo({
+        id: clipId,
+        video: clipFile,
+        user,
+        phrase: `presente:${giftName || 'presente'}`,
+        priority: INTERACTION_PRIORITIES.gift,
+      });
+    }
+    // Fallback: agradecimento dinâmico por TTS.
+    onGift({ user, giftName });
+    return { accepted: true, reason: 'fallback-tts' };
+  }
+
   function onQuestion({ user, comment }) {
     if (!config.enabled || stopped) return { accepted: false, reason: 'disabled' };
     touchActivity();
@@ -485,6 +549,7 @@ export function createLiveInteractionEngine({
     flushMembers,
     onAudienceActivity,
     onGift,
+    onGiftVideo,
     onMember,
     onQuestion,
     onVideo,
