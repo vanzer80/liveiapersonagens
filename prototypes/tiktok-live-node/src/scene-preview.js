@@ -16,6 +16,8 @@ html,body{margin:0;width:100%;height:100%;background:#050505;color:#fff;font-fam
 main{width:100%;height:100%;display:grid;place-items:center}
 .frame{position:relative;height:min(100vh,100%);aspect-ratio:9/16;background:#111;overflow:hidden}
 video{width:100%;height:100%;object-fit:cover;display:block;background:#111}
+.base-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;background:#111}
+.mouth-layer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;pointer-events:none}
 .badge{position:absolute;left:12px;bottom:12px;background:rgba(0,0,0,.6);padding:6px 10px;border-radius:999px;font-size:12px;letter-spacing:.04em;display:__BADGE_DISPLAY__}
 .unlock{position:absolute;inset:0;display:none;place-items:center;background:rgba(0,0,0,.72);font-size:18px;text-align:center;padding:24px;cursor:pointer}
 </style>
@@ -23,14 +25,58 @@ video{width:100%;height:100%;object-fit:cover;display:block;background:#111}
 <body>
 <main><div class="frame">
 <video id="video" muted autoplay loop playsinline preload="auto"></video>
+<img id="base-image" class="base-image" alt="Bob Base" />
+<img id="mouth" class="mouth-layer" alt="Boca Bob" />
 <div class="badge" id="badge">aguardando…</div>
 <div class="unlock" id="unlock"><span>Clique uma vez para ativar o áudio</span></div>
 </div></main>
 <script>
 const video=document.getElementById('video');
+const baseImage=document.getElementById('base-image');
+const mouth=document.getElementById('mouth');
 const badge=document.getElementById('badge');
 const unlock=document.getElementById('unlock');
 let revision=-1;
+let activeLipSync=null;
+let currentViseme='rest';
+
+// Pré-carregamento imediato dos 9 visemas para troca instantânea e sem flicker
+const VISEMES=['rest','a','e','o','u','mbp','fv','l','wq'];
+const preloadedMouths={};
+for(const v of VISEMES){
+  const img=new Image();
+  img.src='/lipsync/mouth-'+v+'.png';
+  preloadedMouths[v]=img;
+}
+
+function resolveViseme(timeline, elapsedMs){
+  if(!timeline || !timeline.length || elapsedMs < 0) return 'rest';
+  let low=0;
+  let high=timeline.length-1;
+  while(low <= high){
+    const mid=Math.floor((low+high)/2);
+    const item=timeline[mid];
+    if(elapsedMs >= item.startMs && elapsedMs < item.endMs){
+      return (item.viseme||'rest').toLowerCase();
+    }
+    if(elapsedMs < item.startMs) high=mid-1;
+    else low=mid+1;
+  }
+  return 'rest';
+}
+
+function animLoop(){
+  if(activeLipSync && activeLipSync.enabled){
+    const elapsed=Date.now()-activeLipSync.startedAt;
+    const nextViseme=resolveViseme(activeLipSync.timeline, elapsed);
+    if(nextViseme !== currentViseme){
+      currentViseme=nextViseme;
+      mouth.src='/lipsync/mouth-'+currentViseme+'.png';
+    }
+  }
+  requestAnimationFrame(animLoop);
+}
+requestAnimationFrame(animLoop);
 
 function report(rev,status){
   fetch('/api/media-ended',{
@@ -52,6 +98,34 @@ async function apply(state){
   const rev=revision;
   video.onended=null;
   video.onerror=null;
+
+  const isLipSyncSpeaking = state.mode === 'scene' &&
+                            state.state === 'speaking' &&
+                            state.lipSync &&
+                            state.lipSync.enabled;
+
+  if(isLipSyncSpeaking){
+    video.pause();
+    video.style.display='none';
+    baseImage.style.display='block';
+    baseImage.src=state.lipSync.baseAssetUrl || '/lipsync/bob-neutral-base.png';
+    mouth.style.display='block';
+    currentViseme='rest';
+    mouth.src='/lipsync/mouth-rest.png';
+    activeLipSync={
+      enabled: true,
+      startedAt: state.lipSync.startedAt || Date.now(),
+      timeline: state.lipSync.timeline || [],
+    };
+    return;
+  }
+
+  // Modo normal de cena (idle/thinking/speaking tradicional) ou vídeo de ação (media)
+  activeLipSync=null;
+  mouth.style.display='none';
+  baseImage.style.display='none';
+  video.style.display='block';
+
   video.pause();
   video.loop=!!state.loop;
   video.muted=!!state.muted;
@@ -78,7 +152,7 @@ async function tick(){
     const response=await fetch('/api/state',{cache:'no-store'});
     if(!response.ok) throw new Error('state');
     const state=await response.json();
-    badge.textContent=state.variant+' · '+state.state;
+    badge.textContent=state.variant+' · '+state.state + (state.lipSync?.enabled ? ' (lip)' : '');
     if(state.revision!==revision && state.assetUrl){ await apply(state); }
   }catch(error){}
 }
@@ -118,6 +192,24 @@ async function readJsonBody(request, limitBytes = 4096) {
     });
     request.on('error', () => resolveBody({}));
   });
+}
+
+async function serveImage(request, response, filePath) {
+  let fileStat;
+  try {
+    fileStat = await stat(filePath);
+  } catch {
+    response.writeHead(404);
+    response.end('Arquivo não encontrado.');
+    return;
+  }
+
+  response.writeHead(200, {
+    'content-type': 'image/png',
+    'content-length': fileStat.size,
+    'cache-control': 'public, max-age=3600',
+  });
+  createReadStream(filePath).pipe(response);
 }
 
 async function serveVideo(request, response, filePath) {
@@ -229,6 +321,7 @@ export function openPreviewBrowser(url, { logger = console } = {}) {
 export function createScenePreview({
   assetsDirectory = resolve('assets', 'mvp4'),
   mediaDirectory = resolve('assets', 'mvp6'),
+  lipsyncDirectory = resolve(process.env.LIP_SYNC_ASSETS_DIRECTORY || 'assets/mvp7/lipsync'),
   host = '127.0.0.1',
   port = Number(process.env.SCENE_PREVIEW_PORT || 3333),
   // Rede de segurança apenas: o contrato real de término é o evento `ended` do player.
@@ -246,6 +339,12 @@ export function createScenePreview({
     loop: true,
     muted: true,
     revision: 0,
+    lipSync: {
+      enabled: false,
+      timeline: null,
+      startedAt: 0,
+      baseAssetUrl: null,
+    },
   };
   let pendingMedia = null;
 
@@ -292,6 +391,12 @@ export function createScenePreview({
       return;
     }
 
+    if (url.pathname.startsWith('/lipsync/')) {
+      const requestedName = basename(decodeURIComponent(url.pathname.slice('/lipsync/'.length)));
+      await serveImage(request, response, resolve(lipsyncDirectory, requestedName));
+      return;
+    }
+
     response.writeHead(404);
     response.end('Não encontrado.');
   });
@@ -299,15 +404,42 @@ export function createScenePreview({
   // MVP 4: camada visual, sempre mutada e em loop.
   function setScene(selection) {
     const assetName = selection?.asset ? basename(selection.asset) : null;
+    const meta = selection?.metadata || {};
+    const stateName = selection?.currentState || selection?.state || current.state;
+    const lipSyncMeta = meta.lipSync || {};
+    const lipSyncEnabled = Boolean(meta.lipSyncEnabled || lipSyncMeta.enabled);
+    const timeline = Array.isArray(meta.timeline)
+      ? meta.timeline
+      : (Array.isArray(lipSyncMeta.timeline) ? lipSyncMeta.timeline : null);
+    const lipSyncActive = Boolean(
+      lipSyncEnabled &&
+      Array.isArray(timeline) &&
+      timeline.length > 0 &&
+      stateName === 'speaking'
+    );
+
     current = {
       variant: selection?.variant || current.variant,
-      state: selection?.currentState || selection?.state || current.state,
+      state: stateName,
       mode: 'scene',
       asset: assetName,
       assetUrl: assetName ? `/assets/${encodeURIComponent(assetName)}` : null,
       loop: true,
       muted: true,
       revision: current.revision + 1,
+      lipSync: lipSyncActive
+        ? {
+            enabled: true,
+            timeline,
+            startedAt: Number(meta.startedAt || lipSyncMeta.startedAt) || Date.now(),
+            baseAssetUrl: meta.baseAssetUrl || lipSyncMeta.baseAssetUrl || '/lipsync/bob-neutral-base.png',
+          }
+        : {
+            enabled: false,
+            timeline: null,
+            startedAt: 0,
+            baseAssetUrl: null,
+          },
     };
     // Uma nova cena cancela qualquer espera de mídia pendente.
     if (pendingMedia) settleMedia(pendingMedia.revision, 'interrupted');
@@ -334,6 +466,12 @@ export function createScenePreview({
       loop: false,
       muted: false,
       revision: current.revision + 1,
+      lipSync: {
+        enabled: false,
+        timeline: null,
+        startedAt: 0,
+        baseAssetUrl: null,
+      },
     };
 
     const revision = current.revision;
@@ -392,3 +530,4 @@ export function createScenePreview({
 
   return { setScene, playMedia, getState: () => current, start, stop };
 }
+

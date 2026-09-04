@@ -13,6 +13,7 @@
     "test:gift": "node --test test/gift-videos.test.js",
     "test:tts": "node src/tts-smoke.js",
     "test:videos": "node src/video-smoke.js",
+    "test:lipsync": "node src/lipsync-smoke.js",
     "preview:spongebob": "node src/scene-smoke.js"
   },
   "engines": {
