@@ -1,6 +1,6 @@
 # MVP 6 — Rotações de ambiente e loop da LIVE
 
-Status: **NOVE CENAS PRODUZIDAS E CONSOLIDADAS EM UM VÍDEO DE 90 S; USO COMO LOOP CONTÍNUO AINDA NÃO VALIDADO EM LIVE REAL**.
+Status: **NOVE CENAS PRODUZIDAS, ARQUIVADAS INDIVIDUALMENTE E CONSOLIDADAS EM UM VÍDEO DE 90 S; USO DAS ROTAÇÕES EM LIVE REAL AINDA PENDENTE**.
 
 ## Objetivo
 
@@ -57,6 +57,41 @@ Os nove clipes foram concatenados pelo usuário em um único vídeo:
 - SHA-256: `446df87a301ff7454e1914cf7d0884856ffe2341ef3e6dc97635190096775b85`.
 
 O binário permanece no Google Drive e não deve ser adicionado ao histórico Git.
+
+
+## Nove clipes individuais arquivados — 04/09/2026
+
+Os nove MP4s separados enviados pelo usuário foram arquivados no Drive oficial em:
+
+`MVP 6 - Rotações e Loop da Live/Clipes individuais`
+
+Drive folder ID: `1NwObrUVnkmCMMZLmUeGzY0eMfrsaunYn`.
+
+A numeração canônica `01`–`09` segue a posição de cada clipe dentro de `bob-rotacoes-1-3-loop-v1.mp4`. Essa correspondência foi verificada por comparação visual de quadros entre cada MP4 individual e os nove segmentos do consolidado.
+
+| Ordem no consolidado | Arquivo oficial | Drive ID | Resolução | Duração | SHA-256 |
+|---:|---|---|---:|---:|---|
+| 01 | `bob-ambient-clip-01-v1.mp4` | `16vBWunCKBAe2oQ5s-LMRLdoMSMvg6Isa` | 1280x2274 | 10,005 s | `59b77a63887c237a093b007ff96129e93af43b67639852d7913ba5b7048b9c6e` |
+| 02 | `bob-ambient-clip-02-v1.mp4` | `1ptv_T1HjAoRQe1r1E5UirUNuAu2LLlmo` | 1280x2274 | 10,005 s | `e08de50b6bab4b51608e4c5a092694008264d2eba4f37bb5f195e029d71efe49` |
+| 03 | `bob-ambient-clip-03-v1.mp4` | `1uM_IG9erIbNRVCoUcLqWvXEywCUbdSTU` | 720x1280 | 10,005 s | `552dd44d390ed14be41c8e703511a1a85c529d065bb3856bd9024fbf1bd44cff` |
+| 04 | `bob-ambient-clip-04-v1.mp4` | `1xTLs0eOq7Alu-pXZ5N1Lm4jVitRaInmC` | 720x1280 | 10,005 s | `86df81364b51a9f63a80f09b9538657993bf9bb5d964a5118173bd59ab3bb73a` |
+| 05 | `bob-ambient-clip-05-v1.mp4` | `1Ois237dl5_YyRfiK8cO-88bIJ7K6_Q6U` | 720x1280 | 10,005 s | `501dcfd23434f863da2c7801d60513b23b243dd3b13d814560aac93254133a3f` |
+| 06 | `bob-ambient-clip-06-v1.mp4` | `1BVz-14EwgGAAv-rkt6Jb3sFyxsnnY82M` | 720x1280 | 10,005 s | `d500a8c450060acb42c73e34d675af86fc7ae27fcb940f629ce5bd0a95db3b22` |
+| 07 | `bob-ambient-clip-07-v1.mp4` | `1WX8CJJ_epNfG_phhQcjaIGTmhKFsDTU7` | 720x1280 | 10,005 s | `1aca9be5c14e928fb8d516738f5853d965710d573acfdf05dce9c30cd40834ef` |
+| 08 | `bob-ambient-clip-08-v1.mp4` | `12LzQDt63h2NnroW9_aXFXQNSwhkCcNCZ` | 720x1280 | 10,005 s | `146a5e99357c3d4b1b21cf6ceceda07983bdeca6b10c189e98ff6073d2666309` |
+| 09 | `bob-ambient-clip-09-v1.mp4` | `1_OtFAJnA9nTA1JHny095IUZQVS8Q9-Wr` | 720x1280 | 10,005 s | `ac4b30e70eff31fc719891c7a78aaa9314f069a2cefdbf255017f2e983e1d770` |
+
+Todos usam H.264, aproximadamente 24 fps, e áudio AAC estéreo 48 kHz.
+
+### Limite de identificação semântica
+
+Vários nomes de exportação originais são genéricos. Por isso, a numeração acima comprova a **posição no consolidado**, mas não deve ser usada sozinha para afirmar qual das nove falas planejadas pertence a cada arquivo.
+
+Antes de configurar gatilhos por assunto ou dar nomes semânticos como `pizza`, `viagem` ou `superpoder`, confirmar o conteúdo de áudio de cada MP4.
+
+### Estado operacional
+
+Os nove clipes individuais passam a ser os ativos preferidos para a futura rotação curta de ambiente. O vídeo consolidado de 90 s permanece como demonstração/backup, não como mídia preferencial da fila.
 
 ## Resultado da inspeção local do arquivo consolidado
 
