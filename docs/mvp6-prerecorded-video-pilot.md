@@ -157,7 +157,7 @@ Em cada geração:
 
 1. selecionar vídeo vertical 9:16;
 2. escolher geração de 10 segundos;
-3. adicionar `mvp4-spongebob-master-v1-approved.jpeg` como Ingredient;
+3. para novas gerações ou substituições do Bob, adicionar `master-spongebob-live-v1-approved.jpeg` como Ingredient; o antigo `mvp4-spongebob-master-v1-approved.jpeg` permanece apenas como referência histórica dos clipes já produzidos;
 4. usar a mesma voz salva/referência de voz em todos os clipes, quando disponível e autorizada;
 5. gerar um vídeo por vez e aprovar antes do próximo.
 
@@ -226,6 +226,33 @@ Suíte automatizada após esta etapa: **82/82 testes passando** no Windows.
 - declarar lip sync dinâmico resolvido;
 - remover o TTS ou os MP4s atuais de fallback;
 - implementar painel, editor visual ou biblioteca comercial.
+
+
+## Masters visuais aprovados para próximas gerações — 04/09/2026
+
+**DECISÃO DO USUÁRIO:** sete imagens passam a ser os MASTERs visuais aprovados e a base de referência para os próximos vídeos de cada personagem.
+
+Os arquivos binários ficam no Google Drive, na pasta oficial `MVP 6 - Masters Visuais` (Drive folder ID `1zBBmvVfkeLjwIzIiD-v8eu7Wffe1tVmk`). O GitHub registra somente nomes, IDs e regras de uso.
+
+| Personagem | Arquivo oficial | Drive ID |
+|---|---|---|
+| Bob Esponja | `master-spongebob-live-v1-approved.jpeg` | `1zf25YxE3JmoCOb7F1ZR6fduxqSpowTFs` |
+| Gary | `master-gary-v1-approved.jpeg` | `1l2TrUB1UP1_5OglLC-Vex6w0mueBoah6` |
+| Lula Molusco | `master-squidward-v1-approved.jpeg` | `1AwsQAR7Osvs9dvprVfhrCmb-iDxg6mEP` |
+| Patrick Estrela | `master-patrick-v1-approved.jpeg` | `1Z6bzRB6PmXR4C0b5zPCK3ov9JX6vCkM-` |
+| Seu Siriguejo | `master-mr-krabs-v1-approved.jpeg` | `106BRk5qNqy8T9Gpj1LfsCEz52oQvNWx6` |
+| Sandy Bochechas | `master-sandy-v1-approved.jpeg` | `1InwO_wiyLBI-Tqy1p6Cnj5excr2Z9Rcb` |
+| Plankton | `master-plankton-v1-approved.jpeg` | `1nJpXWN0AzU0AEyXSDF2EOnBFkLZmzVM0` |
+
+### Regra de uso
+
+- cada novo vídeo deve usar o MASTER correspondente ao personagem como referência visual principal;
+- preservar identidade, proporções, cores, roupa/acessórios, acabamento visual e características reconhecíveis do MASTER;
+- cenário, pose e composição podem variar conforme o prompt, exceto quando a cena exigir continuidade exata;
+- aprovação como MASTER é visual; não significa que o personagem já esteja implementado no código, tenha gatilho próprio ou tenha sido validado em LIVE real;
+- os cinco vídeos acionáveis já produzidos permanecem válidos e **não precisam ser regenerados** por causa desta mudança;
+- o antigo `mvp4-spongebob-master-v1-approved.jpeg` continua documentado como referência histórica do processo anterior, mas não é o MASTER preferencial para novas gerações do Bob.
+
 
 ## Riscos e governança
 
