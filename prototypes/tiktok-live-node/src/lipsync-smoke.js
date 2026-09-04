@@ -99,7 +99,10 @@ async function run() {
       await show(SCENE_STATES.IDLE, { reason: 'tts-failed' });
     } else {
       const timelineCount = result.timeline?.length || 0;
-      console.log(`[LIP] sucesso | geracao_ms=${result.generationLatencyMs} reproducao_ms=${result.playbackDurationMs} visemes=${timelineCount}`);
+      const firstViseme = result.timeline?.[0]?.viseme || 'nenhum';
+      const lastViseme = result.timeline?.[timelineCount - 1]?.viseme || 'nenhum';
+      const endsInRest = String(lastViseme).toUpperCase() === 'REST';
+      console.log(`[LIP] sucesso | geracao_ms=${result.generationLatencyMs} reproducao_ms=${result.playbackDurationMs} visemes=${timelineCount} primeiro=${firstViseme} ultimo=${lastViseme} fallback=false terminou_rest=${endsInRest}`);
     }
 
     await wait(2000);

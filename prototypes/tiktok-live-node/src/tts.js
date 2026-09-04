@@ -75,6 +75,7 @@ export function getTtsConfig(env = process.env) {
       enabled: parseBoolean(env.LIP_SYNC_ENABLED, false),
       assetsDirectory: String(env.LIP_SYNC_ASSETS_DIRECTORY || 'assets/mvp7/lipsync').trim(),
       minHoldMs: Math.max(30, Number(env.LIP_SYNC_MIN_HOLD_MS) || 65),
+      audioOffsetMs: Number(env.LIP_SYNC_AUDIO_OFFSET_MS) || 0,
     },
   };
 }
@@ -524,9 +525,10 @@ export async function speakText(
     const triggerPlaybackStart = async () => {
       if (playbackStartedInvoked) return;
       playbackStartedInvoked = true;
+      const offsetMs = Number(config.lipSync?.audioOffsetMs || 0);
       await invokeLifecycleHook(
         onPlaybackStart,
-        { ...playbackContext, startedAt: Date.now() },
+        { ...playbackContext, startedAt: Date.now() + offsetMs },
         'onPlaybackStart',
       );
     };

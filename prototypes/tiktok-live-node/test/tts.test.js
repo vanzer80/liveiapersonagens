@@ -53,6 +53,7 @@ const TTS_ENV_VARS = [
   'LIP_SYNC_ENABLED',
   'LIP_SYNC_ASSETS_DIRECTORY',
   'LIP_SYNC_MIN_HOLD_MS',
+  'LIP_SYNC_AUDIO_OFFSET_MS',
 ];
 
 function withIsolatedTtsEnv(fn) {
@@ -91,6 +92,7 @@ test('usa configuração padrão segura quando TTS não foi habilitado', () => {
         enabled: false,
         assetsDirectory: 'assets/mvp7/lipsync',
         minHoldMs: 65,
+        audioOffsetMs: 0,
       },
     });
   });
@@ -116,6 +118,7 @@ test('marca velocidade inválida sem derrubar o processo', () => {
         enabled: false,
         assetsDirectory: 'assets/mvp7/lipsync',
         minHoldMs: 65,
+        audioOffsetMs: 0,
       },
     });
   });
@@ -256,4 +259,78 @@ test('getWavDurationMs calcula duração a partir do cabeçalho WAV', () => {
   assert.equal(durationMs, 1000);
 });
 
+test('AUDIO_PLAYBACK_START chega ao Node em tempo real antes do término da reprodução', async () => {
+  const { spawn } = await import('node:child_process');
+  const { writeFile, unlink } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+
+  // Cria WAV de 250ms de silêncio para teste seguro e rápido
+  const sampleRate = 8000;
+  const dataSize = sampleRate * 2 * 0.25;
+  const buf = Buffer.alloc(44 + dataSize);
+  buf.write('RIFF', 0);
+  buf.writeUInt32LE(36 + dataSize, 4);
+  buf.write('WAVE', 8);
+  buf.write('fmt ', 12);
+  buf.writeUInt32LE(16, 16);
+  buf.writeUInt16LE(1, 20);
+  buf.writeUInt16LE(1, 22);
+  buf.writeUInt32LE(sampleRate, 24);
+  buf.writeUInt32LE(sampleRate * 2, 28);
+  buf.writeUInt16LE(2, 32);
+  buf.writeUInt16LE(16, 34);
+  buf.write('data', 36);
+  buf.writeUInt32LE(dataSize, 40);
+
+  const testWav = join(tmpdir(), `test-marker-${Date.now()}.wav`);
+  await writeFile(testWav, buf);
+
+  const script = `
+$audioPath = '${testWav.replace(/\\/g, '\\\\')}'
+$player = [System.Media.SoundPlayer]::new($audioPath)
+try {
+  $player.Load()
+  [Console]::Out.WriteLine('AUDIO_PLAYBACK_START')
+  [Console]::Out.Flush()
+  $player.PlaySync()
+} finally {
+  $player.Dispose()
+}
+`;
+
+  const encoded = Buffer.from(script, 'utf16le').toString('base64');
+  let signalReceivedAt = null;
+  let closedAt = null;
+
+  await new Promise((resolveTest, rejectTest) => {
+    const child = spawn(
+      'powershell.exe',
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', encoded],
+      { stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      if (chunk.includes('AUDIO_PLAYBACK_START') && signalReceivedAt === null) {
+        signalReceivedAt = performance.now();
+      }
+    });
+
+    child.once('error', rejectTest);
+    child.once('close', () => {
+      closedAt = performance.now();
+      resolveTest();
+    });
+  });
+
+  await unlink(testWav).catch(() => {});
+
+  assert.ok(signalReceivedAt !== null, 'Marcador AUDIO_PLAYBACK_START deve ser recebido');
+  assert.ok(closedAt !== null, 'PowerShell deve encerrar normalmente');
+  assert.ok(
+    closedAt >= signalReceivedAt,
+    `O sinal deve chegar antes do encerramento (sinal=${signalReceivedAt}, fim=${closedAt})`,
+  );
+});
 

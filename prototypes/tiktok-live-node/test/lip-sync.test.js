@@ -266,6 +266,37 @@ describe('Motor de Lip Sync PT-BR', () => {
       assert.ok(Math.abs(consolidated[2].end - 1.9) < 0.001);
     });
 
+    test('sobrescreve snapshots cumulativos do mesmo chunk_seq (regra latest-wins)', () => {
+      const alignmentMap = new Map();
+
+      // Snapshot inicial parcial para chunk 0
+      alignmentMap.set(0, {
+        content: 'Oi',
+        offset: 0.0,
+        alignment: {
+          segments: [{ text: 'Oi', start: 0.0, end: 0.3 }],
+        },
+      });
+
+      // Snapshot cumulativo refinado posterior para o mesmo chunk 0
+      alignmentMap.set(0, {
+        content: 'Oi amigo',
+        offset: 0.0,
+        alignment: {
+          segments: [
+            { text: 'Oi', start: 0.0, end: 0.25 },
+            { text: 'amigo', start: 0.3, end: 0.8 },
+          ],
+        },
+      });
+
+      const consolidated = consolidateFishAlignment(alignmentMap);
+      assert.equal(consolidated.length, 2, 'deve conter apenas os segmentos do snapshot mais recente');
+      assert.equal(consolidated[0].text, 'Oi');
+      assert.equal(consolidated[0].end, 0.25);
+      assert.equal(consolidated[1].text, 'amigo');
+    });
+
     test('trata mapa nulo ou vazio com segurança', () => {
       assert.deepEqual(consolidateFishAlignment(null), []);
       assert.deepEqual(consolidateFishAlignment(new Map()), []);

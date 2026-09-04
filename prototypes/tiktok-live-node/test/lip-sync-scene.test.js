@@ -126,4 +126,47 @@ describe('Integração de Cena e Prévia com Lip Sync', () => {
       await preview.stop();
     }
   });
+
+  test('setScene com timeline vazia mantém lipSync desativado (fallback para speaking tradicional)', () => {
+    const preview = createScenePreview({
+      assetsDirectory: assetsDir,
+      mediaDirectory: mediaDir,
+      lipsyncDirectory: lipsyncDir,
+    });
+
+    const state = preview.setScene({
+      variant: SCENE_VARIANTS.SPONGEBOB,
+      currentState: SCENE_STATES.SPEAKING,
+      asset: 'spongebob-speaking-v1.mp4',
+      metadata: {
+        lipSyncEnabled: true,
+        timeline: [], // timeline vazia
+      },
+    });
+
+    assert.equal(state.state, SCENE_STATES.SPEAKING);
+    assert.equal(state.lipSync.enabled, false);
+    assert.equal(state.lipSync.timeline, null);
+  });
+
+  test('setScene com timeline nula mantém lipSync desativado (fallback para speaking tradicional)', () => {
+    const preview = createScenePreview({
+      assetsDirectory: assetsDir,
+      mediaDirectory: mediaDir,
+      lipsyncDirectory: lipsyncDir,
+    });
+
+    const state = preview.setScene({
+      variant: SCENE_VARIANTS.SPONGEBOB,
+      currentState: SCENE_STATES.SPEAKING,
+      asset: 'spongebob-speaking-v1.mp4',
+      metadata: {
+        lipSyncEnabled: true,
+        timeline: null,
+      },
+    });
+
+    assert.equal(state.state, SCENE_STATES.SPEAKING);
+    assert.equal(state.lipSync.enabled, false);
+  });
 });
