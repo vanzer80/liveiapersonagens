@@ -35,7 +35,7 @@ export function getEventVideoConfig(env = process.env) {
     enabled: parseBoolean(env.EVENT_VIDEOS_ENABLED, true),
     file: String(env.EVENT_VIDEOS_FILE || 'config/event-videos.json').trim(),
     openingEnabled: parseBoolean(env.VIDEO_OPENING_ENABLED, true),
-    ambientEnabled: parseBoolean(env.VIDEO_AMBIENT_ENABLED, false),
+    ambientEnabled: parseBoolean(env.EVENT_AMBIENT_VIDEOS_ENABLED, true),
     ambientIntervalMs: parseInteger(env.VIDEO_AMBIENT_INTERVAL_MS, 1000, {
       min: 250,
       max: 10000,
