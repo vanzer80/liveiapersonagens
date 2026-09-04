@@ -153,3 +153,20 @@ Especificação, gatilhos, prompts e critérios: [`docs/mvp6-prerecorded-video-p
 11. Confirmar no celular a imagem, a voz neural e a ordem das falas.
 
 O incremento só estará validado quando o som for ouvido no dispositivo do espectador. O áudio ouvido apenas no computador não comprova a transmissão.
+## Referência operacional — geração manual das falas fixas do Bob
+
+**FATO INFORMADO PELO USUÁRIO em 03/09/2026:** as falas fixas/pré-gravadas do Bob estão sendo geradas manualmente no Fish Audio pela página:
+
+`https://fish.audio/pt/app/text-to-speech/?modelId=a1a7bc39e7ba490a9b51dae6873d21f9`
+
+Identificador operacional observado no link:
+
+```text
+modelId=a1a7bc39e7ba490a9b51dae6873d21f9
+```
+
+A documentação oficial do Fish Audio informa que o identificador da voz presente na URL pode ser usado como `reference_id` em integrações TTS. Este registro serve para reproduzir o fluxo manual usado na produção das falas fixas.
+
+**Importante:** o uso manual desse modelo nas falas pré-gravadas não significa que o mesmo modelo já esteja aprovado como voz dinâmica do pipeline via API. Caso ele seja adotado no `FISH_AUDIO_REFERENCE_ID`, ainda é necessário validar autorização de uso, compatibilidade com a API, naturalidade, latência, custo e áudio recebido pelo espectador em LIVE real.
+
+Fonte oficial Fish Audio: https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech
