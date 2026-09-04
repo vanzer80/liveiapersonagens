@@ -216,3 +216,147 @@ test('fala de abertura começa somente quando o motor é iniciado', async () => 
   assert.deepEqual(spoken, ['A LIVE começou de verdade.']);
   engine.stop();
 });
+
+
+test('abertura usa vídeo quando existe e não chama TTS', async () => {
+  const scheduled = [];
+  const spoken = [];
+  const videos = [];
+  const engine = createLiveInteractionEngine({
+    config: {
+      ...enabledConfig,
+      openingEnabled: true,
+      openingDelayMs: 3000,
+    },
+    openingLines: ['fallback que não deve ser falado'],
+    findOpeningVideo: () => ({ id: 'opening', video: 'abertura.mp4' }),
+    playVideo: async (clip) => videos.push(clip),
+    speak: async (text) => spoken.push(text),
+    answerQuestion: async () => {},
+    logger: { log() {}, error() {} },
+    setTimer: (handler, delay) => {
+      const timer = { handler, delay, cancelled: false };
+      scheduled.push(timer);
+      return timer;
+    },
+    clearTimer: (timer) => { timer.cancelled = true; },
+  });
+
+  engine.start();
+  scheduled[0].handler();
+  await waitForQueue();
+
+  assert.equal(spoken.length, 0);
+  assert.equal(videos.length, 1);
+  assert.equal(videos[0].video, 'abertura.mp4');
+  engine.stop();
+});
+
+test('ambiente usa vídeo e não cai para TTS quando a rotação está habilitada', async () => {
+  const scheduled = [];
+  const spoken = [];
+  const videos = [];
+  let currentTime = 0;
+  const engine = createLiveInteractionEngine({
+    config: {
+      ...enabledConfig,
+      ambientEnabled: true,
+      ambientMinSilenceMs: 10000,
+      ambientMaxSilenceMs: 10000,
+    },
+    ambientLines: ['fallback que não deve ser falado'],
+    findAmbientVideo: () => ({ id: 'ambient-01', video: 'ambient-01.mp4' }),
+    playVideo: async (clip) => videos.push(clip),
+    speak: async (text) => spoken.push(text),
+    answerQuestion: async () => {},
+    logger: { log() {}, error() {} },
+    now: () => currentTime,
+    setTimer: (handler, delay) => {
+      const timer = { handler, delay, cancelled: false };
+      scheduled.push(timer);
+      return timer;
+    },
+    clearTimer: (timer) => { timer.cancelled = true; },
+  });
+
+  engine.start();
+  currentTime = 10000;
+  scheduled[0].handler();
+  await waitForQueue();
+
+  assert.equal(spoken.length, 0);
+  assert.equal(videos.length, 1);
+  assert.equal(videos[0].video, 'ambient-01.mp4');
+  engine.stop();
+});
+
+test('ambiente sem clipe disponível não usa TTS automático', async () => {
+  const scheduled = [];
+  const spoken = [];
+  let currentTime = 0;
+  const engine = createLiveInteractionEngine({
+    config: {
+      ...enabledConfig,
+      ambientEnabled: true,
+      ambientMinSilenceMs: 10000,
+      ambientMaxSilenceMs: 10000,
+    },
+    ambientLines: ['não deve ser falado'],
+    findAmbientVideo: () => null,
+    playVideo: async () => {},
+    speak: async (text) => spoken.push(text),
+    answerQuestion: async () => {},
+    logger: { log() {}, error() {} },
+    now: () => currentTime,
+    setTimer: (handler, delay) => {
+      const timer = { handler, delay, cancelled: false };
+      scheduled.push(timer);
+      return timer;
+    },
+    clearTimer: (timer) => { timer.cancelled = true; },
+  });
+
+  engine.start();
+  currentTime = 10000;
+  scheduled[0].handler();
+  await waitForQueue();
+
+  assert.deepEqual(spoken, []);
+  engine.stop();
+});
+
+test('vídeo de presente entra com prioridade máxima', async () => {
+  const events = [];
+  let releaseActive;
+  const engine = createLiveInteractionEngine({
+    config: enabledConfig,
+    speak: async (text, metadata) => {
+      events.push(metadata?.interactionKind || text);
+      if (metadata?.interactionKind === 'member') {
+        await new Promise((resolve) => { releaseActive = resolve; });
+      }
+    },
+    answerQuestion: async () => events.push('question'),
+    playVideo: async ({ id }) => events.push(id),
+    logger: { log() {}, error() {} },
+  });
+
+  engine.onMember({ id: '1', name: 'Ana' });
+  engine.flushMembers();
+  await waitForQueue();
+
+  engine.onVideo({ id: 'normal-video', video: 'normal.mp4' });
+  engine.onGiftVideo({
+    id: 'gift-rose-sandy',
+    video: 'bob-gift-rosa-sandy-v1.mp4',
+    user: 'Beto',
+    giftName: 'Rose',
+  });
+
+  releaseActive();
+  await waitForQueue();
+  await waitForQueue();
+
+  assert.deepEqual(events, ['member', 'gift-rose-sandy', 'normal-video']);
+  engine.stop();
+});
