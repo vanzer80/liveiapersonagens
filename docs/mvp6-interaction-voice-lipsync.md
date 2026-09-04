@@ -162,7 +162,7 @@ O Fish Audio oferece um fluxo com áudio e alinhamento temporal, documentado em 
 
 Foi aprovada a produção de cinco vídeos pré-gravados antes da implementação dos gatilhos. Eles cobrem boas-vindas, hambúrguer, Fenda do Biquíni, Patrick e convite para perguntas com `ia`. A fala e o áudio ficam embutidos nesses clipes para buscar melhor voz e lip sync nas frases fixas; nomes, presentes e perguntas inéditas permanecem dinâmicos.
 
-A prioridade `presente > pergunta dinâmica > vídeo acionado > entrada > ambiente` foi **implementada em 03/09/2026**, com palavras inteiras, normalização de acentos, cooldown de 60 segundos e uma única mídia por vez. Os clipes tocam com o áudio do próprio MP4, sem TTS junto, e voltam ao `idle` pelo fim real da reprodução. Testado localmente no Windows (82/82 testes e dois clipes acionados de ponta a ponta); a validação em LIVE real, com o espectador ouvindo o áudio, continua pendente.
+A prioridade `presente > pergunta dinâmica > vídeo acionado > entrada > ambiente` foi **implementada em 03/09/2026**, com palavras inteiras, normalização de acentos, cooldown de 60 segundos e uma única mídia por vez. Os clipes tocam com o áudio do próprio MP4, sem TTS junto, e voltam ao `idle` pelo fim real da reprodução. A integração foi testada no Windows; em LIVE real já há evidência de acionamento para fluxos específicos, incluindo `hambúrguer` e `Fenda do Biquíni`, sem sobreposição observada. A validação individual dos cinco clipes, porém, ainda permanece pendente.
 
 Especificação, gatilhos, prompts e critérios: [`docs/mvp6-prerecorded-video-pilot.md`](mvp6-prerecorded-video-pilot.md).
 
@@ -195,6 +195,6 @@ modelId=a1a7bc39e7ba490a9b51dae6873d21f9
 
 A documentação oficial do Fish Audio informa que o identificador da voz presente na URL pode ser usado como `reference_id` em integrações TTS. Este registro serve para reproduzir o fluxo manual usado na produção das falas fixas.
 
-**Importante:** o uso manual desse modelo nas falas pré-gravadas não significa que o mesmo modelo já esteja aprovado como voz dinâmica do pipeline via API. Caso ele seja adotado no `FISH_AUDIO_REFERENCE_ID`, ainda é necessário validar autorização de uso, compatibilidade com a API, naturalidade, latência, custo e áudio recebido pelo espectador em LIVE real.
+**Histórico:** inicialmente, o uso manual desse modelo nas falas pré-gravadas não significava aprovação automática como voz dinâmica. Em 04/09/2026, após teste controlado e LIVE real, essa referência foi adotada como voz dinâmica principal do protótipo e o áudio foi confirmado no celular do espectador. Permanece a restrição de confirmar que a autorização/licença cobre especificamente voz/imitação vocal, IA, TikTok LIVE, monetização, territórios, prazo e aprovações aplicáveis antes de uso público/comercial.
 
 Fonte oficial Fish Audio: https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech
