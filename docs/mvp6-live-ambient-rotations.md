@@ -168,3 +168,39 @@ Possíveis papéis futuros, somente como hipóteses:
 - **RECOMENDAÇÃO:** usar um idle separado e cenas curtas de ambiente na fila.
 - **IDEIA:** outros personagens entrando em cenas acionadas por presentes, comentários ou outros eventos.
 - **PENDÊNCIA:** validar tudo isso em LIVE real antes de tornar a arquitetura definitiva.
+
+
+## Versões finais editadas para LIVE — 04/09/2026
+
+Os nove clipes individuais foram editados e padronizados para integração futura na rotação curta de ambiente, preservando conteúdo e falas.
+
+Padrão final aplicado a todos:
+
+- duração: **10,000 s**;
+- resolução: **720x1280**;
+- vídeo: H.264, 24 fps, yuv420p, faststart;
+- áudio: AAC estéreo, 48 kHz, 192 kbps;
+- loudness nivelado com alvo aproximado de -16 LUFS e true peak de -1,5 dBTP;
+- sem transições, legendas, efeitos ou cortes adicionais;
+- ordem canônica 01–09 preservada.
+
+Drive folder: `MVP 6 - Rotações e Loop da Live/Versões finais para LIVE`  
+Drive folder ID: `1RaAjzRHWARPSw8zimulTnzORgCfHTSF3`.
+
+| Ordem | Arquivo final | Drive ID |
+|---:|---|---|
+| 01 | `bob-ambient-01-live-final-v1.mp4` | `18xP6naA1iGvLs-HfOKq42t46r4EtJns-` |
+| 02 | `bob-ambient-02-live-final-v1.mp4` | `1iozN8C0nMUEjJyi5ZbTmnWjwuEx4mAqh` |
+| 03 | `bob-ambient-03-live-final-v1.mp4` | `1dOsUsLrAouDydglsY9J9I-qs_bPSXY4d` |
+| 04 | `bob-ambient-04-live-final-v1.mp4` | `1OqeF2EB3P2kVo4kQ0mzCoecwKWFMxKgw` |
+| 05 | `bob-ambient-05-live-final-v1.mp4` | `1_DX5I_qyw9bl6nyEe-wpOEy_XXc-R8BO` |
+| 06 | `bob-ambient-06-live-final-v1.mp4` | `1HFRLm9hydsH5BbZhQ9VDc9UsFBD5zOnc` |
+| 07 | `bob-ambient-07-live-final-v1.mp4` | `1EWnY-3n0sn_TaEXJslAM6uf3psgNXblH` |
+| 08 | `bob-ambient-08-live-final-v1.mp4` | `17YOCOqmO-Ahii4QzjbLPSFLR_fcj4c2Z` |
+| 09 | `bob-ambient-09-live-final-v1.mp4` | `16hTtIZ8-pV6qjmldv0IizJdJ3DORKEws` |
+
+### QA pós-render
+
+Todos os nove arquivos foram verificados com `ffprobe` depois da edição e retornaram exatamente 10,000 s, 720x1280, H.264 24 fps e AAC 48 kHz estéreo. Uma inspeção visual de quadros intermediários confirmou que o enquadramento permaneceu coerente e que a padronização não introduziu crop relevante.
+
+**Decisão operacional:** estas versões finais passam a ser os ativos preferenciais para integração da rotação curta de ambiente. Os MP4s originais e o consolidado de 90 s permanecem preservados no Drive como fontes e backup.
