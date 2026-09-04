@@ -9,6 +9,7 @@
     "live:bob": "node src/live-bob.js",
     "test": "node --test",
     "test:tts": "node src/tts-smoke.js",
+    "test:videos": "node src/video-smoke.js",
     "preview:spongebob": "node src/scene-smoke.js"
   },
   "engines": {

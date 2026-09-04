@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
@@ -17,6 +18,7 @@ export function getLiveSceneConfig(env = process.env) {
     enabled: parseBoolean(env.SCENE_ENABLED, false),
     variant: String(env.SCENE_VARIANT || SCENE_VARIANTS.SPONGEBOB).trim().toLowerCase(),
     assetsDirectory: resolve(env.SCENE_ASSETS_DIRECTORY || 'assets/mvp4'),
+    mediaDirectory: resolve(env.VIDEO_ASSETS_DIRECTORY || 'assets/mvp6'),
   };
 }
 
@@ -26,8 +28,12 @@ export function createLiveSceneRuntime({
     assetsDirectory: config.assetsDirectory,
     variant: config.variant,
   }),
-  preview = createScenePreview({ assetsDirectory: config.assetsDirectory }),
+  preview = createScenePreview({
+    assetsDirectory: config.assetsDirectory,
+    mediaDirectory: config.mediaDirectory,
+  }),
   browserOpener = openPreviewBrowser,
+  mediaExists = (candidate) => existsSync(candidate),
   logger = console,
 } = {}) {
   let started = false;
@@ -133,6 +139,52 @@ export function createLiveSceneRuntime({
     return result;
   }
 
+  /**
+   * MVP 6 — reproduz um clipe pré-gravado com a fala já embutida.
+   * Nenhum TTS é gerado aqui: o áudio é o do próprio MP4.
+   * O retorno ao `idle` usa o fim REAL informado pelo player, nunca um atraso fixo.
+   */
+  async function playClip(file, metadata = {}) {
+    if (!config.enabled) return { ok: false, skipped: true, status: 'scene-disabled' };
+
+    if (typeof preview.playMedia !== 'function') {
+      logger.error?.('[VÍDEO] a prévia atual não suporta reprodução de clipes.');
+      return { ok: false, status: 'unsupported' };
+    }
+
+    const fullPath = resolve(config.mediaDirectory, String(file || ''));
+    if (!mediaExists(fullPath)) {
+      logger.error?.(`[VÍDEO] arquivo ausente: ${fullPath}. A LIVE continua sem esse clipe.`);
+      await reset({ ...metadata, reason: 'video-missing' }).catch(() => {});
+      return { ok: false, status: 'missing', asset: String(file || '') };
+    }
+
+    let result = { ok: false, status: 'unknown' };
+    try {
+      result = await preview.playMedia({ file });
+      if (!result.ok) {
+        logger.error?.(`[VÍDEO] reprodução não concluída | arquivo=${file} status=${result.status}`);
+      }
+    } catch (error) {
+      logger.error?.(
+        `[VÍDEO] erro ao reproduzir ${file}: ${error instanceof Error ? error.message : error}`,
+      );
+      result = { ok: false, status: 'exception' };
+    } finally {
+      // reset() e não ensureIdle(): a mídia trocou a prévia por fora do controlador,
+      // então é preciso reimprimir o idle mesmo com o estado interno já em idle.
+      try {
+        await reset({ ...metadata, reason: 'video-finished' });
+      } catch (error) {
+        logger.error?.(
+          `[VÍDEO] falha ao voltar para idle: ${error instanceof Error ? error.message : error}`,
+        );
+      }
+    }
+
+    return result;
+  }
+
   async function stop() {
     if (!config.enabled || !started) return;
     await preview.stop();
@@ -143,6 +195,7 @@ export function createLiveSceneRuntime({
     ensureIdle,
     getState: () => controller.getState(),
     getUrl: () => previewUrl,
+    playClip,
     reset,
     showThinking,
     speak,

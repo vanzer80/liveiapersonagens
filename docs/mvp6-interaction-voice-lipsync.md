@@ -19,6 +19,7 @@ Transformar a cena já enquadrada no TikTok LIVE Studio em uma apresentação qu
 |---|---:|---|
 | Presente | 100 | agradecimento nominal entra antes dos demais itens pendentes |
 | Pergunta `ia`/`!ia` | 80 | resposta da IA é enfileirada; uma pergunta pendente por usuário |
+| Vídeo acionado | 70 | clipe pré-gravado com fala embutida; um por comentário, cooldown de 60 s |
 | Entrada | 60 | nomes são agrupados por 10 s; no máximo 3 nomes por fala |
 | Curtida | 30 | reservada para marcos, sem narrar cada curtida |
 | Abertura | 50 | uma frase três segundos depois da conexão real |
@@ -133,7 +134,7 @@ O Fish Audio oferece um fluxo com áudio e alinhamento temporal, documentado em 
 
 Foi aprovada a produção de cinco vídeos pré-gravados antes da implementação dos gatilhos. Eles cobrem boas-vindas, hambúrguer, Fenda do Biquíni, Patrick e convite para perguntas com `ia`. A fala e o áudio ficam embutidos nesses clipes para buscar melhor voz e lip sync nas frases fixas; nomes, presentes e perguntas inéditas permanecem dinâmicos.
 
-A prioridade planejada é `presente > pergunta dinâmica > vídeo acionado > entrada > ambiente`, com palavras inteiras, normalização de acentos, cooldown de 60 segundos e uma única mídia por vez. Os cinco ativos foram produzidos, validados pelo usuário e organizados no Drive oficial; a configuração de gatilhos, a reprodução e o teste integrado continuam pendentes.
+A prioridade `presente > pergunta dinâmica > vídeo acionado > entrada > ambiente` foi **implementada em 03/09/2026**, com palavras inteiras, normalização de acentos, cooldown de 60 segundos e uma única mídia por vez. Os clipes tocam com o áudio do próprio MP4, sem TTS junto, e voltam ao `idle` pelo fim real da reprodução. Testado localmente no Windows (82/82 testes e dois clipes acionados de ponta a ponta); a validação em LIVE real, com o espectador ouvindo o áudio, continua pendente.
 
 Especificação, gatilhos, prompts e critérios: [`docs/mvp6-prerecorded-video-pilot.md`](mvp6-prerecorded-video-pilot.md).
 

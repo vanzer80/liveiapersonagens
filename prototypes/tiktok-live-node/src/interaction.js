@@ -22,6 +22,8 @@ export const INTERACTION_PRIORITIES = Object.freeze({
   like: 30,
   opening: 50,
   member: 60,
+  // Vídeo acionado fica abaixo da pergunta dinâmica e acima da entrada agrupada.
+  video: 70,
   question: 80,
   gift: 100,
 });
@@ -222,6 +224,8 @@ export function createLiveInteractionEngine({
   config = getInteractionConfig(),
   speak,
   answerQuestion,
+  playVideo = null,
+  findAmbientVideo = null,
   openingLines = DEFAULT_OPENING_LINES,
   ambientLines = DEFAULT_AMBIENT_LINES,
   logger = console,
@@ -284,6 +288,20 @@ export function createLiveInteractionEngine({
         return;
       }
 
+      // Opcional: usar o vídeo de convite como fala de ambiente (desligado por padrão).
+      if (typeof findAmbientVideo === 'function') {
+        const clip = findAmbientVideo();
+        if (clip?.id && clip?.video) {
+          enqueueVideo({
+            id: clip.id,
+            video: clip.video,
+            phrase: 'ambiente',
+            priority: INTERACTION_PRIORITIES.ambient,
+          });
+          return;
+        }
+      }
+
       const text = ambientLines[ambientCursor % ambientLines.length];
       ambientCursor += 1;
       enqueueSpeech({ kind: 'ambient', text, priority: INTERACTION_PRIORITIES.ambient });
@@ -330,6 +348,40 @@ export function createLiveInteractionEngine({
       logger.log?.(`[FILA] tipo=${kind} ignorado | motivo=${result.reason}`);
     }
     return result;
+  }
+
+  // Vídeo pré-gravado entra na MESMA fila das falas: uma mídia por vez.
+  function enqueueVideo({ id, video, user = null, phrase = null, priority = INTERACTION_PRIORITIES.video }) {
+    if (typeof playVideo !== 'function') {
+      logger.log?.(`[VÍDEO] gatilho=${id} ignorado | motivo=reprodutor-indisponivel`);
+      return { accepted: false, reason: 'no-player' };
+    }
+
+    const result = queue.enqueue({
+      kind: 'video',
+      priority,
+      // Impede o mesmo vídeo entrar duas vezes enquanto ainda não terminou.
+      dedupeKey: `video:${id}`,
+      run: async () => {
+        try {
+          await playVideo({ id, video, user, phrase });
+        } finally {
+          touchActivity();
+        }
+      },
+    });
+
+    if (!result.accepted) {
+      logger.log?.(`[FILA] vídeo=${id} ignorado | motivo=${result.reason}`);
+    }
+    return result;
+  }
+
+  function onVideo({ id, video, user = null, phrase = null } = {}) {
+    if (!config.enabled || stopped) return { accepted: false, reason: 'disabled' };
+    if (!id || !video) return { accepted: false, reason: 'invalid' };
+    touchActivity();
+    return enqueueVideo({ id, video, user, phrase });
   }
 
   function flushMembers() {
@@ -435,6 +487,7 @@ export function createLiveInteractionEngine({
     onGift,
     onMember,
     onQuestion,
+    onVideo,
     queue,
     start,
     stop,

@@ -1,6 +1,6 @@
 # Piloto híbrido — cinco vídeos acionáveis por comentário
 
-Status: **CINCO ATIVOS PRODUZIDOS E ORGANIZADOS; GATILHOS E VALIDAÇÃO INTEGRADA PENDENTES**.
+Status: **CINCO ATIVOS PRODUZIDOS; GATILHOS E REPRODUÇÃO IMPLEMENTADOS E TESTADOS LOCALMENTE NO WINDOWS; VALIDAÇÃO EM LIVE REAL PENDENTE**.
 
 ## Objetivo
 
@@ -85,7 +85,55 @@ Formato de configuração pretendido:
 }
 ```
 
-Este arquivo ainda não existe; o exemplo é contrato de planejamento, não implementação.
+## Implementação — 03/09/2026
+
+O contrato acima deixou de ser planejamento e virou código.
+
+| Peça | Arquivo |
+|---|---|
+| Manifesto editável de gatilhos | `prototypes/tiktok-live-node/config/video-triggers.json` |
+| Normalização, palavra inteira, cooldown | `prototypes/tiktok-live-node/src/video-triggers.js` |
+| Roteamento de uma única resposta | `prototypes/tiktok-live-node/src/comment-router.js` |
+| Reprodução com áudio e fim real | `src/scene-preview.js` e `src/live-scene.js` |
+| Entrada na fila existente | `src/interaction.js` (`onVideo`, prioridade 70) |
+| Teste local sem LIVE | `npm run test:videos -- <id>` |
+
+### Como a resposta é escolhida
+
+Para cada comentário existe **uma única** resposta principal:
+
+1. `ia` / `!ia` com mensagem → IA + TTS dinâmico;
+2. senão, comentário que casa um gatilho → vídeo pré-gravado;
+3. senão, com `AI_RESPOND_ALL=true` → IA + TTS;
+4. senão, nada.
+
+Isso resolve o conflito em que "eu gosto do Patrick" tocaria o vídeo **e** geraria resposta de IA. A palavra `ia` sozinha continua reservada e nunca aciona o vídeo de convite.
+
+### Áudio dos clipes
+
+Os MP4s do MVP 4 seguem **mutados e em loop** (camada visual). Os cinco clipes do MVP 6 tocam **com o áudio do próprio arquivo, uma única vez, sem TTS junto**. O player recebe `loop=false` e `muted=false` apenas nesses clipes.
+
+### Fim real da reprodução
+
+O retorno ao `idle` usa o evento `ended` do player, reportado ao Node por `POST /api/media-ended`. Não há atraso fixo como contrato; `VIDEO_PLAYBACK_TIMEOUT_MS` existe apenas como rede de segurança.
+
+### Autoplay com som
+
+Edge e Chrome bloqueiam vídeo com áudio sem gesto do usuário. Isso foi **observado na prática** durante o teste local (`status=blocked`). A prévia passou a ser aberta em modo aplicativo com `--autoplay-policy=no-user-gesture-required` e perfil dedicado. Se nenhum navegador Chromium for encontrado, a página mostra um aviso para clicar uma vez e liberar o som.
+
+### Evidência do teste local no Windows — 03/09/2026
+
+```text
+[TESTE VÍDEO] acionando gatilho=patrick arquivo=bob-patrick-v1.mp4
+[TESTE VÍDEO] status=ended ok=true duracao_ms=10711
+[TESTE VÍDEO] estado_final=idle
+
+[TESTE VÍDEO] acionando gatilho=hamburguer arquivo=bob-hamburguer-v1.mp4
+[TESTE VÍDEO] status=ended ok=true duracao_ms=10741
+[TESTE VÍDEO] estado_final=idle
+```
+
+Classificação: **RESULTADO DE TESTE — local no Windows**. Comprova acionamento, reprodução completa pelo fim real e retorno ao `idle`. **Não** comprova que o espectador ouviu o áudio na LIVE, nem a transmissão pelo LIVE Studio.
 
 ## Padrão de produção dos cinco vídeos
 
@@ -160,13 +208,16 @@ Resultado desta etapa: os cinco arquivos foram aprovados pelo usuário. Os crit�
 
 Com os cinco MP4s aprovados e organizados:
 
-- implementar configuração e seleção por gatilho;
-- criar testes de normalização, palavras inteiras, cooldown, prioridade e deduplicação;
-- confirmar que cada comentário aciona somente o vídeo esperado;
-- confirmar que `ia <pergunta>` continua usando IA/TTS;
-- verificar no celular do espectador imagem e áudio sincronizados;
-- confirmar que não há sobreposição;
-- confirmar retorno ao `idle` e continuidade da captura de eventos.
+- [x] implementar configuração e seleção por gatilho;
+- [x] criar testes de normalização, palavras inteiras, cooldown, prioridade e deduplicação;
+- [x] confirmar que cada comentário aciona somente o vídeo esperado (teste automatizado);
+- [x] confirmar que `ia <pergunta>` continua usando IA/TTS (teste automatizado);
+- [x] confirmar retorno ao `idle` no teste local do Windows;
+- [ ] verificar no celular do espectador imagem e áudio sincronizados;
+- [ ] confirmar que não há sobreposição durante uma LIVE real;
+- [ ] confirmar continuidade da captura de eventos depois dos acionamentos.
+
+Suíte automatizada após esta etapa: **82/82 testes passando** no Windows.
 
 ## Fora deste piloto
 

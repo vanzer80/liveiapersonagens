@@ -1,0 +1,39 @@
+{
+  "cooldownSeconds": 60,
+  "triggers": [
+    {
+      "id": "boas-vindas",
+      "video": "bob-boas-vindas-v1.mp4",
+      "words": ["oi", "ola", "olá", "cheguei", "primeira vez", "bom dia", "boa noite", "boa tarde"]
+    },
+    {
+      "id": "hamburguer",
+      "video": "bob-hamburguer-v1.mp4",
+      "words": ["hamburguer", "hambúrguer", "siri cascudo", "sanduiche", "sanduíche", "lanche"]
+    },
+    {
+      "id": "fenda-biquini",
+      "video": "bob-fenda-biquini-v1.mp4",
+      "words": ["fenda do biquini", "fenda do biquíni", "fundo do mar"]
+    },
+    {
+      "id": "patrick",
+      "video": "bob-patrick-v1.mp4",
+      "words": ["patrick", "estrela do mar", "estrela-do-mar"]
+    },
+    {
+      "id": "convite-ia",
+      "video": "bob-convite-ia-v1.mp4",
+      "ambient": true,
+      "words": [
+        "como perguntar",
+        "como falar com voce",
+        "como falar com você",
+        "como faco uma pergunta",
+        "como faço uma pergunta",
+        "como faco pergunta",
+        "como te pergunto"
+      ]
+    }
+  ]
+}

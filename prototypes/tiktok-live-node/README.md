@@ -12,6 +12,7 @@ Objetivo: validar incrementalmente o fluxo `TikTok LIVE → IA → TTS → cena 
 - **MVP 4 — cena visual:** RAMO BOB VALIDADO localmente; influencer adiada para uma segunda etapa.
 - **MVP 5 — Bob em LIVE real:** composição visual funcionou no LIVE Studio; confirmação do áudio por um espectador ainda pendente.
 - **MVP 6 — interação e voz neural:** fila, boas-vindas, presentes, fala de ambiente e adaptador Fish Audio implementados; validação real pendente.
+- **MVP 6 — vídeos acionáveis:** cinco clipes com fala embutida, gatilhos por palavra, cooldown e fila integrados; testados localmente no Windows, validação em LIVE real pendente.
 
 O controlador ainda suporta duas variantes, mas a direção vigente prioriza `spongebob`. A imagem mestre e os três clipes iniciais do Bob foram aprovados no Google Drive oficial:
 
@@ -190,6 +191,65 @@ AI_RESPOND_ALL=true
 Nesse modo, todo comentário com conteúdo real vira uma resposta da IA (comentários vazios ou só de emoji/pontuação são ignorados). O gatilho `AI_TRIGGER` continua funcionando como padrão quando `AI_RESPOND_ALL=false`.
 
 > **Experimento não validado (HIPÓTESE).** A fala é serial: uma voz por vez, com ~8 a 12 s por resposta. Em chat movimentado, a fila (máx. 12 itens) acumula atraso e o personagem passa a responder comentários antigos. Presentes e a regra de uma pergunta pendente por usuário continuam ativos. Só uma LIVE real confirma se esse ritmo funciona; se atrapalhar, o próximo passo é uma seleção que priorize o comentário mais recente/relevante.
+
+## MVP 6 — cinco vídeos acionáveis por comentário
+
+Cinco clipes pré-gravados com a fala **já embutida** respondem a temas repetidos, sem gastar IA nem TTS.
+
+| Vídeo | Aciona com |
+|---|---|
+| `bob-boas-vindas-v1.mp4` | oi, olá, cheguei, primeira vez, bom dia, boa tarde, boa noite |
+| `bob-hamburguer-v1.mp4` | hambúrguer, hamburguer, siri cascudo, sanduíche, lanche |
+| `bob-fenda-biquini-v1.mp4` | fenda do biquíni, fenda do biquini, fundo do mar |
+| `bob-patrick-v1.mp4` | patrick, estrela do mar, estrela-do-mar |
+| `bob-convite-ia-v1.mp4` | como perguntar, como falar com você, como faço uma pergunta |
+
+Copie os cinco MP4s do Google Drive para `assets\mvp6\`. Eles **não** são versionados no Git.
+
+As palavras podem ser editadas sem programar:
+
+```powershell
+notepad .\config\video-triggers.json
+```
+
+### Regras aplicadas
+
+- comparação em minúsculas e sem acento (`HAMBÚRGUER` = `hamburguer`);
+- só casa **palavra ou expressão inteira** — `hamburgueria` não aciona o vídeo do hambúrguer;
+- **um comentário aciona no máximo um vídeo**, escolhendo a expressão mais específica;
+- **cooldown de 60 segundos por vídeo**, contado só quando ele realmente entra na fila;
+- `ia` e `!ia` continuam reservados para a IA: `ia o patrick é legal?` gera resposta dinâmica, **não** o vídeo;
+- com `AI_RESPOND_ALL=true`, um comentário que aciona vídeo **não** gera também resposta de IA;
+- os clipes tocam com o **áudio do próprio MP4**, uma única vez e sem TTS junto;
+- o retorno ao `idle` usa o fim **real** do vídeo, não um tempo fixo.
+
+### Testar sem abrir uma LIVE
+
+```bash
+npm run test:videos
+```
+
+Lista os cinco vídeos e diz quais estão presentes. Para acionar um deles:
+
+```bash
+npm run test:videos -- patrick
+```
+
+O comando abre a prévia, fica em `idle`, toca o clipe escolhido, espera o fim real e volta para `idle`.
+
+### Ajustes opcionais
+
+```env
+VIDEO_TRIGGERS_ENABLED=true
+VIDEO_TRIGGERS_FILE=config/video-triggers.json
+VIDEO_ASSETS_DIRECTORY=assets/mvp6
+VIDEO_TRIGGER_COOLDOWN_SECONDS=60
+VIDEO_AMBIENT_ENABLED=false
+```
+
+O comando `npm run live:bob` já ativa os vídeos automaticamente.
+
+> **Áudio:** Edge e Chrome bloqueiam vídeo com som sem um clique do usuário. Por isso a prévia é aberta em modo aplicativo com a política de autoplay liberada e um perfil próprio. Se o som não sair, clique uma vez na janela da prévia.
 
 ## Executar o Bob integrado à LIVE
 

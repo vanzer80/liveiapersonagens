@@ -22,6 +22,8 @@ Google Drive: `00 - Documento Mestre - Visão do Produto`, `03 - Registro de Dec
 - Fala de ambiente: uma frase curta após 35 segundos sem atividade.
 - Voz neural Fish Audio: adaptador implementado; precisa de chave e referência autorizada no `.env`.
 - Lip sync: callbacks acertam o início/fim da fala, mas o MP4 pré-renderizado não sincroniza fonemas; exige novos ativos de boca.
+- Vídeos acionáveis do MVP 6: cinco clipes com fala embutida, gatilhos por palavra, cooldown de 60 s, fila e retorno ao `idle` pelo fim real; testados localmente no Windows em 03/09/2026 (`status=ended`), validação em LIVE real pendente.
+- Respostas sem gatilho (`AI_RESPOND_ALL`): modo experimental opcional com validação inicial positiva em LIVE; um comentário que aciona vídeo não gera também resposta de IA.
 - Transmissão audiovisual para espectadores: implementação preparada; teste real pendente.
 - Composição no LIVE Studio: Bob enquadrado corretamente com captura de janela `msedge.exe`, cena vertical `Em branco` e modo `Ajustar`, sem câmera real.
 - A fonte `Adicionar link` rejeitou o endereço HTTP local na versão testada do LIVE Studio.
@@ -46,7 +48,13 @@ comentário ia/!ia
   → idle
 ```
 
-A prévia fica em `http://127.0.0.1:3333`. Os MP4s são reproduzidos sem áudio; a voz vem exclusivamente do provedor TTS selecionado.
+A prévia fica em `http://127.0.0.1:3333`. Os MP4s do MVP 4 (`idle`, `thinking`, `speaking`) são reproduzidos **sem áudio e em loop**; a voz desse fluxo vem exclusivamente do provedor TTS selecionado.
+
+Os cinco clipes do MVP 6 em `assets\mvp6\` são a exceção: tocam **com o áudio do próprio arquivo**, uma única vez e sem TTS junto. Para testá-los sem abrir uma LIVE:
+
+```powershell
+npm run test:videos -- patrick
+```
 
 ## Próximo teste obrigatório no Windows
 

@@ -37,13 +37,16 @@ Concluído:
 - padronização dos nomes;
 - manifesto e proteção contra commit acidental.
 
+- arquivo configurável de gatilhos (`config/video-triggers.json`);
+- seleção do vídeo pelas palavras do comentário;
+- cooldown de 60 s, deduplicação e fila única;
+- reprodução com o áudio do próprio MP4, sem TTS junto;
+- retorno ao `idle` pelo fim real do vídeo;
+- testes automatizados e teste local no Windows (`npm run test:videos -- <id>`).
+
 Pendente:
 
-- arquivo configurável de gatilhos;
-- seleção do vídeo pelas palavras do comentário;
-- cooldown, deduplicação e fila única;
-- reprodução do áudio sem sobreposição;
-- retorno ao `idle`;
-- testes automatizados e validação integrada no celular do espectador.
+- validação em LIVE real com o áudio e a imagem recebidos no celular do espectador;
+- confirmação de que não há sobreposição durante uma LIVE movimentada.
 
-A presença dos arquivos neste diretório não significa que os gatilhos já foram implementados.
+A presença dos arquivos neste diretório não significa que a experiência já foi validada em LIVE.

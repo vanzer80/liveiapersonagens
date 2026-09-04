@@ -4,9 +4,9 @@ import {
   getAiConfig,
   getSafeAiKeyInfo,
   isAiConfigured,
-  resolveCommentForAi,
   validateAiAuthentication,
 } from './ai.js';
+import { routeComment } from './comment-router.js';
 import {
   createLiveInteractionEngine,
   getInteractionConfig,
@@ -15,6 +15,12 @@ import {
 } from './interaction.js';
 import { createLiveSceneRuntime, getLiveSceneConfig } from './live-scene.js';
 import { getTtsConfig, speakText } from './tts.js';
+import {
+  createVideoTriggerMatcher,
+  getVideoTriggerConfig,
+  loadVideoTriggers,
+  validateVideoAssets,
+} from './video-triggers.js';
 
 const usernameArg = process.argv[2];
 const username = (usernameArg || process.env.TIKTOK_USERNAME || '').replace(/^@/, '').trim();
@@ -32,6 +38,25 @@ const ttsConfig = getTtsConfig();
 const sceneConfig = getLiveSceneConfig();
 const interactionConfig = getInteractionConfig();
 const interactionLines = loadInteractionLines({ filePath: interactionConfig.linesFile });
+const videoConfig = getVideoTriggerConfig();
+const videoLibrary = videoConfig.enabled
+  ? loadVideoTriggers({
+      filePath: videoConfig.triggersFile,
+      cooldownSeconds: videoConfig.cooldownSeconds,
+    })
+  : { triggers: [], cooldownMs: 0, source: 'desativado', fallbackUsed: false };
+const videoAssets = videoConfig.enabled
+  ? validateVideoAssets({
+      triggers: videoLibrary.triggers,
+      assetsDirectory: videoConfig.assetsDirectory,
+    })
+  : { directory: videoConfig.assetsDirectory, present: [], missing: [], ok: true };
+const videoMatcher = videoConfig.enabled
+  ? createVideoTriggerMatcher({
+      triggers: videoLibrary.triggers,
+      cooldownMs: videoLibrary.cooldownMs,
+    })
+  : null;
 const liveScene = createLiveSceneRuntime({ config: sceneConfig });
 const connectRetryEnabled = ['1', 'true', 'yes', 'sim', 'on'].includes(
   String(process.env.TIKTOK_CONNECT_RETRY || '').trim().toLowerCase(),
@@ -66,6 +91,21 @@ console.log(
   `Falas: ${interactionLines.opening.length} de abertura + ` +
     `${interactionLines.ambient.length} de ambiente | fonte=${interactionLines.source}`,
 );
+if (videoConfig.enabled) {
+  console.log(
+    `Vídeos acionáveis: ${videoLibrary.triggers.length} gatilhos | fonte=${videoLibrary.source} ` +
+      `cooldown=${Math.round(videoLibrary.cooldownMs / 1000)}s ` +
+      `ambiente=${videoConfig.ambientEnabled ? 'sim' : 'não'}`,
+  );
+  if (videoAssets.missing.length) {
+    console.error(
+      `[VÍDEO] arquivos ausentes em ${videoAssets.directory}: ${videoAssets.missing.join(', ')}. ` +
+        'Os demais gatilhos continuam funcionando.',
+    );
+  }
+} else {
+  console.log('Vídeos acionáveis: desativados');
+}
 if (ttsConfig.error) {
   console.error(`[ERRO TTS] latencia_ms=0 | ${ttsConfig.error}`);
 }
@@ -162,6 +202,24 @@ async function processAiReply({ user, comment: selectedText }) {
   }
 }
 
+let directMediaBusy = false;
+
+// Reproduz um clipe do MVP 6. O áudio é o do próprio MP4: nenhum TTS é gerado aqui.
+async function playTriggeredVideo({ id, video, user = null, phrase = null }) {
+  console.log(
+    `[VÍDEO] usuario=${user || 'ambiente'} | gatilho=${id} | arquivo=${video}` +
+      (phrase ? ` | expressao=${phrase}` : ''),
+  );
+
+  const result = await liveScene.playClip(video, { videoId: id, user });
+
+  if (result?.ok) {
+    console.log(`[VÍDEO] concluído | gatilho=${id} | arquivo=${video}`);
+  }
+
+  return result;
+}
+
 const interactions = createLiveInteractionEngine({
   config: interactionConfig,
   openingLines: interactionLines.opening,
@@ -171,16 +229,49 @@ const interactions = createLiveInteractionEngine({
     metadata,
   }),
   answerQuestion: processAiReply,
+  playVideo: videoConfig.enabled ? playTriggeredVideo : null,
+  findAmbientVideo:
+    videoConfig.enabled && videoConfig.ambientEnabled && videoMatcher
+      ? () => videoMatcher.findAmbient()
+      : null,
 });
 
-function maybeQueueAiReply(user, comment) {
-  const decision = resolveCommentForAi({
+function queueTriggeredVideo(user, clip) {
+  const { id, video, phrase } = clip;
+
+  if (interactionConfig.enabled) {
+    const result = interactions.onVideo({ id, video, user, phrase });
+    // O cooldown só começa quando o vídeo realmente entrou na fila.
+    if (result?.accepted) videoMatcher.markFired(id);
+    return;
+  }
+
+  if (directMediaBusy) {
+    console.log(`[VÍDEO] gatilho=${id} ignorado — outra mídia já está em reprodução.`);
+    return;
+  }
+
+  videoMatcher.markFired(id);
+  directMediaBusy = true;
+  void playTriggeredVideo({ id, video, user, phrase }).finally(() => {
+    directMediaBusy = false;
+  });
+}
+
+function handleComment(user, comment) {
+  const decision = routeComment({
     comment,
     trigger: aiConfig.trigger,
     respondAll: aiConfig.respondAll,
+    findVideo: videoMatcher ? (text) => videoMatcher.match(text) : null,
   });
 
-  if (!decision.shouldAnswer) {
+  if (decision.kind === 'video') {
+    queueTriggeredVideo(user, decision.video);
+    return;
+  }
+
+  if (decision.kind !== 'ai') {
     if (decision.reason === 'trigger-without-message') {
       console.log(`[DECISÃO IA] @${user}: ignorado — gatilho sem mensagem.`);
     }
@@ -189,7 +280,7 @@ function maybeQueueAiReply(user, comment) {
 
   const selectedText = decision.text;
 
-  console.log(`[DECISÃO IA] @${user}: selecionado.`);
+  console.log(`[DECISÃO IA] @${user}: selecionado | motivo=${decision.reason}`);
   if (interactionConfig.enabled) {
     interactions.onQuestion({ user, comment: selectedText });
     return;
@@ -220,7 +311,7 @@ connection.on(WebcastEvent.CHAT, (data) => {
   interactions.onAudienceActivity();
 
   if (comment) {
-    maybeQueueAiReply(displayName, comment);
+    handleComment(displayName, comment);
   }
 });
 
