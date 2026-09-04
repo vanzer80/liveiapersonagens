@@ -299,8 +299,11 @@ export function createLiveInteractionEngine({
             phrase: 'ambiente',
             priority: INTERACTION_PRIORITIES.ambient,
           });
-          return;
+        } else {
+          logger.log?.('[VÍDEO] rotação de ambiente sem clipe disponível; TTS automático não será usado.');
+          touchActivity();
         }
+        return;
       }
 
       const text = ambientLines[ambientCursor % ambientLines.length];
@@ -327,8 +330,11 @@ export function createLiveInteractionEngine({
             phrase: 'abertura',
             priority: INTERACTION_PRIORITIES.opening,
           });
-          return;
+        } else {
+          logger.log?.('[VÍDEO] abertura sem clipe disponível; TTS automático não será usado.');
+          touchActivity();
         }
+        return;
       }
 
       enqueueSpeech({
