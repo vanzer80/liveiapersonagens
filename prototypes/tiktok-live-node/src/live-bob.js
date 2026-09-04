@@ -12,7 +12,8 @@ process.env.INTERACTION_ENABLED = process.env.INTERACTION_ENABLED || 'true';
 process.env.VIDEO_TRIGGERS_ENABLED = process.env.VIDEO_TRIGGERS_ENABLED || 'true';
 process.env.EVENT_VIDEOS_ENABLED = process.env.EVENT_VIDEOS_ENABLED || 'true';
 process.env.VIDEO_OPENING_ENABLED = process.env.VIDEO_OPENING_ENABLED || 'true';
-process.env.VIDEO_AMBIENT_ENABLED = process.env.VIDEO_AMBIENT_ENABLED || 'true';
+process.env.EVENT_AMBIENT_VIDEOS_ENABLED =
+  process.env.EVENT_AMBIENT_VIDEOS_ENABLED || 'true';
 process.env.GIFT_VIDEOS_ENABLED = process.env.GIFT_VIDEOS_ENABLED || 'true';
 
 if (
