@@ -101,11 +101,11 @@ test('valida presença dos ativos de evento sem derrubar o processo', () => {
   assert.deepEqual(result.missing, ['bob-gift-rosa-sandy-v1.mp4']);
 });
 
-test('configuração padrão ativa eventos, abertura e presentes mas não ambiente fora do live:bob', () => {
+test('configuração padrão ativa eventos, abertura, ambiente e presentes', () => {
   const config = getEventVideoConfig({});
 
   assert.equal(config.enabled, true);
   assert.equal(config.openingEnabled, true);
   assert.equal(config.giftEnabled, true);
-  assert.equal(config.ambientEnabled, false);
+  assert.equal(config.ambientEnabled, true);
 });
