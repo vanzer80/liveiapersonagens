@@ -16,6 +16,14 @@ import {
 import { createLiveSceneRuntime, getLiveSceneConfig } from './live-scene.js';
 import { getTtsConfig, speakText } from './tts.js';
 import {
+  createAmbientVideoRotation,
+  getEventVideoConfig,
+  listEventVideos,
+  loadEventVideos,
+  matchGiftVideo,
+  validateEventVideoAssets,
+} from './event-videos.js';
+import {
   createVideoTriggerMatcher,
   getVideoTriggerConfig,
   loadVideoTriggers,
@@ -39,6 +47,17 @@ const sceneConfig = getLiveSceneConfig();
 const interactionConfig = getInteractionConfig();
 const interactionLines = loadInteractionLines({ filePath: interactionConfig.linesFile });
 const videoConfig = getVideoTriggerConfig();
+const eventVideoConfig = getEventVideoConfig();
+const eventVideoLibrary = eventVideoConfig.enabled
+  ? loadEventVideos({ filePath: eventVideoConfig.file })
+  : { opening: [], ambient: [], gifts: [], source: 'desativado', fallbackUsed: false };
+const eventVideoAssets = eventVideoConfig.enabled
+  ? validateEventVideoAssets({
+      library: eventVideoLibrary,
+      assetsDirectory: videoConfig.assetsDirectory,
+    })
+  : { directory: videoConfig.assetsDirectory, present: [], missing: [], ok: true };
+const ambientRotation = createAmbientVideoRotation({ clips: eventVideoLibrary.ambient || [] });
 const videoLibrary = videoConfig.enabled
   ? loadVideoTriggers({
       filePath: videoConfig.triggersFile,
@@ -91,6 +110,20 @@ console.log(
   `Falas: ${interactionLines.opening.length} de abertura + ` +
     `${interactionLines.ambient.length} de ambiente | fonte=${interactionLines.source}`,
 );
+if (eventVideoConfig.enabled) {
+  const mappedEventVideos = listEventVideos(eventVideoLibrary);
+  console.log(
+    `Vídeos de evento: ${mappedEventVideos.length} | abertura=${eventVideoLibrary.opening.length} ` +
+      `ambiente=${eventVideoLibrary.ambient.length} presentes=${eventVideoLibrary.gifts.length} ` +
+      `fonte=${eventVideoLibrary.source}`,
+  );
+  if (eventVideoAssets.missing.length) {
+    console.error(
+      `[EVENTO VÍDEO] arquivos ausentes em ${eventVideoAssets.directory}: ` +
+        `${eventVideoAssets.missing.join(', ')}. Fallbacks continuam disponíveis.`,
+    );
+  }
+}
 if (videoConfig.enabled) {
   console.log(
     `Vídeos acionáveis: ${videoLibrary.triggers.length} gatilhos | fonte=${videoLibrary.source} ` +
@@ -224,6 +257,15 @@ const interactions = createLiveInteractionEngine({
   config: interactionConfig,
   openingLines: interactionLines.opening,
   ambientLines: interactionLines.ambient,
+  findOpeningVideo:
+    eventVideoConfig.enabled && eventVideoConfig.openingEnabled
+      ? () => {
+          const clip = eventVideoLibrary.opening.find((item) =>
+            eventVideoAssets.present.includes(item.video),
+          );
+          return clip || null;
+        }
+      : null,
   speak: (text, metadata) => liveScene.speak(text, {
     speaker: speakText,
     metadata,
@@ -231,9 +273,13 @@ const interactions = createLiveInteractionEngine({
   answerQuestion: processAiReply,
   playVideo: videoConfig.enabled ? playTriggeredVideo : null,
   findAmbientVideo:
-    videoConfig.enabled && videoConfig.ambientEnabled && videoMatcher
-      ? () => videoMatcher.findAmbient()
-      : null,
+    eventVideoConfig.enabled && eventVideoConfig.ambientEnabled
+      ? () => ambientRotation.next({
+          available: (clip) => eventVideoAssets.present.includes(clip.video),
+        })
+      : videoConfig.enabled && videoConfig.ambientEnabled && videoMatcher
+        ? () => videoMatcher.findAmbient()
+        : null,
 });
 
 function queueTriggeredVideo(user, clip) {
@@ -338,9 +384,41 @@ connection.on(WebcastEvent.GIFT, (data) => {
     return;
   }
 
+  const giftName = data?.giftDetails?.giftName || data?.giftName || 'presente';
+  const giftClip = eventVideoConfig.enabled && eventVideoConfig.giftEnabled
+    ? matchGiftVideo({
+        giftName,
+        giftId,
+        gifts: eventVideoLibrary.gifts,
+      })
+    : null;
+
+  if (giftClip && eventVideoAssets.present.includes(giftClip.video)) {
+    const result = interactions.onGiftVideo({
+      id: giftClip.id,
+      video: giftClip.video,
+      user: data?.user?.nickname || user,
+      giftName,
+    });
+    if (result?.accepted) {
+      console.log(
+        `[PRESENTE VÍDEO] @${user} | gift=${giftName} giftId=${giftId} ` +
+          `arquivo=${giftClip.video}`,
+      );
+      return;
+    }
+    console.log(
+      `[PRESENTE VÍDEO] @${user} | fallback=TTS | motivo=${result?.reason || 'recusado'}`,
+    );
+  } else if (giftClip) {
+    console.log(
+      `[PRESENTE VÍDEO] @${user} | fallback=TTS | arquivo ausente=${giftClip.video}`,
+    );
+  }
+
   interactions.onGift({
     user: data?.user?.nickname || user,
-    giftName: data?.giftDetails?.giftName || data?.giftName || 'presente',
+    giftName,
   });
 });
 

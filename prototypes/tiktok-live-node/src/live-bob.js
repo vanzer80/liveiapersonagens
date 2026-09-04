@@ -10,6 +10,19 @@ process.env.TTS_ENABLED = 'true';
 process.env.TIKTOK_CONNECT_RETRY = 'true';
 process.env.INTERACTION_ENABLED = process.env.INTERACTION_ENABLED || 'true';
 process.env.VIDEO_TRIGGERS_ENABLED = process.env.VIDEO_TRIGGERS_ENABLED || 'true';
+process.env.EVENT_VIDEOS_ENABLED = process.env.EVENT_VIDEOS_ENABLED || 'true';
+process.env.VIDEO_OPENING_ENABLED = process.env.VIDEO_OPENING_ENABLED || 'true';
+process.env.EVENT_AMBIENT_VIDEOS_ENABLED =
+  process.env.EVENT_AMBIENT_VIDEOS_ENABLED || 'true';
+process.env.GIFT_VIDEOS_ENABLED = process.env.GIFT_VIDEOS_ENABLED || 'true';
+
+if (
+  !String(process.env.TTS_PROVIDER || '').trim() &&
+  String(process.env.FISH_AUDIO_API_KEY || '').trim() &&
+  String(process.env.FISH_AUDIO_REFERENCE_ID || '').trim()
+) {
+  process.env.TTS_PROVIDER = 'fish-audio';
+}
 process.env.PERSONA_PROMPT = process.env.PERSONA_PROMPT || [
   'Você interpreta Bob Esponja em uma transmissão ao vivo interativa em português do Brasil.',
   'Seja alegre, inocente, otimista, divertido e adequado para todas as idades.',

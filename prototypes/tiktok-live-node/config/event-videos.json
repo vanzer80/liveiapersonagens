@@ -1,0 +1,27 @@
+{
+  "opening": [
+    {
+      "id": "opening-boas-vindas",
+      "video": "bob-boas-vindas-v1.mp4"
+    }
+  ],
+  "ambient": [
+    { "id": "ambient-01", "video": "bob-ambient-01-live-final-v1.mp4" },
+    { "id": "ambient-02", "video": "bob-ambient-02-live-final-v1.mp4" },
+    { "id": "ambient-03", "video": "bob-ambient-03-live-final-v1.mp4" },
+    { "id": "ambient-04", "video": "bob-ambient-04-live-final-v1.mp4" },
+    { "id": "ambient-05", "video": "bob-ambient-05-live-final-v1.mp4" },
+    { "id": "ambient-06", "video": "bob-ambient-06-live-final-v1.mp4" },
+    { "id": "ambient-07", "video": "bob-ambient-07-live-final-v1.mp4" },
+    { "id": "ambient-08", "video": "bob-ambient-08-live-final-v1.mp4" },
+    { "id": "ambient-09", "video": "bob-ambient-09-live-final-v1.mp4" }
+  ],
+  "gifts": [
+    {
+      "id": "gift-rose-sandy",
+      "video": "bob-gift-rosa-sandy-v1.mp4",
+      "names": ["Rose", "Rosa", "Rosinha"],
+      "giftIds": []
+    }
+  ]
+}
