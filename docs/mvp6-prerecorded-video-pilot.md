@@ -257,3 +257,24 @@ Os arquivos binários ficam no Google Drive, na pasta oficial `MVP 6 - Masters V
 ## Riscos e governança
 
 A qualidade pode variar entre gerações, inclusive voz, boca, volume, cenário e proporções. Uma imagem visualmente boa não comprova áudio ou sincronização. Antes de uso público ou comercial, confirmar que a autorização informada cobre personagem, voz, IA, animação, TikTok LIVE e monetização.
+
+
+## Primeiro vídeo dedicado a presente — Rosa com Sandy — 04/09/2026
+
+**RESULTADO DE ATIVO:** o usuário gerou e entregou um clipe específico para reação ao presente Rosa. Nome canônico adotado pelo projeto: `bob-gift-rosa-sandy-v1.mp4`.
+
+Cena: Sandy Bochechas entra com uma rosa física rosa, entrega a flor ao Bob Esponja e apenas o Bob fala em PT-BR agradecendo o presente. A rosa é um objeto físico da cena, não um elemento gráfico de TikTok.
+
+QA técnico realizado no arquivo recebido:
+- duração: **8,000 s**;
+- resolução: **720x1280**;
+- vídeo: **H.264, 24 fps**;
+- áudio: **AAC estéreo, 48 kHz**;
+- SHA-256: `5df972b75beab68baeeb1ff87bb55ce943df398505e4f1d3aff6564dc3471afd`;
+- inspeção visual de quadros amostrados não mostrou texto, comentários, barras, ícones, presentes gráficos, interface do TikTok ou overlays; a única rosa observada é a flor física da cena.
+
+**CLASSIFICAÇÃO:** ativo produzido e inspecionado localmente. Isso não equivale a validação em TikTok LIVE real.
+
+**USO PREVISTO:** mapear o evento real de presente Rosa (por `giftName` e/ou `giftId` confirmado em LIVE) para este clipe, com prioridade de presente. Se o mapeamento não casar ou o arquivo estiver ausente, preservar o agradecimento dinâmico por TTS como fallback.
+
+**PENDÊNCIAS OPERACIONAIS:** o binário deve permanecer fora do Git e ser sincronizado para a pasta oficial de ativos do Drive e para `prototypes/tiktok-live-node/assets/mvp6/` na máquina Windows. A integração presente → vídeo ainda precisa ser implementada/testada no roteador de presentes e depois validada em LIVE real.
