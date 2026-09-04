@@ -247,6 +247,37 @@ describe('Orquestração do motor de interação (MVP 6)', () => {
     assert.ok(triggeredVideo, 'vídeo acionado deve ter tocado');
   });
 
+  it('presente novo ultrapassa perguntas pendentes mais antigas na fila', async () => {
+    const { engine, timer, spoken, played } = buildEngine();
+    engine.start();
+
+    // Bloqueia a fila com um vídeo inicial para que os itens subsequentes fiquem pendentes
+    engine.onVideo({ id: 'inicial', video: 'bob-fenda.mp4', user: 'fan1', phrase: 'fenda' });
+
+    // 1. Enfileira pergunta (prioridade 80) enquanto o vídeo inicial está rodando
+    engine.onQuestion({ user: 'espectador-antigo', comment: 'Pergunta antiga' });
+
+    // 2. Enfileira presente novo (prioridade 100) enquanto ambos estão pendentes
+    engine.onGiftVideo({
+      user: 'doador-novo',
+      giftName: 'Rosa',
+      clipId: 'rosa-sandy',
+      clipFile: 'bob-gift-rosa-sandy-v1.mp4',
+    });
+
+    timer.flush();
+    await flushMicrotasks();
+
+    // Ordem estrita de execução:
+    // 1º vídeo inicial (já estava ativo)
+    // 2º presente novo (prioridade 100 ultrapassa a pergunta pendente)
+    // 3º pergunta (prioridade 80)
+    assert.equal(played.length, 2, 'deve ter tocado vídeo inicial e presente');
+    assert.equal(played[0].id, 'inicial', 'vídeo inicial roda primeiro');
+    assert.equal(played[1].id, 'rosa-sandy', 'presente roda antes da pergunta pendente');
+    assert.ok(spoken.some((s) => s.text.includes('espectador antigo')), 'pergunta executa após o presente');
+  });
+
   // ─── 8. Retorno ao idle após interação ─────────────────────────────────────
 
   it('motor volta a agendar ambiente após concluir interação', async () => {

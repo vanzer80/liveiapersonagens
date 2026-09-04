@@ -26,6 +26,7 @@ Google Drive: `00 - Documento Mestre - Visão do Produto`, `03 - Registro de Dec
 - Modo `AI_RESPOND_ALL`: validado com respostas dinâmicas reais; fila descarta duplicatas e respeita serialização.
 - Composição no LIVE Studio: Bob enquadrado corretamente com captura de janela `msedge.exe`, cena vertical `Em branco` e modo `Ajustar`, sem câmera real.
 - A fonte `Adicionar link` rejeitou o endereço HTTP local na versão testada do LIVE Studio.
+- MVP 6/7 — Lip sync dinâmico fonema/visema: PIPELINE TÉCNICO IMPLEMENTADO E AUDITADO EM TESTE CONTROLADO NO WINDOWS (`npm run test:lipsync`) com Fish Audio SSE timestamps, motor PT-BR com 9 visemas, composição sem dupla boca no navegador a 60 fps, fallback seguro sem alignment (`LIP_SYNC_APPROXIMATE_FALLBACK=false`), e 160/160 testes passando (17 suítes). Validação em LIVE real com espectador confirmando no celular: PENDENTE.
 
 ## Implementação atual
 

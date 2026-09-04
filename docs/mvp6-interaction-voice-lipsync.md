@@ -1,6 +1,6 @@
 # MVP 6 — Interação contínua, voz neural e sincronização labial
 
-Status: **ORQUESTRAÇÃO IMPLEMENTADA; CINCO VÍDEOS FIXOS COM GATILHOS E REPRODUÇÃO TESTADOS; SETE MASTERS VISUAIS APROVADOS; VOZ NEURAL FISH AUDIO VALIDADA EM LIVE REAL (04/09/2026); LIP SYNC DINÂMICO FONEMA/VISEMA PENDENTE**.
+Status: **ORQUESTRAÇÃO IMPLEMENTADA; CINCO VÍDEOS FIXOS COM GATILHOS E REPRODUÇÃO TESTADOS; SETE MASTERS VISUAIS APROVADOS; VOZ NEURAL FISH AUDIO VALIDADA EM LIVE REAL (04/09/2026); LIP SYNC DINÂMICO FONEMA/VISEMA IMPLEMENTADO E VALIDADO EM TESTE CONTROLADO NO WINDOWS (04/09/2026); TESTE EM LIVE REAL COM ESPECTADOR PENDENTE**.
 
 ## Objetivo
 
@@ -134,29 +134,71 @@ Em transmissão ao vivo real na conta `@luisbossgpt` (`roomId=768156953793878708
 - **Risco:** Em lives com chat mais ativo, delays de 30 a 40 s na IA podem fazer o personagem responder a comentários defasados, gerando perda de contexto com o público.
 - **Pendências:**
   - Otimizar o tempo de inferência do modelo de texto (avaliar modelo mais rápido ou provedor pago/direto com SLA estável de < 2 s);
-  - Sincronização labial dinâmica por fonemas/visemas (lip sync).
+  - Validação do lip-sync dinâmico em TikTok LIVE real com espectador confirmando visual no celular.
 
-## Por que o lip sync atual não pode ficar exato
+## Sincronização Labial Dinâmica (Lip Sync) — Implementado e Validado (04/09/2026)
 
-Os arquivos `idle`, `thinking` e `speaking` são vídeos pré-renderizados. O clipe `speaking` contém uma animação de boca fixa, criada antes de a resposta e o áudio existirem. Os callbacks atuais sincronizam corretamente o **início e o fim do estado falando**, mas não têm como transformar os movimentos internos do vídeo em fonemas da frase nova.
+Em 04/09/2026, foi implementada e validada de ponta a ponta a sincronização labial dinâmica do Bob Esponja para respostas inéditas da IA sintetizadas pelo Fish Audio.
 
-Portanto:
+### Arquitetura da Solução
 
-- corrigir atraso melhora a troca `thinking → speaking → idle`;
-- redimensionar ou trocar a velocidade do MP4 não produz sincronização silábica;
-- voz neural melhora o timbre, mas não corrige a boca por si só.
+1. **Alinhamento Temporal via Fish Audio SSE:**
+   - Chamada para `POST https://api.fish.audio/v1/tts/stream/with-timestamp`.
+   - Streaming SSE entrega chunks de áudio em base64 e snapshots cumulativos de alinhamento (`chunk_audio_offset_sec` + `segments: [{ text, start, end }]`).
+   - Consolidação por `chunk_seq` com regra *latest-wins* em `consolidateFishAlignment()`.
+   - Sanitização de cabeçalho WAV (`sanitizeWavHeader`) para áudio contínuo sem truncamento.
 
-## Próximo incremento visual recomendado
+2. **Motor Fonético/Visêmico PT-BR (`src/lip-sync.js`):**
+   - Mapeamento determinístico de grafemas, dígrafos e encontros consonantais do Português do Brasil em 9 visemas:
+     - `rest`: silêncio / boca em repouso neutro.
+     - `a`: vogais abertas (A, Á, À, Ã, Â).
+     - `e`: vogais médias / fechadas (E, É, Ê, I, Í, Y).
+     - `o`: vogais arredondadas (O, Ó, Ô).
+     - `u`: lábios protusos (U, Ú).
+     - `mbp`: oclusão bilabial (M, B, P).
+     - `fv`: labiodental fricativa (F, V).
+     - `l`: língua no palato (L, LH, R, RR, S, Z, T, D, N, NH, J, X, CH).
+     - `wq`: semivogal arredondada / velar (W, Q, GU, QU).
+   - Suavização temporal com tempo mínimo de sustentação (`LIP_SYNC_MIN_HOLD_MS=65ms`) para evitar jitter/flicker.
+   - Término estrito garantido em `rest`.
 
-Para sincronização verdadeira, o compositor deve receber o áudio gerado e controlar formas de boca. O caminho recomendado para o personagem 2D é:
+3. **Arquitetura Visual Sem Dupla Boca:**
+   - Durante a fala dinâmica com lip-sync, o elemento `<video>` é ocultado/pausado.
+   - Entra em cena a base neutra com boca fechada (`assets/mvp7/lipsync/bob-neutral-base.png`).
+   - As camadas de boca (`mouth-*.png`) são renderizadas em canvas idêntico (720x1280 transparente), garantindo alinhamento pixel-a-pixel sem frestas ou deslocamentos.
+   - O compositor no navegador (`src/scene-preview.js`) roda um único loop de alta precisão via `requestAnimationFrame` global permanente que executa continuamente e anima exclusivamente quando `activeLipSync && activeLipSync.enabled`, com busca binária na timeline pré-carregada. Fora de `speaking`, `activeLipSync` é nulo e o overlay permanece oculto.
+   - **Janela de Polling Visual:** o navegador consulta o estado do backend via `setInterval(tick, 150)`. O compositor utiliza o `startedAt` absoluto e compensa a defasagem no relógio da timeline. No início visual imediato da fala, existe uma janela teórica de atraso de até ~150 ms para o primeiro frame de boca aparecer no browser.
+   - Ao final do áudio, a sobreposição é imediatamente ocultada e a prévia retorna ao vídeo em loop `idle`.
 
-1. preparar uma base do personagem e 6 a 9 bocas transparentes;
-2. gerar o áudio antes da fala;
-3. extrair marcas temporais de fonemas/visemas;
-4. trocar as bocas no navegador durante a reprodução;
-5. manter os MP4s atuais como fallback.
+4. **Sincronização com Áudio no Windows:**
+   - O player nativo PowerShell (`System.Media.SoundPlayer`) emite o marcador `AUDIO_PLAYBACK_START` no `stdout` imediatamente antes de `$player.PlaySync()`.
+   - O marcador é emitido imediatamente antes de `PlaySync` e usado como referência temporal de início da reprodução no processo, eliminando o atraso de spawn do PowerShell (~200 a 400 ms). Não representa a física vibração mecânica do cone do alto-falante, mas o início síncrono da execução da API de áudio no SO.
 
-O Fish Audio oferece um fluxo com áudio e alinhamento temporal, documentado em [TTS com timestamps](https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech-stream-with-timestamps), mas alinhamento de texto não equivale automaticamente a formas de boca. A etapa visual ainda precisa de um mapa de fonema para boca ou de um alinhador dedicado.
+5. **Fallbacks e Segurança:**
+   - Protegido por feature flag: `LIP_SYNC_ENABLED=false` (padrão) preserva integralmente o comportamento tradicional com `spongebob-speaking-v1.mp4`.
+   - **Fallback sem alignment**: se o Fish Audio stream falhar ou não retornar timestamps válidos, o sistema recorre transparentemente ao `/v1/tts` regular. Por padrão (`LIP_SYNC_APPROXIMATE_FALLBACK=false`), o lip-sync visual permanece DESATIVADO (`activeLipSync = null`), caindo de forma 100% segura para o speaking tradicional sem nunca perder a voz do Bob nem falhar a interação.
+   - Nenhuma interferência sobre os 5 vídeos acionáveis do MVP 6 (Patrick, Hambúrguer, etc.), que tocam áudio nativo intacto.
+
+### Classificação dos Ativos Visuais (Regra de Transparência)
+
+Conforme a diretriz de rigor técnico:
+- Os 10 arquivos PNG em `assets/mvp7/lipsync/` foram classificados oficialmente como:
+  > **PACK DE DESENVOLVIMENTO / PROVISÓRIO PARA VALIDAÇÃO DO PIPELINE TÉCNICO**
+- Objetivo: validar integração, alinhamento temporal, ausência de regressão e fluidez no navegador.
+- Os modelos mestres de 720x1280 foram derivados dos frames de referência 3D existentes para garantir estabilidade visual.
+
+### Resultados do Teste Controlado no Windows (`npm run test:lipsync`)
+
+Executado em 04/09/2026 com as três frases de homologação:
+
+| Frase | Segmentos Fish | Visemas Gerados | Duração da Timeline | Latência de Síntese | Reprodução de Áudio | Resultado |
+|---|---:|---:|---:|---:|---:|---|
+| *"Oi, eu sou o Bob!"* | 5 | 10 | 1.672 ms | 728 ms | 3.195 ms | **Sucesso (idle → thinking → speaking → idle)** |
+| *"Olá, pessoal! Bem-vindos à nossa live na Fenda do Biquíni!"* | 11 | 40 | 4.830 ms | 1.323 ms | 5.523 ms | **Sucesso (idle → thinking → speaking → idle)** |
+| *"Bob preparou um hambúrguer para Patrick e foi visitar a Fenda do Biquíni."* | 13 | 50 | 4.365 ms | 1.705 ms | 4.941 ms | **Sucesso (idle → thinking → speaking → idle)** |
+
+- **Total de testes automatizados:** 160/160 testes passando (17 suítes, 0 falhas). Sendo 23 testes dedicados no motor de lip-sync (`test/lip-sync.test.js`), 7 testes de cena/compositor (`test/lip-sync-scene.test.js`), 17 testes de TTS e reprodução (`test/tts.test.js`), e 113 testes de regressão dos módulos de interação, rotação e presentes.
+- **Status do Lip Sync:** PIPELINE TÉCNICO E TESTE CONTROLADO NO WINDOWS 100% CONCLUÍDOS; VALIDAÇÃO EM TRANSMISSÃO AO VIVO REAL NO TIKTOK LIVE STUDIO COM ESPECTADOR CONFIRMANDO NO CELULAR: **PENDENTE**.
 
 ## Piloto híbrido com vídeos acionáveis
 
