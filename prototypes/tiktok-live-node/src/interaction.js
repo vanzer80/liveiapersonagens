@@ -225,6 +225,7 @@ export function createLiveInteractionEngine({
   speak,
   answerQuestion,
   playVideo = null,
+  findOpeningVideo = null,
   findAmbientVideo = null,
   openingLines = DEFAULT_OPENING_LINES,
   ambientLines = DEFAULT_AMBIENT_LINES,
@@ -317,6 +318,19 @@ export function createLiveInteractionEngine({
         openingLines.length - 1,
         Math.floor(Math.min(1, Math.max(0, random())) * openingLines.length),
       );
+      if (typeof findOpeningVideo === 'function') {
+        const clip = findOpeningVideo();
+        if (clip?.id && clip?.video) {
+          enqueueVideo({
+            id: clip.id,
+            video: clip.video,
+            phrase: 'abertura',
+            priority: INTERACTION_PRIORITIES.opening,
+          });
+          return;
+        }
+      }
+
       enqueueSpeech({
         kind: 'opening',
         text: openingLines[openingIndex],
@@ -377,11 +391,21 @@ export function createLiveInteractionEngine({
     return result;
   }
 
-  function onVideo({ id, video, user = null, phrase = null } = {}) {
+  function onVideo({ id, video, user = null, phrase = null, priority = INTERACTION_PRIORITIES.video } = {}) {
     if (!config.enabled || stopped) return { accepted: false, reason: 'disabled' };
     if (!id || !video) return { accepted: false, reason: 'invalid' };
     touchActivity();
-    return enqueueVideo({ id, video, user, phrase });
+    return enqueueVideo({ id, video, user, phrase, priority });
+  }
+
+  function onGiftVideo({ id, video, user = null, giftName = null } = {}) {
+    return onVideo({
+      id,
+      video,
+      user,
+      phrase: giftName || 'presente',
+      priority: INTERACTION_PRIORITIES.gift,
+    });
   }
 
   function flushMembers() {
@@ -485,6 +509,7 @@ export function createLiveInteractionEngine({
     flushMembers,
     onAudienceActivity,
     onGift,
+    onGiftVideo,
     onMember,
     onQuestion,
     onVideo,
