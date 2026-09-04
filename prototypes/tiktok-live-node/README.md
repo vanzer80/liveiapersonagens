@@ -10,9 +10,9 @@ Objetivo: validar incrementalmente o fluxo `TikTok LIVE → IA → TTS → cena 
 - **MVP 2 — resposta textual com IA:** VALIDADO em LIVE real.
 - **MVP 3 — TTS local:** VALIDADO no Windows e em LIVE real com voz pt-BR.
 - **MVP 4 — cena visual:** RAMO BOB VALIDADO localmente; influencer adiada para uma segunda etapa.
-- **MVP 5 — Bob em LIVE real:** composição visual funcionou no LIVE Studio; confirmação do áudio por um espectador ainda pendente.
-- **MVP 6 — interação e voz neural:** fila, boas-vindas, presentes, fala de ambiente e adaptador Fish Audio implementados; validação real pendente.
-- **MVP 6 — vídeos acionáveis:** cinco clipes com fala embutida, gatilhos por palavra, cooldown e fila integrados; testados localmente no Windows, validação em LIVE real pendente.
+- **MVP 5 — Bob em LIVE real:** VALIDADO em LIVE real com imagem, voz e respostas aos comentários ouvidas no celular do espectador.
+- **MVP 6 — interação e voz neural:** fila, boas-vindas, presentes, rotação de ambiente e voz neural Fish Audio (`s2.1-pro-free`, `a1a7bc39e7ba490a9b51dae6873d21f9`) VALIDADOS EM LIVE REAL em 04/09/2026.
+- **MVP 6 — vídeos acionáveis:** cinco clipes com fala embutida, gatilhos por palavra, cooldown e fila integrados; testados no Windows e em LIVE real.
 
 O controlador ainda suporta duas variantes, mas a direção vigente prioriza `spongebob`. A imagem mestre e os três clipes iniciais do Bob foram aprovados no Google Drive oficial:
 

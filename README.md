@@ -14,12 +14,12 @@ O objetivo imediato não é construir um SaaS completo. Primeiro precisamos vali
 - MVP 2 — resposta textual com IA: validado em LIVE real e encerrado na Issue #2.
 - MVP 3 — TTS local: validado no Windows e integrado em LIVE real; concluído na Issue #3.
 - MVP 4 — cena visual: ramo Bob Esponja validado localmente com ativos reais e callbacks do TTS; influencer adiada por decisão do usuário.
-- MVP 5 — transmissão do Bob em LIVE real: integração implementada no protótipo; validação audiovisual por espectador ainda pendente.
-- MVP 6 — interação contínua e voz neural: orquestração implementada; modo experimental `AI_RESPOND_ALL` com validação inicial positiva em LIVE real; cinco vídeos acionáveis com gatilhos e reprodução testados localmente; sete MASTERs visuais aprovados; nove cenas de ambiente produzidas em três rotações, arquivadas individualmente e também consolidadas em 90,01 s; as nove versões finais foram editadas para 10,000 s, 720x1280, H.264/24 fps e áudio AAC 48 kHz nivelado, passando a ser os ativos preferenciais da rotação curta; integração e validação em LIVE real ainda pendentes.
+- MVP 5 — transmissão do Bob em LIVE real: validado em LIVE real com imagem, voz e respostas aos comentários ouvidas no celular do espectador.
+- MVP 6 — interação contínua e voz neural: orquestração implementada; modo experimental `AI_RESPOND_ALL` validado em LIVE real; cinco vídeos acionáveis com gatilhos e reprodução testados; rotação de ambiente implementada; voz neural Fish Audio (PT-BR) VALIDADA EM LIVE REAL no celular do espectador em 04/09/2026, após correção técnica no cabeçalho de streaming WAV para compatibilidade com o SoundPlayer do Windows. Lip sync dinâmico fonema/visema pendente.
 
-O protótipo converte a resposta textual em WAV e reproduz o áudio localmente com uma voz instalada no Windows. O teste controlado selecionou `Microsoft Maria Desktop` em `pt-BR`, gerou o áudio em 884 ms e concluiu uma reprodução audível. Em LIVE real, duas respostas foram faladas com geração de 455 ms e 377 ms e reprodução de 7699 ms e 7072 ms. A captura continuou ativa. Essa escolha continua sendo uma hipótese gratuita para validação, não o fornecedor definitivo do produto.
+O protótipo converte a resposta textual em WAV. Com o Fish Audio, gera o áudio neural via API em ~1,8 a 2,5 s e reproduz localmente no Windows com áudio capturado pelo TikTok LIVE Studio. A voz nativa Microsoft Maria permanece como fallback local.
 
-O comando `npm run live:bob -- <usuario>` inicia a cena vertical, aguarda a conta entrar ao vivo e integra `thinking`, `speaking` e `idle` ao fluxo comentário → IA → TTS. O TikTok LIVE Studio deve capturar a URL local e o áudio do sistema. Essa saída ainda precisa ser confirmada no celular de um espectador antes de ser declarada validada.
+O comando `npm run live:bob -- <usuario>` inicia a cena vertical, aguarda a conta entrar ao vivo e integra `thinking`, `speaking` e `idle` ao fluxo comentário → IA → TTS. O TikTok LIVE Studio deve capturar a janela do navegador e o áudio do sistema (Alto-falantes). A recepção audiovisual foi confirmada no celular do espectador em 04/09/2026.
 
 ## Ordem de implementação
 

@@ -6,6 +6,7 @@ import {
   getTtsConfig,
   normalizeTextForSpeech,
   parseTtsMetadata,
+  sanitizeWavHeader,
   speakText,
 } from '../src/tts.js';
 
@@ -37,20 +38,37 @@ test('rejeita metadados sem identificação da voz', () => {
   assert.throws(() => parseTtsMetadata('{"culture":"pt-BR"}'), /Metadados inesperados/);
 });
 
-test('usa configuração padrão segura quando TTS não foi habilitado', () => {
-  const previous = {
-    enabled: process.env.TTS_ENABLED,
-    provider: process.env.TTS_PROVIDER,
-    voice: process.env.TTS_VOICE,
-    rate: process.env.TTS_RATE,
-  };
+const TTS_ENV_VARS = [
+  'TTS_ENABLED',
+  'TTS_PROVIDER',
+  'TTS_VOICE',
+  'TTS_RATE',
+  'FISH_AUDIO_API_KEY',
+  'FISH_AUDIO_REFERENCE_ID',
+  'FISH_AUDIO_MODEL',
+  'FISH_AUDIO_API_URL',
+  'FISH_AUDIO_LATENCY',
+];
 
-  delete process.env.TTS_ENABLED;
-  delete process.env.TTS_PROVIDER;
-  delete process.env.TTS_VOICE;
-  delete process.env.TTS_RATE;
+function withIsolatedTtsEnv(fn) {
+  const previous = {};
+  for (const key of TTS_ENV_VARS) {
+    previous[key] = process.env[key];
+    delete process.env[key];
+  }
 
   try {
+    return fn();
+  } finally {
+    for (const key of TTS_ENV_VARS) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  }
+}
+
+test('usa configuração padrão segura quando TTS não foi habilitado', () => {
+  withIsolatedTtsEnv(() => {
     assert.deepEqual(getTtsConfig(), {
       enabled: false,
       provider: 'windows-sapi',
@@ -65,23 +83,12 @@ test('usa configuração padrão segura quando TTS não foi habilitado', () => {
         latency: 'balanced',
       },
     });
-  } finally {
-    if (previous.enabled === undefined) delete process.env.TTS_ENABLED;
-    else process.env.TTS_ENABLED = previous.enabled;
-    if (previous.provider === undefined) delete process.env.TTS_PROVIDER;
-    else process.env.TTS_PROVIDER = previous.provider;
-    if (previous.voice === undefined) delete process.env.TTS_VOICE;
-    else process.env.TTS_VOICE = previous.voice;
-    if (previous.rate === undefined) delete process.env.TTS_RATE;
-    else process.env.TTS_RATE = previous.rate;
-  }
+  });
 });
 
 test('marca velocidade inválida sem derrubar o processo', () => {
-  const previous = process.env.TTS_RATE;
-  process.env.TTS_RATE = '11';
-
-  try {
+  withIsolatedTtsEnv(() => {
+    process.env.TTS_RATE = '11';
     assert.deepEqual(getTtsConfig(), {
       enabled: false,
       provider: 'windows-sapi',
@@ -96,10 +103,7 @@ test('marca velocidade inválida sem derrubar o processo', () => {
         latency: 'balanced',
       },
     });
-  } finally {
-    if (previous === undefined) delete process.env.TTS_RATE;
-    else process.env.TTS_RATE = previous;
-  }
+  });
 });
 
 test('monta a solicitação Fish Audio sem colocar a chave no corpo', () => {
@@ -178,3 +182,21 @@ test('configuração inválida vira erro de TTS sem lançar exceção', async ()
     else process.env.TTS_RATE = previousRate;
   }
 });
+
+test('sanitizeWavHeader corrige tamanho dos chunks data e RIFF em streaming WAV', () => {
+  // Cria um buffer simulando um WAV com chunk data indefinido/streaming (0xFFFFFF00)
+  const buf = Buffer.alloc(100);
+  buf.write('RIFF', 0);
+  buf.writeUInt32LE(92, 4);
+  buf.write('WAVE', 8);
+  buf.write('fmt ', 12);
+  buf.writeUInt32LE(16, 16);
+  buf.write('data', 36);
+  buf.writeUInt32LE(0xFFFFFF00, 40); // tamanho incorreto de streaming
+
+  const sanitized = sanitizeWavHeader(buf);
+  // Tamanho real dos dados é 100 - (36 + 8) = 56
+  assert.equal(sanitized.readUInt32LE(40), 56);
+  assert.equal(sanitized.readUInt32LE(4), 92);
+});
+

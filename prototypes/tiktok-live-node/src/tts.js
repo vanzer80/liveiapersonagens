@@ -236,6 +236,30 @@ export function buildFishTtsRequest(text, config = getTtsConfig()) {
   };
 }
 
+export function sanitizeWavHeader(audio) {
+  if (!Buffer.isBuffer(audio) || audio.length < 44) return audio;
+  if (audio.toString('ascii', 0, 4) === 'RIFF' && audio.toString('ascii', 8, 12) === 'WAVE') {
+    const copy = Buffer.from(audio);
+    let pos = 12;
+    while (pos < copy.length - 8) {
+      const id = copy.toString('ascii', pos, pos + 4);
+      const len = copy.readUInt32LE(pos + 4);
+      if (id === 'data') {
+        const realDataSize = copy.length - (pos + 8);
+        if (len !== realDataSize) {
+          copy.writeUInt32LE(realDataSize, pos + 4);
+          copy.writeUInt32LE(copy.length - 8, 4);
+        }
+        break;
+      }
+      pos += 8 + len;
+      if (len % 2 !== 0) pos++;
+    }
+    return copy;
+  }
+  return audio;
+}
+
 async function generateFishWav(text, audioPath, config) {
   const request = buildFishTtsRequest(text, config);
   const response = await fetch(request.url, request.options);
@@ -248,7 +272,7 @@ async function generateFishWav(text, audioPath, config) {
 
   const audio = Buffer.from(await response.arrayBuffer());
   if (!audio.length) throw new Error('Fish Audio respondeu sem dados de áudio.');
-  await writeFile(audioPath, audio);
+  await writeFile(audioPath, sanitizeWavHeader(audio));
 
   return {
     voice: `Fish ${config.fish.referenceId.slice(0, 8)}`,

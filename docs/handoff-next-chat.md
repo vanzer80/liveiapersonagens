@@ -19,12 +19,11 @@ Google Drive: `00 - Documento Mestre - Visão do Produto`, `03 - Registro de Dec
 - Influencer: adiada para segunda etapa.
 - Presentes, fila e prioridades: implementados no código; teste real pendente.
 - Entradas: agrupadas por 10 segundos, com até três nomes por fala.
-- Fala de ambiente: uma frase curta após 35 segundos sem atividade.
-- Voz neural Fish Audio: adaptador implementado; precisa de chave e referência autorizada no `.env`.
-- Lip sync: callbacks acertam o início/fim da fala, mas o MP4 pré-renderizado não sincroniza fonemas; exige novos ativos de boca.
-- Vídeos acionáveis do MVP 6: cinco clipes com fala embutida, gatilhos por palavra, cooldown de 60 s, fila e retorno ao `idle` pelo fim real; testados localmente no Windows em 03/09/2026 (`status=ended`), validação em LIVE real pendente.
-- Respostas sem gatilho (`AI_RESPOND_ALL`): modo experimental opcional com validação inicial positiva em LIVE; um comentário que aciona vídeo não gera também resposta de IA.
-- Transmissão audiovisual para espectadores: implementação preparada; teste real pendente.
+- MVP 5: Bob em LIVE real VALIDADO com imagem, voz e respostas recebidas no celular do espectador em 04/09/2026.
+- MVP 6: voz neural Fish Audio (`reference_id=a1a7bc39e7ba490a9b51dae6873d21f9`, `s2.1-pro-free`) VALIDADA EM LIVE REAL no celular do espectador em 04/09/2026.
+- Correção de cabeçalho WAV de streaming: o Fish Audio entrega `data chunk length = 0xFFFFFF00`, o que fazia o `System.Media.SoundPlayer` abortar em ~600 ms; a função `sanitizeWavHeader()` em `src/tts.js` reescreve os tamanhos reais de `data` e `RIFF`, permitindo reprodução contínua completa (áudios de 10 a 14 segundos reproduzidos com sucesso).
+- Diagnóstico de delay: a síntese de voz no Fish Audio é rápida (1,3 a 2,5 s). O delay perceptível entre o comentário e a fala na LIVE deveu-se à latência do modelo de IA no OpenRouter, quando o modelo gratuito principal (`nemotron`) falha/entra em timeout e aciona fallbacks lentos (`minimax-m3:free` levou 32 a 38 s por resposta).
+- Modo `AI_RESPOND_ALL`: validado com respostas dinâmicas reais; fila descarta duplicatas e respeita serialização.
 - Composição no LIVE Studio: Bob enquadrado corretamente com captura de janela `msedge.exe`, cena vertical `Em branco` e modo `Ajustar`, sem câmera real.
 - A fonte `Adicionar link` rejeitou o endereço HTTP local na versão testada do LIVE Studio.
 

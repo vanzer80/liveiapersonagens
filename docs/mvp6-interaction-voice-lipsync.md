@@ -1,6 +1,6 @@
 # MVP 6 — Interação contínua, voz neural e sincronização labial
 
-Status: **ORQUESTRAÇÃO IMPLEMENTADA; CINCO VÍDEOS FIXOS COM GATILHOS E REPRODUÇÃO TESTADOS LOCALMENTE NO WINDOWS; SETE MASTERS VISUAIS APROVADOS; VALIDAÇÃO EM LIVE REAL E LIP SYNC DINÂMICO PENDENTES**.
+Status: **ORQUESTRAÇÃO IMPLEMENTADA; CINCO VÍDEOS FIXOS COM GATILHOS E REPRODUÇÃO TESTADOS; SETE MASTERS VISUAIS APROVADOS; VOZ NEURAL FISH AUDIO VALIDADA EM LIVE REAL (04/09/2026); LIP SYNC DINÂMICO FONEMA/VISEMA PENDENTE**.
 
 ## Objetivo
 
@@ -107,6 +107,34 @@ FISH_AUDIO_LATENCY=balanced
 O endpoint, o campo `reference_id` e o cabeçalho de modelo seguem a [documentação oficial do Fish Audio](https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech). A chave fica somente no `.env`. Antes de usar uma voz de personagem em LIVE pública ou comercial, confirmar que a autorização cobre a voz, a plataforma e o tipo de uso.
 
 O guia oficial do Fish Audio orienta criar a chave na área de API, mantê-la secreta e usar o identificador do modelo presente na URL da voz. O adaptador atual usa WAV e aguarda o arquivo completo antes de tocar. A documentação também oferece streaming para reduzir o tempo até a primeira palavra; isso fica como melhoria posterior, depois da validação da voz básica.
+
+### RESULTADO DE TESTE — Validação em LIVE Real (04/09/2026)
+
+Em transmissão ao vivo real na conta `@luisbossgpt` (`roomId=7681569537938787080`), a voz neural do Fish Audio foi ouvida com clareza no aparelho celular do espectador.
+
+- **Decisão:** Adotar `TTS_PROVIDER=fish-audio` com modelo `s2.1-pro-free` e referência `a1a7bc39e7ba490a9b51dae6873d21f9` como voz dinâmica principal do Bob Esponja, mantendo a voz nativa Microsoft Maria do Windows apenas como fallback reversível.
+- **Configuração:**
+  - `TTS_ENABLED=true`
+  - `TTS_PROVIDER=fish-audio`
+  - `FISH_AUDIO_REFERENCE_ID=a1a7bc39e7ba490a9b51dae6873d21f9`
+  - `FISH_AUDIO_MODEL=s2.1-pro-free`
+  - `FISH_AUDIO_API_URL=https://api.fish.audio/v1/tts`
+  - `FISH_AUDIO_LATENCY=balanced`
+  - Captura no TikTok LIVE Studio: Áudio do Sistema direcionado para o dispositivo de saída (Alto-falantes Realtek Audio).
+- **Correção técnica necessária (WAV header sanitization):** A API do Fish Audio entrega áudio WAV com cabeçalho de streaming (`data chunk length = 0xFFFFFF00`). O `System.Media.SoundPlayer` nativo do Windows abortava a reprodução após ~600 ms devido a esse tamanho não finalizado. Foi implementada a função pura `sanitizeWavHeader()` em `src/tts.js`, que recalcula e grava os tamanhos reais de `data` e `RIFF` no buffer. Após essa correção, as falas foram reproduzidas na íntegra (áudios de 10,7 s e 13,5 s reproduzidos do início ao fim sem cortes).
+- **Resultado obtido:**
+  - Respostas dinâmicas inéditas da IA faladas com a voz neural do Fish Audio e confirmadas pelo espectador no celular.
+  - Exemplos executados na LIVE:
+    - *"Oi, @Peres Shop! Tô ótimo, pronto pra dar um show de diversão aqui no Siri Cascudo! 🎉"* — geração Fish Audio em 2287 ms, reprodução completa de 13558 ms.
+    - *"Oi, @Peres Shop! Eu moro no Abacaxi Marítimo, lá no fundo do mar..."* — geração Fish Audio em 2047 ms, reprodução completa de 10710 ms.
+    - *"Oi, Peres Shop! Vamos sim, bora pra praia pegar aquela onda! 🏖️"* — geração Fish Audio em 1819 ms, reprodução completa de 6484 ms.
+  - Transições `idle → thinking → speaking → idle` perfeitamente sincronizadas via callbacks `onPlaybackStart` e `onPlaybackEnd`.
+  - Ausência de conflito entre vídeos acionados e falas dinâmicas.
+- **Limitação observada:** O tempo de resposta entre o envio do comentário pelo espectador e o início da fala do Bob apresentou atraso perceptível de 30 a 40 segundos. O diagnóstico comprovou que a lentidão **não foi causada pelo Fish Audio** (cuja síntese levou apenas 1,8 a 2,5 s), mas sim pelo tempo de resposta dos modelos gratuitos de IA no OpenRouter (o modelo principal `nemotron` falhou/entrou em timeout e acionou o fallback `minimax-m3:free`, que levou 32 a 38 segundos por inferência).
+- **Risco:** Em lives com chat mais ativo, delays de 30 a 40 s na IA podem fazer o personagem responder a comentários defasados, gerando perda de contexto com o público.
+- **Pendências:**
+  - Otimizar o tempo de inferência do modelo de texto (avaliar modelo mais rápido ou provedor pago/direto com SLA estável de < 2 s);
+  - Sincronização labial dinâmica por fonemas/visemas (lip sync).
 
 ## Por que o lip sync atual não pode ficar exato
 
