@@ -11,8 +11,8 @@ Objetivo: validar incrementalmente o fluxo `TikTok LIVE → IA → TTS → cena 
 - **MVP 3 — TTS local:** VALIDADO no Windows e em LIVE real com voz pt-BR.
 - **MVP 4 — cena visual:** RAMO BOB VALIDADO localmente; influencer adiada para uma segunda etapa.
 - **MVP 5 — Bob em LIVE real:** VALIDADO em LIVE real com imagem, voz e respostas aos comentários ouvidas no celular do espectador.
-- **MVP 6 — interação e voz neural:** fila, boas-vindas, presentes, rotação de ambiente e voz neural Fish Audio (`s2.1-pro-free`, `a1a7bc39e7ba490a9b51dae6873d21f9`) VALIDADOS EM LIVE REAL em 04/09/2026.
-- **MVP 6 — vídeos acionáveis:** cinco clipes com fala embutida, gatilhos por palavra, cooldown e fila integrados; testados no Windows e em LIVE real.
+- **MVP 6 — interação e voz neural:** orquestração, `AI_RESPOND_ALL`, entrega audiovisual, fluxo Rosa/Sandy e voz neural Fish Audio (`s2.1-pro-free`, `a1a7bc39e7ba490a9b51dae6873d21f9`) validados em LIVE real em 04/09/2026. Boas-vindas sob carga e cobertura completa dos demais fluxos permanecem pendentes.
+- **MVP 6 — vídeos acionáveis:** cinco clipes com fala embutida, gatilhos por palavra, cooldown e fila integrados; integração testada no Windows. Em LIVE real há evidência de acionamento para fluxos específicos (incluindo hambúrguer e Fenda do Biquíni), mas a validação individual dos cinco clipes ainda não foi concluída.
 
 O controlador ainda suporta duas variantes, mas a direção vigente prioriza `spongebob`. A imagem mestre e os três clipes iniciais do Bob foram aprovados no Google Drive oficial:
 
@@ -305,7 +305,7 @@ Valores menores que 10 segundos para falas de ambiente são limitados pelo progr
 
 Na versão testada do TikTok LIVE Studio, `Adicionar link` rejeitou a URL HTTP local. Use captura de janela, selecione a prévia do Edge, escolha uma cena vertical **em branco** e mantenha o modo `Ajustar`. O layout `Câmera em tela cheia` enquadrou o vídeo, mas exigiu uma câmera visível ao iniciar a LIVE; a cena em branco eliminou essa exigência e manteve apenas o personagem. A cena `4:3 | Câmera abaixo` deixa a fonte em um espaço horizontal; `Preencher` corta o Bob e `Expandir` deforma a imagem. Ative o áudio do sistema no mixer para que o TTS chegue aos espectadores.
 
-A transmissão só estará validada depois que outro dispositivo confirmar imagem e voz em LIVE real. Procedimento: [`../../docs/mvp5-live-bob.md`](../../docs/mvp5-live-bob.md). Erros e acertos da primeira configuração: [`../../docs/mvp5-live-studio-retrospective.md`](../../docs/mvp5-live-studio-retrospective.md).
+A transmissão audiovisual foi validada em 04/09/2026 após confirmação de imagem e voz no dispositivo do espectador. O procedimento em [`../../docs/mvp5-live-bob.md`](../../docs/mvp5-live-bob.md) permanece como guia de regressão. Erros e acertos da primeira configuração: [`../../docs/mvp5-live-studio-retrospective.md`](../../docs/mvp5-live-studio-retrospective.md).
 
 ## Testes automatizados
 
