@@ -76,6 +76,10 @@ test('agradece presente em sequência apenas quando a sequência termina', () =>
   assert.equal(shouldThankGift({ giftType: 1, repeatEnd: false }), false);
   assert.equal(shouldThankGift({ giftType: 1, repeatEnd: true }), true);
   assert.equal(shouldThankGift({ giftType: 2, repeatEnd: false }), true);
+  assert.equal(shouldThankGift({ repeatEnd: 0 }), false);
+  assert.equal(shouldThankGift({ repeatEnd: 1 }), true);
+  assert.equal(shouldThankGift({ giftType: 1, repeatEnd: 0 }), false);
+  assert.equal(shouldThankGift({ giftType: 1, repeatEnd: 1 }), true);
 });
 
 test('agrupa boas-vindas sem narrar uma entrada por vez', () => {

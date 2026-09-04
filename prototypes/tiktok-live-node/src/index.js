@@ -197,7 +197,7 @@ if (ttsConfig.error) {
   console.error(`[ERRO TTS] latencia_ms=0 | ${ttsConfig.error}`);
 }
 
-if (aiKeyInfo.placeholder) {
+if (aiKeyInfo.placeholderDetected) {
   console.log('Chave IA: NÃO configurada — o .env ainda contém cole_sua_chave_aqui');
 } else {
   console.log(`Chave IA: ${isAiConfigured() ? 'configurada' : 'NÃO configurada'}`);
@@ -456,10 +456,10 @@ connection.on(WebcastEvent.GIFT, (data) => {
           clipFile: clip.video,
         });
       } else {
-        if (!directMediaBusy) {
-          directMediaBusy = true;
+        if (!directBusy) {
+          directBusy = true;
           void playTriggeredVideo({ id: clip.id, video: clip.video, user: displayName, phrase: `presente:${giftName}` }).finally(() => {
-            directMediaBusy = false;
+            directBusy = false;
           });
         }
       }
