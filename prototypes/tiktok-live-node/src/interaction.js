@@ -82,6 +82,16 @@ export function getInteractionConfig(env = process.env) {
       min: 1,
       max: 100,
     }),
+    // Tempo máximo que um item pode esperar antes de furar a fila por prioridade.
+    starvationMs: parseInteger(env.INTERACTION_STARVATION_MS, 20000, {
+      min: 0,
+      max: 600000,
+    }),
+    // Quantos itens do MESMO tipo podem ficar pendentes ao mesmo tempo.
+    maxPendingPerKind: parseInteger(env.INTERACTION_MAX_PENDING_PER_KIND, 4, {
+      min: 1,
+      max: 100,
+    }),
   };
 }
 
@@ -186,16 +196,69 @@ export function formatWelcome(names, total, maxNames = 3) {
   return `Olha quem chegou: ${selected.join(', ')} e ${last}! Sejam muito bem-vindos à live!`;
 }
 
-export function createPriorityTaskQueue({ maxPending = 12, logger = console } = {}) {
+export function createPriorityTaskQueue({
+  maxPending = 12,
+  // Nenhum tipo pode ocupar a fila inteira. Sem isso, um chat cheio de perguntas
+  // (prioridade 80) enche os 12 lugares e a entrada (60) é recusada na porta.
+  maxPendingPerKind = Math.max(1, Math.ceil(12 / 2)),
+  // Item que espera mais que isso passa na frente, mesmo com prioridade menor.
+  // Sem isso, uma entrada (60) nunca fala em um chat cheio de perguntas (80).
+  starvationMs = 20000,
+  now = () => Date.now(),
+  logger = console,
+} = {}) {
   let active = null;
   let sequence = 0;
   const pending = [];
+
+  function isStarved(item, currentTime) {
+    return starvationMs > 0 && currentTime - item.enqueuedAt >= starvationMs;
+  }
+
+  // Escolhe o próximo item na hora de executar (e não na hora de enfileirar),
+  // porque a espera de cada item muda com o tempo.
+  function takeNext() {
+    const currentTime = now();
+    let bestIndex = 0;
+
+    for (let index = 1; index < pending.length; index += 1) {
+      const candidate = pending[index];
+      const best = pending[bestIndex];
+      const candidateStarved = isStarved(candidate, currentTime);
+      const bestStarved = isStarved(best, currentTime);
+
+      // Quem passou do limite de espera vem antes de quem não passou.
+      if (candidateStarved !== bestStarved) {
+        if (candidateStarved) bestIndex = index;
+        continue;
+      }
+
+      // Entre os que já esperaram demais vale a ordem de chegada, não a prioridade.
+      // Sem isso, novas perguntas também ficariam "atrasadas" e voltariam a passar
+      // na frente da entrada, que nunca seria falada.
+      if (candidateStarved && bestStarved) {
+        if (candidate.enqueuedAt < best.enqueuedAt) bestIndex = index;
+        else if (candidate.enqueuedAt === best.enqueuedAt && candidate.sequence < best.sequence) {
+          bestIndex = index;
+        }
+        continue;
+      }
+
+      if (candidate.priority !== best.priority) {
+        if (candidate.priority > best.priority) bestIndex = index;
+        continue;
+      }
+      if (candidate.sequence < best.sequence) bestIndex = index;
+    }
+
+    return pending.splice(bestIndex, 1)[0];
+  }
 
   async function drain() {
     if (active) return;
 
     while (pending.length) {
-      active = pending.shift();
+      active = takeNext();
       try {
         await active.run();
       } catch (error) {
@@ -218,9 +281,17 @@ export function createPriorityTaskQueue({ maxPending = 12, logger = console } = 
       return { accepted: false, reason: 'duplicate' };
     }
 
+    // Reserva lugar para os outros tipos antes de disputar a capacidade total.
+    if (pending.filter((item) => item.kind === kind).length >= maxPendingPerKind) {
+      return { accepted: false, reason: 'kind-full' };
+    }
+
     if (pending.length >= maxPending) {
+      const currentTime = now();
+      // Um item que já esperou demais está prestes a falar: não pode ser descartado.
       const lowest = pending
         .map((item, index) => ({ item, index }))
+        .filter(({ item }) => !isStarved(item, currentTime))
         .sort((a, b) => a.item.priority - b.item.priority || b.item.sequence - a.item.sequence)[0];
 
       if (!lowest || lowest.item.priority >= priority) {
@@ -229,7 +300,7 @@ export function createPriorityTaskQueue({ maxPending = 12, logger = console } = 
       pending.splice(lowest.index, 1);
     }
 
-    pending.push({ kind, priority, run, dedupeKey, sequence: sequence++ });
+    pending.push({ kind, priority, run, dedupeKey, sequence: sequence++, enqueuedAt: now() });
     pending.sort((a, b) => b.priority - a.priority || a.sequence - b.sequence);
     void drain();
     return { accepted: true };
@@ -263,7 +334,13 @@ export function createLiveInteractionEngine({
   if (typeof speak !== 'function') throw new Error('A função speak é obrigatória.');
   if (typeof answerQuestion !== 'function') throw new Error('A função answerQuestion é obrigatória.');
 
-  const queue = createPriorityTaskQueue({ maxPending: config.maxPending, logger });
+  const queue = createPriorityTaskQueue({
+    maxPending: config.maxPending,
+    maxPendingPerKind: config.maxPendingPerKind,
+    starvationMs: config.starvationMs,
+    now,
+    logger,
+  });
   const pendingMembers = new Map();
   let welcomeTimer = null;
   let openingTimer = null;
