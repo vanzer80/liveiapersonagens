@@ -14,10 +14,12 @@ const silentLogger = { log() {}, warn() {}, error() {} };
 function createPreviewDouble({ mediaResult = { ok: true, status: 'ended' } } = {}) {
   const selections = [];
   const played = [];
+  const playedAudio = [];
 
   return {
     selections,
     played,
+    playedAudio,
     async start() {
       return { url: 'http://127.0.0.1:3333' };
     },
@@ -28,6 +30,11 @@ function createPreviewDouble({ mediaResult = { ok: true, status: 'ended' } } = {
     async playMedia({ file }) {
       played.push(file);
       return { ...mediaResult, asset: file };
+    },
+    async playAudio({ filePath, onStart }) {
+      playedAudio.push(filePath);
+      await onStart?.();
+      return { ok: true, status: 'ended' };
     },
     async stop() {},
   };
@@ -70,6 +77,20 @@ test('toca o clipe e volta ao idle pelo fim real da reprodução', async () => {
   assert.deepEqual(preview.played, ['bob-patrick-v1.mp4']);
   assert.equal(preview.selections.at(-1).currentState, SCENE_STATES.IDLE);
   assert.equal(runtime.getState(), SCENE_STATES.IDLE);
+});
+
+test('reproduz TTS dinâmico pelo player da prévia quando solicitado', async () => {
+  const { runtime, preview } = createRuntime();
+  await runtime.start();
+
+  let started = 0;
+  const result = await runtime.playTtsAudio('/tmp/fala.wav', {
+    onStart: () => { started += 1; },
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(preview.playedAudio, ['/tmp/fala.wav']);
+  assert.equal(started, 1);
 });
 
 test('arquivo ausente não derruba o processo e volta ao idle', async () => {
