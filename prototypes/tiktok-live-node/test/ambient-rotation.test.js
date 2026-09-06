@@ -202,3 +202,10 @@ describe('createAmbientRotationController', () => {
     assert.deepEqual(order, clips.map((c) => c.id));
   });
 });
+
+it('preserva cooldown explícito do ambiente e identifica shuffled=false explícito',()=>{
+  const config=getAmbientRotationConfig({AMBIENT_ROTATION_COOLDOWN_SECONDS:'17',AMBIENT_ROTATION_SHUFFLED:'false'});
+  assert.equal(config.cooldownFromEnv,true);assert.equal(config.shuffledFromEnv,true);assert.equal(config.shuffled,false);
+  const library=loadAmbientRotation({cooldownSeconds:config.cooldownSeconds,cooldownFromEnv:config.cooldownFromEnv});
+  assert.equal(library.cooldownMs,17000);
+});

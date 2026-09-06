@@ -17,7 +17,7 @@ O objetivo imediato não é construir um SaaS completo. Primeiro precisamos vali
 - MVP 5 — transmissão do Bob em LIVE real: validado em LIVE real com imagem, voz e respostas aos comentários ouvidas no celular do espectador.
 - MVP 6 — interação contínua e voz neural: orquestração implementada; modo experimental `AI_RESPOND_ALL` validado em LIVE real; cinco vídeos acionáveis com gatilhos e reprodução testados; rotação de ambiente implementada; voz neural Fish Audio (PT-BR) VALIDADA EM LIVE REAL no celular do espectador em 04/09/2026, após correção técnica no cabeçalho de streaming WAV para compatibilidade com o SoundPlayer do Windows. Lip sync dinâmico fonema/visema IMPLEMENTADO e VALIDADO LOCALMENTE no Windows com Fish Audio SSE timestamps e 9 visemas PT-BR; validação visual em transmissão ao vivo real pendente de abertura de LIVE.
 
-O protótipo converte a resposta textual em WAV. Com o Fish Audio, gera o áudio neural via API em ~1,8 a 2,5 s e reproduz localmente no Windows com áudio capturado pelo TikTok LIVE Studio. A voz nativa Microsoft Maria permanece como fallback local.
+O protótipo converte a resposta textual em WAV. Com o Fish Audio, gera o áudio neural via API (1819, 2047 e 2287 ms nas três respostas da LIVE de 04/09/2026; não é garantia de latência) e reproduz localmente no Windows com áudio capturado pelo TikTok LIVE Studio. A voz nativa Microsoft Maria permanece como fallback local.
 
 O comando `npm run live:bob -- <usuario>` inicia a cena vertical, aguarda a conta entrar ao vivo e integra `thinking`, `speaking` e `idle` ao fluxo comentário → IA → TTS. O TikTok LIVE Studio deve capturar a janela do navegador e o áudio do sistema (Alto-falantes). A recepção audiovisual foi confirmada no celular do espectador em 04/09/2026.
 
@@ -68,11 +68,20 @@ Issues de validação:
 - [#2 — MVP 2: resposta textual](https://github.com/vanzer80/liveiapersonagens/issues/2) — concluída;
 - [#3 — MVP 3: TTS local](https://github.com/vanzer80/liveiapersonagens/issues/3) — concluída;
 - [#4 — MVP 4: cena visual com clipes Flow/Veo](https://github.com/vanzer80/liveiapersonagens/issues/4) — concluída para o ramo Bob; influencer adiada;
-- [#8 — MVP 5: Bob Esponja em TikTok LIVE real](https://github.com/vanzer80/liveiapersonagens/issues/8) — etapa atual.
-- [#9 — MVP 6: interação, voz neural e lip sync](https://github.com/vanzer80/liveiapersonagens/issues/9) — orquestração pronta; cinco vídeos com gatilhos e reprodução testados localmente; sete MASTERs visuais aprovados e organizados no Drive; nove clipes individuais de ambiente arquivados; validação integrada em LIVE real pendente.
+- [#8 — MVP 5: Bob Esponja em TikTok LIVE real](https://github.com/vanzer80/liveiapersonagens/issues/8) — validado em LIVE real com imagem e voz recebidas pelo espectador.
+- [#9 — MVP 6: interação, voz neural e lip sync](https://github.com/vanzer80/liveiapersonagens/issues/9) — AI_RESPOND_ALL, voz Fish Audio e Rosa/Sandy já possuem validação em LIVE real; lip sync está implementado e auditado no Windows, com homologação visual em LIVE real ainda pendente; falas automáticas estão revisadas e aprovadas em testes Linux, com Windows/Fish real/LIVE ainda pendentes.
+- [#17 — Experimento de infraestrutura em DigitalOcean](https://github.com/vanzer80/liveiapersonagens/issues/17) — experimento paralelo aprovado, mantendo Windows como backup e referência validada; DigitalOcean, região e tamanho do Droplet permanecem hipóteses reversíveis até medição.
 
 Procedimento da etapa atual: [`docs/mvp5-live-bob.md`](docs/mvp5-live-bob.md). Retrospectiva de erros e acertos na configuração do LIVE Studio: [`docs/mvp5-live-studio-retrospective.md`](docs/mvp5-live-studio-retrospective.md).
 
 Interação e voz: [`docs/mvp6-interaction-voice-lipsync.md`](docs/mvp6-interaction-voice-lipsync.md). Piloto dos cinco vídeos acionáveis: [`docs/mvp6-prerecorded-video-pilot.md`](docs/mvp6-prerecorded-video-pilot.md).
 
 Rotações de ambiente e análise do loop: [`docs/mvp6-live-ambient-rotations.md`](docs/mvp6-live-ambient-rotations.md).
+
+## Falas automáticas — revisão complementar
+
+Rotação e TTS ambiente alternam na mesma fila após 5s de disponibilidade. Frases acompanham `AI_RESPOND_ALL`; áudio obsoleto é cancelado antes de liberar o player. Resultado desta revisão: 204 testes aprovados, 0 falhas, 1 teste Windows não executado em Linux (205 encontrados). Homologação no Windows com Fish Audio real e LIVE com espectador permanece pendente. [Relatório, matriz e reversão](docs/mvp6-auto-speech-complementary-review.md).
+
+## Infraestrutura experimental
+
+Foi aprovado um experimento controlado em DigitalOcean para medir CPU, RAM, latência, estabilidade, reconexão e custo sem desmontar o ambiente Windows atual. A primeira separação deve mover apenas componentes compatíveis com Linux (captura, lógica/orquestração e chamadas de IA); reprodução de áudio, cena e transmissão permanecem no Windows enquanto dependerem de PowerShell/System.Media.SoundPlayer e TikTok LIVE Studio. Não usar Kubernetes nesta etapa e não tratar o fornecedor, a região ou o tamanho da VPS como arquitetura comercial definitiva antes dos resultados da Issue #17.

@@ -1,0 +1,98 @@
+{
+  "date": "2026-09-06",
+  "codeCommit": "e88822ecbf13ba871db319e1629fc008e404811b",
+  "testedTree": "bd75ea30bed7e0c8783c5d63939f730db67d62a5",
+  "drive": [
+    {
+      "documentId": "1uYAtE0vLWqs2enRHgQ6mgRA24r1c2VN0xRgNk5mKFZ4",
+      "expectedParagraphsPresent": true,
+      "heading": {
+        "endIndex": 63531,
+        "isListItem": false,
+        "namedStyleType": "HEADING_1",
+        "startIndex": 63470,
+        "tabId": "t.0",
+        "text": "35 — Revisão complementar — falas automáticas por inatividade"
+      },
+      "lastParagraph": {
+        "endIndex": 67798,
+        "isListItem": false,
+        "namedStyleType": "NORMAL_TEXT",
+        "startIndex": 67479,
+        "tabId": "t.0",
+        "text": "Relatório e evidências: https://github.com/vanzer80/liveiapersonagens/blob/feat/mvp6-auto-speech/docs/mvp6-auto-speech-complementary-review.md . Issue de continuidade: https://github.com/vanzer80/liveiapersonagens/issues/9 . Estado: implementação revisada e testes automatizados aprovados; homologação prática pendente."
+      },
+      "nativeDates": [
+        {
+          "dateElementProperties": {
+            "dateFormat": "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED",
+            "displayText": "Sep 6, 2026",
+            "locale": "en",
+            "timeFormat": "TIME_FORMAT_DISABLED",
+            "timestamp": "2026-09-06T12:00:00Z"
+          },
+          "dateId": "kix.u7lm43a7vgwi",
+          "textStyle": {}
+        }
+      ],
+      "oldContentPreserved": true,
+      "oldParagraphs": 418,
+      "revisionId": "ANLCKQlMdlwjG5rZhuzDb692a5kWI8NM3J44-UePsviDJYnBISIo4ZnHNvzkfX96zmejHbms61x61zISdt3XmMJEHOHW3ny0ph1UEIrH",
+      "url": "https://docs.google.com/document/d/1uYAtE0vLWqs2enRHgQ6mgRA24r1c2VN0xRgNk5mKFZ4/edit"
+    },
+    {
+      "documentId": "1DBTJ1CjmDodV5XWtrqEGm2AhFRHlRE5WkyUwzxvpMyw",
+      "expectedParagraphsPresent": true,
+      "heading": {
+        "endIndex": 25672,
+        "isListItem": false,
+        "namedStyleType": "HEADING_1",
+        "startIndex": 25611,
+        "tabId": "t.0",
+        "text": "20 — Revisão complementar — falas automáticas por inatividade"
+      },
+      "lastParagraph": {
+        "endIndex": 30252,
+        "isListItem": false,
+        "namedStyleType": "NORMAL_TEXT",
+        "startIndex": 29789,
+        "tabId": "t.0",
+        "text": "O rollback operacional validado usa INTERACTION_AMBIENT_ENABLED=false, desligando todo o ambiente, inclusive rotação, e mantendo interações humanas. Não tratar uma troca de branch como reversão garantida. Preservar .env, ativos e trabalho local. Relatório, matriz e saída dos testes: https://github.com/vanzer80/liveiapersonagens/blob/feat/mvp6-auto-speech/docs/mvp6-auto-speech-complementary-review.md . A entrega técnica permanece sujeita à homologação prática."
+      },
+      "nativeDates": [
+        {
+          "dateElementProperties": {
+            "dateFormat": "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED",
+            "displayText": "Sep 6, 2026",
+            "locale": "en",
+            "timeFormat": "TIME_FORMAT_DISABLED",
+            "timestamp": "2026-09-06T12:00:00Z"
+          },
+          "dateId": "kix.r195geouapbg",
+          "textStyle": {}
+        }
+      ],
+      "oldContentPreserved": true,
+      "oldParagraphs": 139,
+      "revisionId": "ANLCKQnQbQCaH1TrVPmaxvwIFD8mcEKvM1O5h2mAMdMq8MUWAxy2cb21uPm9lJY047bo60lQ7b3Pzg2pmXKHL19NnJGjXYElRNWKaYm7",
+      "url": "https://docs.google.com/document/d/1DBTJ1CjmDodV5XWtrqEGm2AhFRHlRE5WkyUwzxvpMyw/edit"
+    }
+  ],
+  "pullRequest": {
+    "bodyConfirmed": true,
+    "draft": true,
+    "head": "e88822ecbf13ba871db319e1629fc008e404811b",
+    "merged": false,
+    "url": "https://github.com/vanzer80/liveiapersonagens/pull/16"
+  },
+  "issue": {
+    "bodyConfirmed": true,
+    "state": "open",
+    "url": "https://github.com/vanzer80/liveiapersonagens/issues/9"
+  },
+  "limitations": [
+    "Windows com Fish real não executado",
+    "LIVE e dispositivo de espectador sem acesso",
+    "Nenhuma nova latência acústica ou de transmissão medida"
+  ]
+}

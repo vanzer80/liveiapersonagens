@@ -41,9 +41,19 @@ test('configura a interação com limites seguros', () => {
   assert.equal(config.enabled, true);
   assert.equal(config.welcomeBatchMs, 1000);
   assert.equal(config.welcomeMaxNames, 5);
-  assert.equal(config.ambientSilenceMs, 10000);
-  assert.equal(config.ambientMinSilenceMs, 10000);
-  assert.equal(config.ambientMaxSilenceMs, 10000);
+  assert.equal(config.ambientSilenceMs, 5000);
+  assert.equal(config.ambientMinSilenceMs, 5000);
+  assert.equal(config.ambientMaxSilenceMs, 5000);
+
+  const config3s = getInteractionConfig({
+    INTERACTION_AMBIENT_SILENCE_MS: '3000',
+  });
+  assert.equal(config3s.ambientSilenceMs, 3000);
+
+  const configUnderMin = getInteractionConfig({
+    INTERACTION_AMBIENT_SILENCE_MS: '500',
+  });
+  assert.equal(configUnderMin.ambientSilenceMs, 1000);
 });
 
 test('carrega falas editáveis do arquivo de configuração', () => {

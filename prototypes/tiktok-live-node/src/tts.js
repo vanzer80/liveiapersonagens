@@ -98,48 +98,67 @@ export function encodePowerShellCommand(script) {
   return Buffer.from(String(script), 'utf16le').toString('base64');
 }
 
-function runPowerShell(script, extraEnv = {}, onSignal = null) {
+export function runPowerShell(script, extraEnv = {}, onSignal = null, {
+  signal = null, shouldCancel = null, timeoutMs = 60000, spawnProcess = spawn,
+} = {}) {
   return new Promise((resolve, reject) => {
-    const encodedCommand = encodePowerShellCommand(script);
-    const child = spawn(
+    signal?.throwIfAborted();
+    const child = spawnProcess(
       'powershell.exe',
-      ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', encodedCommand],
-      {
-        env: { ...process.env, ...extraEnv },
-        windowsHide: true,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      },
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', encodePowerShellCommand(script)],
+      { env: { ...process.env, ...extraEnv }, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] },
     );
-
     let stdout = '';
     let stderr = '';
-
+    let buffered = '';
+    let committed = false;
+    let signaled = false;
+    let failure = null;
+    let hook = Promise.resolve();
+    const stop = (error) => { failure = error; child.kill(); };
+    const onAbort = () => {
+      // Depois da autorização de PlaySync, conclui a frase; não corta a voz.
+      if (!committed) stop(signal.reason || new Error('TTS cancelado'));
+    };
+    const timer = setTimeout(() => stop(new Error(`PowerShell excedeu ${timeoutMs} ms.`)), timeoutMs);
+    signal?.addEventListener('abort', onAbort, { once: true });
+    if (signal?.aborted) onAbort();
+    const cleanup = () => { clearTimeout(timer); signal?.removeEventListener('abort', onAbort); };
+    child.stdin.on('error', () => {}); // EPIPE após encerramento é tratado em close.
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
     child.stdout.on('data', (chunk) => {
       stdout += chunk;
-      if (typeof onSignal === 'function' && chunk.includes('AUDIO_PLAYBACK_START')) {
-        onSignal();
+      buffered += chunk;
+      const lines = buffered.split(/\r?\n/u);
+      buffered = lines.pop();
+      for (const line of lines) {
+        if (line === 'AUDIO_PLAYBACK_READY') {
+          const cancel = signal?.aborted || shouldCancel?.();
+          committed = !cancel;
+          child.stdin.end(cancel ? 'CANCEL\n' : 'PLAY\n');
+        } else if (line === 'AUDIO_PLAYBACK_START' && !signaled) {
+          signaled = true;
+          committed = true;
+          hook = Promise.resolve(onSignal?.());
+          hook.catch(() => {});
+        }
       }
     });
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk;
-    });
-
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
     child.once('error', (error) => {
-      if (error?.code === 'ENOENT') {
-        reject(new Error('PowerShell do Windows não foi encontrado. Este provedor exige Windows.'));
-        return;
-      }
-      reject(error);
+      cleanup();
+      reject(error?.code === 'ENOENT'
+        ? new Error('PowerShell do Windows não foi encontrado. Este provedor exige Windows.') : error);
     });
-
-    child.once('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(stderr.trim() || stdout.trim() || `PowerShell encerrou com código ${code}.`));
-        return;
-      }
-      resolve(stdout.trim());
+    child.once('close', async (code) => {
+      cleanup();
+      try {
+        await hook; // O início visual termina antes de emitir o fim, inclusive em erro.
+        if (failure) throw failure;
+        if (code !== 0) throw new Error(stderr.trim() || stdout.trim() || `PowerShell encerrou com código ${code}.`);
+        resolve(stdout.trim());
+      } catch (error) { reject(error); }
     });
   });
 }
@@ -200,12 +219,18 @@ finally {
 }
 `;
 
-const PLAY_WAV_SCRIPT = String.raw`
+export const PLAY_WAV_SCRIPT = String.raw`
 $ErrorActionPreference = 'Stop'
 $audioPath = [Environment]::GetEnvironmentVariable('LIVEIA_TTS_OUTPUT')
 $player = [System.Media.SoundPlayer]::new($audioPath)
 try {
   $player.Load()
+  [Console]::Out.WriteLine('AUDIO_PLAYBACK_READY')
+  [Console]::Out.Flush()
+  if ([Console]::In.ReadLine() -ne 'PLAY') {
+    [Console]::Out.WriteLine('AUDIO_PLAYBACK_CANCELLED')
+    exit 0
+  }
   [Console]::Out.WriteLine('AUDIO_PLAYBACK_START')
   [Console]::Out.Flush()
   $player.PlaySync()
@@ -320,8 +345,9 @@ export function getWavDurationMs(audio) {
   return 0;
 }
 
-export async function fetchFishTtsStreamWithTimestamps(text, config = getTtsConfig()) {
+export async function fetchFishTtsStreamWithTimestamps(text, config = getTtsConfig(), { signal } = {}) {
   const request = buildFishTimestampedRequest(text, config);
+  if (signal) request.options.signal = AbortSignal.any([request.options.signal, signal]);
   const response = await fetch(request.url, request.options);
 
   if (!response.ok) {
@@ -369,17 +395,18 @@ export async function fetchFishTtsStreamWithTimestamps(text, config = getTtsConf
   return { audio, segments, alignmentByChunk };
 }
 
-async function generateFishWav(text, audioPath, config) {
+async function generateFishWav(text, audioPath, config, signal) {
   let audio;
   let segments = [];
 
   if (config.lipSync?.enabled) {
     try {
-      const streamResult = await fetchFishTtsStreamWithTimestamps(text, config);
+      const streamResult = await fetchFishTtsStreamWithTimestamps(text, config, { signal });
       audio = streamResult.audio;
       segments = streamResult.segments;
       console.log(`[LIP] alignment recebido | segmentos=${segments.length}`);
     } catch (streamError) {
+      signal?.throwIfAborted();
       console.warn(`[LIP] aviso: falha no stream com timestamps (${streamError.message}). Usando /v1/tts padrão.`);
     }
   }
@@ -387,6 +414,7 @@ async function generateFishWav(text, audioPath, config) {
   // Se o stream com timestamps não foi usado ou falhou, usar o endpoint tradicional
   if (!audio) {
     const request = buildFishTtsRequest(text, config);
+    if (signal) request.options.signal = AbortSignal.any([request.options.signal, signal]);
     const response = await fetch(request.url, request.options);
 
     if (!response.ok) {
@@ -450,11 +478,20 @@ async function invokeLifecycleHook(hook, payload, hookName) {
 
 export async function speakText(
   value,
-  { force = false, onPlaybackStart = null, onPlaybackEnd = null } = {},
+  { force = false, onPlaybackStart = null, onPlaybackEnd = null, shouldCancel = null,
+    signal = null, config = getTtsConfig(), runProcess = runPowerShell, playAudio = null,
+    generationTimeoutMs = 65000, playbackTimeoutMs = 60000 } = {},
 ) {
   const operationStartedAt = performance.now();
   let temporaryDirectory = null;
-  const config = getTtsConfig();
+  let playbackStartedInvoked = false;
+  let playbackContext = null;
+  let playerSignalAt = null;
+  let generationStartedAt = null;
+  let generationFinished = false;
+  const isCancelled = () => signal?.aborted || shouldCancel?.();
+  const cancelledResult = () => ({ ok: false, skipped: true, reason: 'cancelled-before-playback' });
+  if (isCancelled()) return cancelledResult();
 
   if (!config.enabled && !force) {
     return { ok: true, skipped: true, reason: 'disabled' };
@@ -487,19 +524,21 @@ export async function speakText(
     temporaryDirectory = await mkdtemp(join(tmpdir(), 'liveia-tts-'));
     const audioPath = join(temporaryDirectory, 'speech.wav');
     const metadataPath = join(temporaryDirectory, 'metadata.json');
-    const generationStartedAt = performance.now();
+    generationStartedAt = performance.now();
+    const deadline = AbortSignal.timeout(generationTimeoutMs);
+    const generationSignal = signal ? AbortSignal.any([signal, deadline]) : deadline;
     let voiceInfo;
 
     if (config.provider === FISH_PROVIDER) {
-      voiceInfo = await generateFishWav(text, audioPath, config);
+      voiceInfo = await generateFishWav(text, audioPath, config, generationSignal);
     } else {
-      await runPowerShell(GENERATE_WAV_SCRIPT, {
+      await runProcess(GENERATE_WAV_SCRIPT, {
         LIVEIA_TTS_TEXT: text,
         LIVEIA_TTS_OUTPUT: audioPath,
         LIVEIA_TTS_METADATA: metadataPath,
         LIVEIA_TTS_VOICE: config.voice,
         LIVEIA_TTS_RATE: String(config.rate),
-      });
+      }, null, { signal: generationSignal, timeoutMs: generationTimeoutMs });
       voiceInfo = await readTtsMetadata(metadataPath);
       // Fallback timeline para windows-sapi somente se approximateFallback for true
       if (config.lipSync?.enabled && config.lipSync.approximateFallback) {
@@ -512,13 +551,27 @@ export async function speakText(
         });
       }
     }
+    generationFinished = true;
     const generationLatencyMs = Math.round(performance.now() - generationStartedAt);
 
     console.log(
       `[TTS] áudio gerado | provedor=${config.provider} voz=${voiceInfo.voice} idioma=${voiceInfo.culture} latencia_ms=${generationLatencyMs}`,
     );
 
-    const playbackContext = {
+    if (isCancelled()) {
+      console.log('[TTS] reprodução cancelada antes de iniciar | áudio gerado descartado');
+      return {
+        ok: false,
+        skipped: true,
+        reason: 'cancelled-before-playback',
+        provider: config.provider,
+        voice: voiceInfo.voice,
+        culture: voiceInfo.culture,
+        generationLatencyMs,
+      };
+    }
+
+    playbackContext = {
       provider: config.provider,
       voice: voiceInfo.voice,
       culture: voiceInfo.culture,
@@ -527,10 +580,11 @@ export async function speakText(
       lipSyncEnabled: Boolean(config.lipSync?.enabled && voiceInfo.timeline),
     };
 
-    let playbackStartedInvoked = false;
     const triggerPlaybackStart = async () => {
       if (playbackStartedInvoked) return;
       playbackStartedInvoked = true;
+      playerSignalAt = performance.now();
+      console.log('[TTS] inicio_reproducao_local | origem=AUDIO_PLAYBACK_START | espectador=nao-verificado');
       const offsetMs = Number(config.lipSync?.audioOffsetMs || 0);
       await invokeLifecycleHook(
         onPlaybackStart,
@@ -539,26 +593,30 @@ export async function speakText(
       );
     };
 
-    console.log('[TTS] reproduzindo...');
-    const playbackStartedAt = performance.now();
-
-    await runPowerShell(PLAY_WAV_SCRIPT, { LIVEIA_TTS_OUTPUT: audioPath }, () => {
-      void triggerPlaybackStart();
-    });
-
-    // Rede de segurança caso o sinal não tenha vindo pelo stdout
-    if (!playbackStartedInvoked) {
-      await triggerPlaybackStart();
+    if (typeof playAudio === 'function') {
+      console.log('[TTS] preparando player do navegador...');
+      const browserResult = await playAudio(audioPath, {
+        onStart: triggerPlaybackStart,
+        signal,
+        shouldCancel: isCancelled,
+        timeoutMs: playbackTimeoutMs,
+      });
+      if (browserResult?.status === 'cancelled') return cancelledResult();
+      if (!browserResult?.ok) {
+        throw new Error(`Player do navegador encerrou com status ${browserResult?.status || 'desconhecido'}.`);
+      }
+    } else {
+      console.log('[TTS] preparando player local...');
+      const output = await runProcess(PLAY_WAV_SCRIPT, { LIVEIA_TTS_OUTPUT: audioPath }, triggerPlaybackStart,
+        { signal, shouldCancel: isCancelled, timeoutMs: playbackTimeoutMs });
+      if (output?.includes('AUDIO_PLAYBACK_CANCELLED')) return cancelledResult();
     }
-
-    const playbackDurationMs = Math.round(performance.now() - playbackStartedAt);
-
-    console.log(`[TTS] concluído | duracao_ms=${playbackDurationMs}`);
-    await invokeLifecycleHook(
-      onPlaybackEnd,
-      { ...playbackContext, playbackDurationMs },
-      'onPlaybackEnd',
-    );
+    if (!playbackStartedInvoked) throw new Error('Player encerrou sem marcador de início; reprodução não confirmada.');
+    const playbackDurationMs = Math.round(performance.now() - playerSignalAt);
+    console.log(`[TTS] fim_reproducao_local | duracao_ms=${playbackDurationMs} | status=ended`);
+    await invokeLifecycleHook(onPlaybackEnd,
+      { ...playbackContext, playbackDurationMs, status: 'ended' }, 'onPlaybackEnd');
+    playbackStartedInvoked = false;
 
     return {
       ok: true,
@@ -571,6 +629,17 @@ export async function speakText(
       timeline: voiceInfo.timeline || null,
     };
   } catch (error) {
+    if (!generationFinished && generationStartedAt !== null) {
+      console.log(`[TTS] fim_geracao | status=${isCancelled() ? 'cancelled' : 'error'} | duracao_ms=${Math.round(performance.now() - generationStartedAt)}`);
+    }
+    if (playbackStartedInvoked) {
+      const playbackDurationMs = Math.round(performance.now() - playerSignalAt);
+      console.log(`[TTS] fim_reproducao_local | duracao_ms=${playbackDurationMs} | status=error`);
+      await invokeLifecycleHook(onPlaybackEnd, { ...playbackContext, playbackDurationMs, status: 'error' }, 'onPlaybackEnd');
+    } else if (isCancelled()) {
+      console.log('[TTS] cancelado antes da reprodução local');
+      return cancelledResult();
+    }
     const latencyMs = Math.round(performance.now() - operationStartedAt);
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[ERRO TTS] latencia_ms=${latencyMs} | ${message}`);

@@ -46,6 +46,7 @@ async function show(state, metadata = {}) {
 }
 
 async function run() {
+  let failures = 0;
   const ttsConfig = getTtsConfig();
   console.log('====================================================');
   console.log('Live IA — Teste Controlado de Sincronização Labial');
@@ -95,6 +96,7 @@ async function run() {
     });
 
     if (!result.ok) {
+      failures++;
       console.error(`[LIP] erro na fala | ${result.error}`);
       await show(SCENE_STATES.IDLE, { reason: 'tts-failed' });
     } else {
@@ -102,14 +104,15 @@ async function run() {
       const firstViseme = result.timeline?.[0]?.viseme || 'nenhum';
       const lastViseme = result.timeline?.[timelineCount - 1]?.viseme || 'nenhum';
       const endsInRest = String(lastViseme).toUpperCase() === 'REST';
-      console.log(`[LIP] sucesso | geracao_ms=${result.generationLatencyMs} reproducao_ms=${result.playbackDurationMs} visemes=${timelineCount} primeiro=${firstViseme} ultimo=${lastViseme} fallback=false terminou_rest=${endsInRest}`);
+      if (!timelineCount) failures++;
+      console.log(`[LIP] ${timelineCount ? 'timeline-disponivel' : 'sem-alignment'} | geracao_ms=${result.generationLatencyMs} reproducao_ms=${result.playbackDurationMs} visemes=${timelineCount} primeiro=${firstViseme} ultimo=${lastViseme} terminou_rest=${endsInRest}`);
     }
 
     await wait(2000);
   }
 
   console.log('====================================================');
-  console.log('[LIP] Teste de frases concluído com sucesso.');
+  console.log(`[LIP] Teste de frases concluído | falhas=${failures}. Homologação visual depende do operador.`);
   console.log('[LIP] Estado final: ' + controller.getState());
   console.log('====================================================');
 
@@ -119,7 +122,7 @@ async function run() {
 
   if (exitAfter) {
     await preview.stop();
-    process.exit(0);
+    process.exit(failures ? 1 : 0);
   } else {
     console.log('\nA prévia ficará aberta em idle. Pressione Ctrl+C para encerrar.');
     await new Promise(() => {});

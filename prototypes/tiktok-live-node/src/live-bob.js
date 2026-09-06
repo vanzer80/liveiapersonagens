@@ -12,7 +12,7 @@ process.env.TIKTOK_CONNECT_RETRY = 'true';
 // Com `||` a string 'false' vinda do .env seria truthy e nada seria ativado.
 process.env.INTERACTION_ENABLED = 'true';
 process.env.VIDEO_TRIGGERS_ENABLED = 'true';
-process.env.AMBIENT_ROTATION_ENABLED = process.env.AMBIENT_ROTATION_ENABLED || 'true';
+process.env.AMBIENT_ROTATION_ENABLED = process.env.AMBIENT_ROTATION_ENABLED !== undefined ? process.env.AMBIENT_ROTATION_ENABLED : 'true';
 process.env.GIFT_VIDEOS_ENABLED = process.env.GIFT_VIDEOS_ENABLED || 'true';
 if (
   !String(process.env.TTS_PROVIDER || '').trim() &&

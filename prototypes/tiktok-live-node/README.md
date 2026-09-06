@@ -271,9 +271,10 @@ O comando:
 8. agrupa entradas por 10 segundos e pronuncia até três nomes;
 9. enfileira perguntas, boas-vindas e presentes por prioridade;
 10. depois que a conexão for confirmada, faz uma abertura após 3 segundos;
-11. após um intervalo variável de 30 a 45 segundos sem atividade, usa uma frase curta para movimentar o chat;
-12. lê as falas do arquivo `config/live-lines.json`, que pode ser editado sem alterar o código;
-13. em presentes enviados em sequência, agradece somente quando a sequência termina.
+11. após 5 segundos de disponibilidade, alterna um vídeo de rotação e uma fala automática TTS; com rotação desligada ou ausente, usa TTS;
+12. lê as falas do arquivo `config/live-lines.json` (mínimo de 20 frases curtas e variadas), percorridas por seletor cíclico sem repetição imediata na troca de ciclo;
+13. em presentes enviados em sequência, agradece somente quando a sequência termina;
+14. se uma pergunta ou presente chegar enquanto uma fala automática estiver sendo gerada ou pendente, a fala automática é cancelada imediatamente e o áudio obsoleto é descartado.
 
 ### Personalizar as falas sem programar
 
@@ -283,29 +284,48 @@ Abra no Bloco de Notas:
 notepad .\config\live-lines.json
 ```
 
-O arquivo tem duas listas:
+O arquivo tem duas listas. Frases comuns são strings; convites com instruções de uso são objetos com `trigger` e `respondAll`. O sistema seleciona a variante de `AI_RESPOND_ALL` e substitui `{trigger}` pelo gatilho configurado:
 
 - `opening`: uma das frases, escolhida a cada execução, é dita três segundos depois de o PowerShell mostrar `Conectado`;
-- `ambient`: frases percorridas em ordem quando o chat fica silencioso por 30 a 45 segundos.
+- `ambient`: pelo menos 20 frases curtas (convites, perguntas leves, tep-tep/curtidas e compartilhamentos), selecionadas ciclicamente quando o personagem fica em silêncio pelo intervalo configurado.
 
-Cada frase precisa ficar entre aspas, separada da próxima por vírgula. Não coloque vírgula depois da última frase de cada lista. Salve o arquivo em UTF-8 e mantenha as chaves e os colchetes. Se o JSON estiver inválido, o programa registra um aviso e usa falas internas de segurança.
+Cada string/objeto precisa ser separado do próximo por vírgula. Não coloque vírgula depois da última frase de cada lista. Salve o arquivo em UTF-8 e mantenha as chaves e os colchetes. Se o JSON estiver inválido, o programa registra um aviso e usa falas internas de segurança.
 
-Os tempos podem ser ajustados somente no `.env`:
+Os tempos e opções podem ser ajustados no `.env` sem alterar o código:
 
 ```env
 INTERACTION_LINES_FILE=config/live-lines.json
 INTERACTION_OPENING_ENABLED=true
 INTERACTION_OPENING_DELAY_MS=3000
 INTERACTION_AMBIENT_ENABLED=true
-INTERACTION_AMBIENT_MIN_SILENCE_MS=30000
-INTERACTION_AMBIENT_MAX_SILENCE_MS=45000
+INTERACTION_AMBIENT_SILENCE_MS=5000
+# Para ajustar o intervalo para 3 segundos sem alterar código:
+# INTERACTION_AMBIENT_SILENCE_MS=3000
+# Para desativar rotação de MP4s pré-gravados e usar fala por TTS com voz dinâmica:
+# AMBIENT_ROTATION_ENABLED=false
 ```
 
-Valores menores que 10 segundos para falas de ambiente são limitados pelo programa para evitar fala excessiva. Entradas, perguntas e presentes continuam tendo prioridade sobre as frases de ambiente.
+O intervalo fixo explícito `INTERACTION_AMBIENT_SILENCE_MS` prevalece sobre MIN/MAX antigos. `INTERACTION_AMBIENT_ENABLED=false` desliga todo ambiente automático (TTS e rotação), preservando interações humanas. O intervalo padrão é de 5000 ms (5 segundos), aceitando valores entre 1000 ms (1s) e 300000 ms (5 minutos). Curtidas isoladas e comentários comuns não atrasam a contagem; apenas respostas a perguntas, vídeos e presentes reiniciam o contador a partir do seu término real. Se uma fala automática já estiver tocando audivelmente, ela termina sua frase curta antes de atender o evento prioritário, evitando qualquer sobreposição de som.
 
 Na versão testada do TikTok LIVE Studio, `Adicionar link` rejeitou a URL HTTP local. Use captura de janela, selecione a prévia do Edge, escolha uma cena vertical **em branco** e mantenha o modo `Ajustar`. O layout `Câmera em tela cheia` enquadrou o vídeo, mas exigiu uma câmera visível ao iniciar a LIVE; a cena em branco eliminou essa exigência e manteve apenas o personagem. A cena `4:3 | Câmera abaixo` deixa a fonte em um espaço horizontal; `Preencher` corta o Bob e `Expandir` deforma a imagem. Ative o áudio do sistema no mixer para que o TTS chegue aos espectadores.
 
 A transmissão só estará validada depois que outro dispositivo confirmar imagem e voz em LIVE real. Procedimento: [`../../docs/mvp5-live-bob.md`](../../docs/mvp5-live-bob.md). Erros e acertos da primeira configuração: [`../../docs/mvp5-live-studio-retrospective.md`](../../docs/mvp5-live-studio-retrospective.md).
+
+## Experimento VPS — TTS dinâmico pelo navegador
+
+Na branch `feat/mvp6-auto-speech`, o Linux pode usar o navegador da prévia como player do áudio dinâmico gerado pelo Fish Audio. Isso evita depender de `powershell.exe`/`System.Media.SoundPlayer` na VPS: a VPS gera o WAV, a prévia disponibiliza o áudio pela mesma conexão HTTP e o navegador no Windows reproduz o arquivo enquanto a cena recebe os callbacks de início/fim.
+
+Requisitos deste experimento:
+
+- `SCENE_ENABLED=true`;
+- `TTS_ENABLED=true`;
+- `TTS_PROVIDER=fish-audio`;
+- chave/referência Fish e chave OpenRouter somente no `.env` local da VPS;
+- túnel SSH para a porta da prévia;
+- clicar uma vez na prévia se o navegador bloquear autoplay;
+- `AI_RESPOND_ALL=true` para responder comentários comuns sem `ia/!ia`.
+
+A reprodução pelo navegador é selecionada automaticamente em plataformas não-Windows quando a cena está ativa. Windows preserva o player local existente. Esta rota permanece **experimental até validação em LIVE real com espectador**.
 
 ## Testes automatizados
 
@@ -321,3 +341,9 @@ A lógica do controlador de cena cobre seleção de variante, transições, esta
 - validar boas-vindas agrupadas, presente e duas perguntas consecutivas;
 - criar os ativos de boca para lip sync verdadeiro;
 - retomar a influencer somente em etapa posterior.
+
+### Revisão complementar de falas automáticas
+
+O padrão de `live:bob` voltou a habilitar rotação, respeitando `AMBIENT_ROTATION_ENABLED=false` explícito. A arbitragem alterna vídeo e TTS; não basta apenas habilitar a variável. Manifestos aceitam `hasSpeech:false` para clipes realmente silenciosos: são mutados e têm ocupação limitada ao intervalo ambiente. Falhas espaçam tentativas em 15/30/60s. READY/PLAY/CANCEL revalida a fala depois de carregar o player. Os logs descrevem reprodução local, sem afirmar recepção pelo espectador.
+
+Resultado Linux: 205 testes encontrados, 204 aprovados, 0 falhas, 1 Windows não executado. `npm run test:tts` e `npm run test:lipsync` com Fish real continuam pendentes no Windows nesta revisão. [Relatório completo e roteiro de LIVE](../../docs/mvp6-auto-speech-complementary-review.md).

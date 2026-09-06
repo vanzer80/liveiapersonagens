@@ -101,41 +101,53 @@ export function createLiveSceneRuntime({
     return show(SCENE_STATES.THINKING, { ...metadata, reason: 'ai-processing' });
   }
 
-  async function speak(text, { speaker, metadata = {} } = {}) {
+  async function speak(text, { speaker, metadata = {}, shouldCancel = null, onPlaybackStart = null, onPlaybackEnd = null, signal = null } = {}) {
     if (typeof speaker !== 'function') {
       throw new Error('A função de TTS não foi informada para a cena ao vivo.');
     }
 
-    if (!config.enabled) return speaker(text);
+    if (!config.enabled) return speaker(text, { shouldCancel, onPlaybackStart, onPlaybackEnd, signal });
 
     let playbackStarted = false;
     let playbackEnded = false;
-    const result = await speaker(text, {
-      onPlaybackStart: async (context) => {
-        playbackStarted = true;
-        await show(SCENE_STATES.SPEAKING, {
-          ...metadata,
-          ...context,
-          reason: 'tts-playback-start',
-        });
-      },
-      onPlaybackEnd: async (context) => {
-        playbackEnded = true;
-        await reset({
-          ...metadata,
-          ...context,
-          reason: 'tts-playback-end',
-        });
-      },
-    });
-
-    if (!result?.ok || result?.skipped || !playbackStarted || !playbackEnded) {
-      await ensureIdle({
-        ...metadata,
-        reason: result?.ok ? 'tts-without-playback' : 'tts-failed',
+    let result;
+    try {
+      result = await speaker(text, {
+        shouldCancel,
+        signal,
+        onPlaybackStart: async (context) => {
+          playbackStarted = true;
+          await show(SCENE_STATES.SPEAKING, {
+            ...metadata,
+            ...context,
+            reason: 'tts-playback-start',
+          });
+          if (typeof onPlaybackStart === 'function') {
+            try {
+              await onPlaybackStart(context);
+            } catch {
+              // Callback externo não deve derrubar o ciclo da cena
+            }
+          }
+        },
+        onPlaybackEnd: async (context) => {
+          playbackEnded = true;
+          await reset({
+            ...metadata,
+            ...context,
+            reason: 'tts-playback-end',
+          });
+          await onPlaybackEnd?.(context);
+        },
       });
+    } finally {
+      if (!result?.ok || result?.skipped || !playbackStarted || !playbackEnded) {
+        await ensureIdle({
+          ...metadata,
+          reason: result?.ok ? 'tts-without-playback' : 'tts-failed',
+        });
+      }
     }
-
     return result;
   }
 
@@ -144,6 +156,15 @@ export function createLiveSceneRuntime({
    * Nenhum TTS é gerado aqui: o áudio é o do próprio MP4.
    * O retorno ao `idle` usa o fim REAL informado pelo player, nunca um atraso fixo.
    */
+  async function playTtsAudio(filePath, options = {}) {
+    if (!config.enabled || !started) return { ok: false, skipped: true, status: 'scene-disabled' };
+    if (typeof preview.playAudio !== 'function') {
+      logger.error?.('[TTS] a prévia atual não suporta reprodução de áudio dinâmico.');
+      return { ok: false, status: 'unsupported' };
+    }
+    return preview.playAudio({ filePath, ...options });
+  }
+
   async function playClip(file, metadata = {}) {
     if (!config.enabled) return { ok: false, skipped: true, status: 'scene-disabled' };
 
@@ -161,8 +182,8 @@ export function createLiveSceneRuntime({
 
     let result = { ok: false, status: 'unknown' };
     try {
-      result = await preview.playMedia({ file });
-      if (!result.ok) {
+      result = await preview.playMedia({ file, muted: metadata.hasSpeech === false, timeoutMs: metadata.timeoutMs });
+      if (!result.ok && !(metadata.hasSpeech === false && result.status === 'timeout')) {
         logger.error?.(`[VÍDEO] reprodução não concluída | arquivo=${file} status=${result.status}`);
       }
     } catch (error) {
@@ -196,6 +217,7 @@ export function createLiveSceneRuntime({
     getState: () => controller.getState(),
     getUrl: () => previewUrl,
     playClip,
+    playTtsAudio,
     reset,
     showThinking,
     speak,

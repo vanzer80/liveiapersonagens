@@ -1,0 +1,6 @@
+2026-09-06 — Linux x86_64, Node v24.19.0, npm 11.9.0
+Base: 9533a0c22e82f29585593655e6a96d4f924331f9
+Comando: npm test
+177 testes; 18 suites; 174 pass; 3 fail; 0 skipped. Exit 1.
+Falhas: test/tts.test.js:265 spawn powershell.exe ENOENT; :341 não tentou Fish timestamped (config externa não isolada); :404 não obteve skipped=true (mesma dependência externa).
+Instalação: npm ci --ignore-scripts --no-audit --no-fund, 60 pacotes, exit 0. Aviso npm http-proxy desconhecido, não bloqueante; npm não atualizado.

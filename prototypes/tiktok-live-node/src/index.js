@@ -49,7 +49,7 @@ const aiKeyInfo = getSafeAiKeyInfo();
 const ttsConfig = getTtsConfig();
 const sceneConfig = getLiveSceneConfig();
 const interactionConfig = getInteractionConfig();
-const interactionLines = loadInteractionLines({ filePath: interactionConfig.linesFile });
+const interactionLines = loadInteractionLines({ filePath: interactionConfig.linesFile, respondAll: aiConfig.respondAll, trigger: aiConfig.trigger });
 const videoConfig = getVideoTriggerConfig();
 const videoLibrary = videoConfig.enabled
   ? loadVideoTriggers({
@@ -77,6 +77,7 @@ const ambientRotationLibrary = ambientRotationConfig.enabled
   ? loadAmbientRotation({
       filePath: ambientRotationConfig.rotationFile,
       cooldownSeconds: ambientRotationConfig.cooldownSeconds,
+      cooldownFromEnv: ambientRotationConfig.cooldownFromEnv,
     })
   : { clips: [], cooldownMs: 0, source: 'desativado', fallbackUsed: false };
 const ambientRotationAssets = ambientRotationConfig.enabled && ambientRotationLibrary.clips.length
@@ -90,7 +91,7 @@ const ambientRotationController = ambientRotationConfig.enabled
       clips: ambientRotationLibrary.clips,
       presentFiles: new Set(ambientRotationAssets.present),
       cooldownMs: ambientRotationLibrary.cooldownMs,
-      shuffled: ambientRotationConfig.shuffled || ambientRotationLibrary.shuffled,
+      shuffled: ambientRotationConfig.shuffledFromEnv ? ambientRotationConfig.shuffled : ambientRotationLibrary.shuffled,
     })
   : null;
 
@@ -112,6 +113,13 @@ const giftVideoRouter = giftVideoConfig.enabled
     })
   : null;
 const liveScene = createLiveSceneRuntime({ config: sceneConfig });
+const browserTtsPlaybackEnabled = process.platform !== 'win32' && sceneConfig.enabled;
+const runtimeSpeaker = (text, options = {}) => speakText(text, {
+  ...options,
+  ...(browserTtsPlaybackEnabled
+    ? { playAudio: (audioPath, playbackOptions) => liveScene.playTtsAudio(audioPath, playbackOptions) }
+    : {}),
+});
 const connectRetryEnabled = ['1', 'true', 'yes', 'sim', 'on'].includes(
   String(process.env.TIKTOK_CONNECT_RETRY || '').trim().toLowerCase(),
 );
@@ -133,6 +141,9 @@ console.log(
     `voz=${ttsConfig.provider === 'fish-audio' ? `referência-${ttsConfig.fish.referenceId.slice(0, 8) || 'ausente'}` : ttsConfig.voice || 'automática-pt-BR'} ` +
     `velocidade=${ttsConfig.rate}`,
 );
+if (ttsConfig.enabled) {
+  console.log(`TTS playback: ${browserTtsPlaybackEnabled ? 'navegador da prévia' : 'player local do sistema'}`);
+}
 console.log(
   `Cena LIVE: ${sceneConfig.enabled ? 'ativada' : 'desativada'} | variante=${sceneConfig.variant}`,
 );
@@ -230,6 +241,7 @@ const connection = new TikTokLiveConnection(username, {
   processInitialData: false,
 });
 let shuttingDown = false;
+let reconnectTask = null;
 
 connection.on(ControlEvent.ERROR, (error) => {
   const info = error?.info || 'sem-info';
@@ -237,8 +249,31 @@ connection.on(ControlEvent.ERROR, (error) => {
   console.error('[ERRO CONECTOR]', info, exception);
 });
 
+connection.on(ControlEvent.CONNECTED, () => {
+  console.log('[CONECTADO] sessão ativa');
+  interactions.resume();
+});
+
 connection.on(ControlEvent.DISCONNECTED, ({ code, reason } = {}) => {
   console.log(`[DESCONECTADO] code=${code ?? '?'} reason=${reason ?? 'sem-motivo'}`);
+  interactions.pause();
+
+  if (shuttingDown || !connectRetryEnabled || reconnectTask) return;
+
+  console.log(`[CONEXÃO] sessão perdida; tentando reconectar em ${connectRetryMs} ms.`);
+  reconnectTask = (async () => {
+    await new Promise((resolveRetry) => setTimeout(resolveRetry, connectRetryMs));
+    if (shuttingDown) return;
+    await connectToLive();
+  })()
+    .catch((error) => {
+      console.error(
+        `[ERRO RECONEXÃO] ${error instanceof Error ? error.message : error}`,
+      );
+    })
+    .finally(() => {
+      reconnectTask = null;
+    });
 });
 
 function extractChatText(data) {
@@ -274,7 +309,7 @@ async function processAiReply({ user, comment: selectedText }) {
     console.log(`[RESPOSTA IA] modelo=${result.model} latencia_ms=${latencyMs}`);
     console.log(`[RESPOSTA IA] @${user}: ${result.text}`);
     await liveScene.speak(result.text, {
-      speaker: speakText,
+      speaker: runtimeSpeaker,
       metadata: { user, comment: selectedText },
     });
   } catch (error) {
@@ -292,13 +327,13 @@ async function processAiReply({ user, comment: selectedText }) {
 }
 
 // Reproduz um clipe do MVP 6. O áudio é o do próprio MP4: nenhum TTS é gerado aqui.
-async function playTriggeredVideo({ id, video, user = null, phrase = null }) {
+async function playTriggeredVideo({ id, video, user = null, phrase = null, hasSpeech = true, timeoutMs }) {
   console.log(
     `[VÍDEO] usuario=${user || 'ambiente'} | gatilho=${id} | arquivo=${video}` +
       (phrase ? ` | expressao=${phrase}` : ''),
   );
 
-  const result = await liveScene.playClip(video, { videoId: id, user });
+  const result = await liveScene.playClip(video, { videoId: id, user, hasSpeech, timeoutMs });
 
   if (result?.ok) {
     console.log(`[VÍDEO] concluído | gatilho=${id} | arquivo=${video}`);
@@ -316,13 +351,17 @@ const interactions = createLiveInteractionEngine({
   openingLines: interactionLines.opening,
   ambientLines: interactionLines.ambient,
   speak: (text, metadata) => liveScene.speak(text, {
-    speaker: speakText,
+    speaker: runtimeSpeaker,
     metadata,
+    shouldCancel: metadata?.shouldCancel,
+    onPlaybackStart: metadata?.onPlaybackStart,
+    onPlaybackEnd: metadata?.onPlaybackEnd,
+    signal: metadata?.signal,
   }),
   answerQuestion: processAiReply,
-  playVideo: videoConfig.enabled ? playTriggeredVideo : null,
+  playVideo: videoConfig.enabled || ambientRotationConfig.enabled || giftVideoConfig.enabled ? playTriggeredVideo : null,
   findAmbientVideo:
-    videoConfig.enabled && videoConfig.ambientEnabled && videoMatcher
+    !aiConfig.respondAll && videoConfig.enabled && videoConfig.ambientEnabled && videoMatcher
       ? () => {
           const clip = videoMatcher.findAmbient();
           // Marcar aqui evita que o convite toque em TODO beat de silêncio:
@@ -409,7 +448,6 @@ connection.on(WebcastEvent.CHAT, (data) => {
   }
 
   console.log(`[COMENTÁRIO] @${user}: ${comment || '(texto vazio)'}`);
-  interactions.onAudienceActivity();
 
   if (comment) {
     handleComment(displayName, comment);
@@ -484,12 +522,13 @@ async function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log('\nEncerrando conexão...');
-  interactions.stop();
+  const interactionsStopped = interactions.stop();
   try {
     await connection.disconnect();
   } catch {
     // Nada a fazer no encerramento do protótipo.
   }
+  await interactionsStopped;
   await liveScene.stop();
   process.exit(0);
 }

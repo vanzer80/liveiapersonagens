@@ -1,12 +1,15 @@
 # Continuidade — próximo chat
 
+> Atualização complementar de 2026-09-06: continuar da branch `feat/mvp6-auto-speech`, correções publicadas em `e88822ecbf13ba871db319e1629fc008e404811b`, [PR #16](https://github.com/vanzer80/liveiapersonagens/pull/16) em rascunho, dependente do PR #15. Não reimplementar. 205 testes encontrados em Linux: 204 aprovados, 0 falhas, 1 Windows não executado. Rotação/TTS agora alternam; convites por modo, cancelamento e recuperação corrigidos. Documentos oficiais 03 (seção 35) e 04 (seção 20) atualizados e relidos, histórico preservado; Issue #9 atualizada. Windows com Fish real e LIVE com espectador pendentes. Evidências, links e reversão no [relatório complementar](mvp6-auto-speech-complementary-review.md).
+
+
 ## Direção vigente
 
 A influencer virtual foi adiada. A prioridade é colocar o Bob Esponja em uma TikTok LIVE real e confirmar que os espectadores recebem imagem, voz e respostas aos comentários.
 
 ## Leitura obrigatória antes de alterar código
 
-Google Drive: `00 - Documento Mestre - Visão do Produto`, `03 - Registro de Decisões e Pendências` e o documento específico da etapa. No GitHub: `README.md`, `docs/technical-plan.md`, este handoff e a Issue #8.
+Google Drive: `00 - Documento Mestre - Visão do Produto`, `03 - Registro de Decisões e Pendências` e o documento específico da etapa. No GitHub: `README.md`, `docs/technical-plan.md`, este handoff e a Issue #9 (Issue #8 como histórico do MVP 5).
 
 ## Estado confirmado
 
@@ -22,18 +25,19 @@ Google Drive: `00 - Documento Mestre - Visão do Produto`, `03 - Registro de Dec
 - MVP 5: Bob em LIVE real VALIDADO com imagem, voz e respostas recebidas no celular do espectador em 04/09/2026.
 - MVP 6: voz neural Fish Audio (`reference_id=a1a7bc39e7ba490a9b51dae6873d21f9`, `s2.1-pro-free`) VALIDADA EM LIVE REAL no celular do espectador em 04/09/2026.
 - Correção de cabeçalho WAV de streaming: o Fish Audio entrega `data chunk length = 0xFFFFFF00`, o que fazia o `System.Media.SoundPlayer` abortar em ~600 ms; a função `sanitizeWavHeader()` em `src/tts.js` reescreve os tamanhos reais de `data` e `RIFF`, permitindo reprodução contínua completa (áudios de 10 a 14 segundos reproduzidos com sucesso).
-- Diagnóstico de delay: a síntese de voz no Fish Audio é rápida (1,3 a 2,5 s). O delay perceptível entre o comentário e a fala na LIVE deveu-se à latência do modelo de IA no OpenRouter, quando o modelo gratuito principal (`nemotron`) falha/entra em timeout e aciona fallbacks lentos (`minimax-m3:free` levou 32 a 38 s por resposta).
+- Diagnóstico histórico de delay (04/09/2026): o registro oficial informa gerações Fish de 1819/2047/2287 ms e inferência/fallback de IA na faixa reportada de 32–38 s. A faixa anterior de 1,3–2,5 s neste handoff não tinha evidência específica e foi substituída por esses valores atribuídos. Nenhuma dessas medidas é resultado ou garantia para a revisão de 06/09/2026; ainda falta medir a versão atual no PC/celular.
 - Modo `AI_RESPOND_ALL`: validado com respostas dinâmicas reais; fila descarta duplicatas e respeita serialização.
 - Composição no LIVE Studio: Bob enquadrado corretamente com captura de janela `msedge.exe`, cena vertical `Em branco` e modo `Ajustar`, sem câmera real.
 - A fonte `Adicionar link` rejeitou o endereço HTTP local na versão testada do LIVE Studio.
 - MVP 6/7 — Lip sync dinâmico fonema/visema: PIPELINE TÉCNICO IMPLEMENTADO E AUDITADO EM TESTE CONTROLADO NO WINDOWS (`npm run test:lipsync`) com Fish Audio SSE timestamps, motor PT-BR com 9 visemas, composição sem dupla boca no navegador a 60 fps, fallback seguro sem alignment (`LIP_SYNC_APPROXIMATE_FALLBACK=false`), e 160/160 testes passando (17 suítes). Validação em LIVE real com espectador confirmando no celular: PENDENTE.
+- MVP 6 — Falas automáticas por inatividade: revisão complementar publicada; 205 testes encontrados em Linux, 204 aprovados, 0 falhas, 1 dependente de Windows não executado (18 suítes). A alegação anterior de 177/177 não se reproduziu no baseline Linux (174 aprovados, 3 falhas) e fica no relatório histórico. Intervalo de 5 segundos mede elegibilidade após disponibilidade real; geração e transmissão adicionam tempo. Rotação e TTS alternam, preservando prioridade humana; 25 frases por modo, sem repetição imediata. Cancelamento e recuperação cobertos por testes; fala autorizada ao player termina antes da próxima interação. Validação do novo player no Windows, reconexão real e LIVE com espectador: PENDENTES.
 
 ## Implementação atual
 
 O comando abaixo ativa a cena Bob, o TTS e a reconexão automática enquanto a conta ainda não entrou ao vivo:
 
 ```powershell
-npm run live:bob -- luisbossgpt
+npm run live:bob -- familiasilvahumor
 ```
 
 Durante uma interação elegível:
@@ -58,22 +62,20 @@ npm run test:videos -- patrick
 
 ## Próximo teste obrigatório no Windows
 
-1. atualizar o repositório;
-2. confirmar os três MP4s em `assets\mvp4\`;
-3. executar `npm run live:bob -- <usuario>`;
-4. abrir a prévia no Edge e capturar a janela `msedge.exe`;
-5. usar visualização vertical, cena `Em branco` e modo `Ajustar`, sem adicionar câmera real;
-6. configurar e testar `fish-audio` ou manter temporariamente `windows-sapi`;
-7. incluir o áudio do sistema e confirmar movimento no medidor quando o TTS falar;
-8. iniciar a LIVE;
-9. em outro celular/conta, validar uma entrada, um presente e duas perguntas começando com `ia`;
-10. confirmar imagem, voz, ordem da fila, `thinking → speaking → idle` e continuidade dos eventos.
+1. inspecionar Git e preservar alterações locais; atualizar `feat/mvp6-auto-speech` apenas com avanço seguro;
+2. confirmar os ativos existentes do MVP 4 e os clipes de rotação do MVP 6, sem regenerá-los;
+3. executar `npm test`, `npm run test:tts` e `npm run test:lipsync`, com Fish real e fallback aproximado desligado; parar se falhar;
+4. confirmar voz, transições e lip sync no PC; usar a prévia do navegador, captura de janela e áudio do sistema já configurados no LIVE Studio;
+5. somente com LIVE já ativa e autorizada, executar `npm run live:bob -- familiasilvahumor` com ambiente e rotação habilitados, `AI_RESPOND_ALL=true` e intervalo `5000`;
+6. no celular do espectador, observar três ciclos automáticos entre vídeos, comentário em idle, durante preparação e durante fala audível; no modo responder a todos, não exigir prefixo `ia`;
+7. observar presente natural ou autorizado, sem exigir compra; confirmar retomada após cada interação, imagem, voz, sincronização e ausência de sobreposição;
+8. registrar tempos separados de geração, player local e recepção no celular; se comparar `3000`, encerrar com Ctrl+C, executar no mesmo terminal e restaurar `5000` após o teste.
 
 Não declarar a transmissão validada sem confirmação no dispositivo do espectador.
 
 ## Depois do teste
 
-Se funcionar, documentar latência percebida, qualidade de imagem/áudio e qualquer falha. Depois, produzir os ativos de boca e implementar sincronização por fonemas/visemas. Se não funcionar, separar o diagnóstico entre fonte visual, captura de áudio, provedor TTS, conexão TikTok e lógica da aplicação.
+Se funcionar, acrescentar as medições e evidências observadas ao relatório, Drive 03/04 e Issue/PR. Lip sync e o pack provisório já estão implementados: avaliar sua homologação, sem refazer o pipeline. Se falhar, separar o diagnóstico entre fonte visual, captura de áudio, provedor TTS, conexão TikTok e lógica da aplicação. Não fazer merge automático; o PR #16 depende do #15.
 
 ## Restrições
 
@@ -88,4 +90,4 @@ Interação, voz e lip sync: [`mvp6-interaction-voice-lipsync.md`](mvp6-interact
 
 Retrospectiva do LIVE Studio: [`mvp5-live-studio-retrospective.md`](mvp5-live-studio-retrospective.md).
 
-Acompanhamento: [Issue #8 — Bob Esponja em TikTok LIVE real](https://github.com/vanzer80/liveiapersonagens/issues/8).
+Acompanhamento atual: [Issue #9 — Interação, voz neural e lip sync](https://github.com/vanzer80/liveiapersonagens/issues/9). Histórico: [Issue #8 — Bob Esponja em TikTok LIVE real](https://github.com/vanzer80/liveiapersonagens/issues/8).
