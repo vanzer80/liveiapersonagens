@@ -479,7 +479,7 @@ async function invokeLifecycleHook(hook, payload, hookName) {
 export async function speakText(
   value,
   { force = false, onPlaybackStart = null, onPlaybackEnd = null, shouldCancel = null,
-    signal = null, config = getTtsConfig(), runProcess = runPowerShell,
+    signal = null, config = getTtsConfig(), runProcess = runPowerShell, playAudio = null,
     generationTimeoutMs = 65000, playbackTimeoutMs = 60000 } = {},
 ) {
   const operationStartedAt = performance.now();
@@ -593,10 +593,24 @@ export async function speakText(
       );
     };
 
-    console.log('[TTS] preparando player local...');
-    const output = await runProcess(PLAY_WAV_SCRIPT, { LIVEIA_TTS_OUTPUT: audioPath }, triggerPlaybackStart,
-      { signal, shouldCancel: isCancelled, timeoutMs: playbackTimeoutMs });
-    if (output?.includes('AUDIO_PLAYBACK_CANCELLED')) return cancelledResult();
+    if (typeof playAudio === 'function') {
+      console.log('[TTS] preparando player do navegador...');
+      const browserResult = await playAudio(audioPath, {
+        onStart: triggerPlaybackStart,
+        signal,
+        shouldCancel: isCancelled,
+        timeoutMs: playbackTimeoutMs,
+      });
+      if (browserResult?.status === 'cancelled') return cancelledResult();
+      if (!browserResult?.ok) {
+        throw new Error(`Player do navegador encerrou com status ${browserResult?.status || 'desconhecido'}.`);
+      }
+    } else {
+      console.log('[TTS] preparando player local...');
+      const output = await runProcess(PLAY_WAV_SCRIPT, { LIVEIA_TTS_OUTPUT: audioPath }, triggerPlaybackStart,
+        { signal, shouldCancel: isCancelled, timeoutMs: playbackTimeoutMs });
+      if (output?.includes('AUDIO_PLAYBACK_CANCELLED')) return cancelledResult();
+    }
     if (!playbackStartedInvoked) throw new Error('Player encerrou sem marcador de início; reprodução não confirmada.');
     const playbackDurationMs = Math.round(performance.now() - playerSignalAt);
     console.log(`[TTS] fim_reproducao_local | duracao_ms=${playbackDurationMs} | status=ended`);
