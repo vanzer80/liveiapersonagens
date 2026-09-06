@@ -231,6 +231,7 @@ const connection = new TikTokLiveConnection(username, {
   processInitialData: false,
 });
 let shuttingDown = false;
+let reconnectTask = null;
 
 connection.on(ControlEvent.ERROR, (error) => {
   const info = error?.info || 'sem-info';
@@ -246,6 +247,23 @@ connection.on(ControlEvent.CONNECTED, () => {
 connection.on(ControlEvent.DISCONNECTED, ({ code, reason } = {}) => {
   console.log(`[DESCONECTADO] code=${code ?? '?'} reason=${reason ?? 'sem-motivo'}`);
   interactions.pause();
+
+  if (shuttingDown || !connectRetryEnabled || reconnectTask) return;
+
+  console.log(`[CONEXÃO] sessão perdida; tentando reconectar em ${connectRetryMs} ms.`);
+  reconnectTask = (async () => {
+    await new Promise((resolveRetry) => setTimeout(resolveRetry, connectRetryMs));
+    if (shuttingDown) return;
+    await connectToLive();
+  })()
+    .catch((error) => {
+      console.error(
+        `[ERRO RECONEXÃO] ${error instanceof Error ? error.message : error}`,
+      );
+    })
+    .finally(() => {
+      reconnectTask = null;
+    });
 });
 
 function extractChatText(data) {
