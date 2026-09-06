@@ -237,8 +237,14 @@ connection.on(ControlEvent.ERROR, (error) => {
   console.error('[ERRO CONECTOR]', info, exception);
 });
 
+connection.on(ControlEvent.CONNECTED, () => {
+  console.log('[CONECTADO] sessão ativa');
+  interactions.resume();
+});
+
 connection.on(ControlEvent.DISCONNECTED, ({ code, reason } = {}) => {
   console.log(`[DESCONECTADO] code=${code ?? '?'} reason=${reason ?? 'sem-motivo'}`);
+  interactions.pause();
 });
 
 function extractChatText(data) {
@@ -318,6 +324,8 @@ const interactions = createLiveInteractionEngine({
   speak: (text, metadata) => liveScene.speak(text, {
     speaker: speakText,
     metadata,
+    shouldCancel: metadata?.shouldCancel,
+    onPlaybackStart: metadata?.onPlaybackStart,
   }),
   answerQuestion: processAiReply,
   playVideo: videoConfig.enabled ? playTriggeredVideo : null,
@@ -409,7 +417,6 @@ connection.on(WebcastEvent.CHAT, (data) => {
   }
 
   console.log(`[COMENTÁRIO] @${user}: ${comment || '(texto vazio)'}`);
-  interactions.onAudienceActivity();
 
   if (comment) {
     handleComment(displayName, comment);

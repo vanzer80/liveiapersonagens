@@ -6,15 +6,32 @@ const DEFAULT_OPENING_LINES = [
   'Sejam bem-vindos! Escrevam ia e depois a pergunta para falar comigo ao vivo!',
 ];
 
-const DEFAULT_AMBIENT_LINES = [
-  'Quem acabou de chegar, conta pra gente de onde está assistindo!',
-  'Pergunta do momento: qual seria o seu trabalho na Fenda do Biquíni?',
+export const DEFAULT_AMBIENT_LINES = [
+  'Galerinha, vamos curtir a live! Tep tep na telinha!',
+  'Quem chegou agora manda um oi no chat!',
+  'De qual cidade vocês estão assistindo?',
+  'Quem aí também adora hambúrguer de siri?',
+  'Qual personagem da Fenda do Biquíni vocês mais gostam?',
   'Pessoal, mandem uma pergunta começando com ia que eu respondo ao vivo!',
+  'Quem tá curtindo a live clica duas vezes na tela!',
   'Quero saber: vocês preferem hambúrguer ou pizza?',
-  'Se esta live fosse uma aventura submarina, qual seria a nossa primeira missão?',
-  'Quem está curtindo a live manda um oi no chat!',
-  'Me contem uma coisa boa que aconteceu hoje com vocês.',
-  'Qual personagem vocês gostariam de encontrar no fundo do mar?',
+  'Quem aí já caçou água-viva levanta a mão no chat!',
+  'Sejam todos muito bem-vindos! Vamos bater nossa meta de curtidas!',
+  'Pergunta rápida: praia, piscina ou mar da Fenda do Biquíni?',
+  'Tem alguém assistindo pela primeira vez? Escreve primeira vez no chat!',
+  'Estou pronto! Quem aí também está pronto pra se divertir?',
+  'Eu quero ver esse chat se mexer: mandem um emoji bem alegre!',
+  'Vocês preferem um dia no Siri Cascudo ou passear com o Gary?',
+  'Tep tep na telinha pra espalhar alegria submarina!',
+  'Vocês escolheriam morar no fundo do mar por uma semana?',
+  'Quem aí é amigo do Patrick manda um coração no chat!',
+  'Tem pergunta pro Bob? Comece com ia que eu respondo tudo!',
+  'Compartilha essa live com quem precisa dar uma boa risada hoje!',
+  'Quem já almoçou ou jantou? Me conta o que comeu no chat!',
+  'Não esquece de seguir o perfil pra acompanhar as próximas aventuras!',
+  'Qual superpoder da Fenda do Biquíni vocês gostariam de ter?',
+  'Todo mundo dando dois toques na tela pra ajudar o canal do Bob!',
+  'Eu estou de olho no chat! Mandem um oi pra eu saber quem está comigo!',
 ];
 
 export const INTERACTION_PRIORITIES = Object.freeze({
@@ -27,6 +44,58 @@ export const INTERACTION_PRIORITIES = Object.freeze({
   question: 80,
   gift: 100,
 });
+
+/**
+ * Seletor cíclico que percorre todas as frases sem repetir antes de concluir o ciclo.
+ * Na troca de ciclo (refill), garante que o primeiro item do novo ciclo não seja igual
+ * ao último falado no ciclo anterior.
+ */
+export function createLineCycleSelector(lines, { random = Math.random } = {}) {
+  if (!Array.isArray(lines) || lines.length === 0) {
+    throw new Error('Lista de falas vazia ou inválida.');
+  }
+
+  let currentCycle = [];
+  let lastItem = null;
+
+  function refill() {
+    const pool = [...lines];
+    // Fisher-Yates shuffle
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+
+    // Se a primeira frase do novo ciclo for idêntica à última frase falada,
+    // movemos para o final (se houver mais de 1 item) para evitar repetição imediata.
+    if (pool.length > 1 && lastItem !== null && pool[0] === lastItem) {
+      pool.push(pool.shift());
+    }
+
+    currentCycle = pool;
+  }
+
+  return {
+    next() {
+      if (currentCycle.length === 0) {
+        refill();
+      }
+      const item = currentCycle.shift();
+      lastItem = item;
+      return item;
+    },
+    reset() {
+      currentCycle = [];
+      lastItem = null;
+    },
+    getRemainingCount() {
+      return currentCycle.length;
+    },
+    getLastItem() {
+      return lastItem;
+    },
+  };
+}
 
 function parseBoolean(value, fallback) {
   if (value === undefined || value === null || String(value).trim() === '') return fallback;
@@ -41,15 +110,20 @@ function parseInteger(value, fallback, { min, max }) {
 
 export function getInteractionConfig(env = process.env) {
   const legacyAmbientSilence = env.INTERACTION_AMBIENT_SILENCE_MS;
+  const configuredMin = env.INTERACTION_AMBIENT_MIN_SILENCE_MS ?? legacyAmbientSilence;
+  const configuredMax = env.INTERACTION_AMBIENT_MAX_SILENCE_MS ?? legacyAmbientSilence;
+
+  // Padrão aprovado: 5000 ms (5 segundos). Permite configurar valores menores (como 3000 ms)
+  // com faixa segura entre 1000 ms (1s) e 300000 ms (5 minutos).
   const ambientMinSilenceMs = parseInteger(
-    env.INTERACTION_AMBIENT_MIN_SILENCE_MS ?? legacyAmbientSilence,
-    30000,
-    { min: 10000, max: 300000 },
+    configuredMin,
+    5000,
+    { min: 1000, max: 300000 },
   );
-  const configuredAmbientMax = parseInteger(
-    env.INTERACTION_AMBIENT_MAX_SILENCE_MS ?? legacyAmbientSilence,
-    45000,
-    { min: 10000, max: 300000 },
+  const ambientMaxSilenceMs = parseInteger(
+    configuredMax,
+    ambientMinSilenceMs,
+    { min: 1000, max: 300000 },
   );
 
   return {
@@ -75,9 +149,11 @@ export function getInteractionConfig(env = process.env) {
     }),
     ambientEnabled: parseBoolean(env.INTERACTION_AMBIENT_ENABLED, true),
     ambientMinSilenceMs,
-    ambientMaxSilenceMs: Math.max(ambientMinSilenceMs, configuredAmbientMax),
-    // Mantido para configurações e testes antigos que ainda usam um intervalo fixo.
-    ambientSilenceMs: legacyAmbientSilence === undefined ? undefined : ambientMinSilenceMs,
+    ambientMaxSilenceMs: Math.max(ambientMinSilenceMs, ambientMaxSilenceMs),
+    // Mantido para configurações e testes que usam um intervalo fixo.
+    ambientSilenceMs: legacyAmbientSilence === undefined
+      ? ambientMinSilenceMs
+      : parseInteger(legacyAmbientSilence, 5000, { min: 1000, max: 300000 }),
     maxPending: parseInteger(env.INTERACTION_MAX_PENDING, 12, {
       min: 1,
       max: 100,
@@ -186,7 +262,7 @@ export function formatWelcome(names, total, maxNames = 3) {
   return `Olha quem chegou: ${selected.join(', ')} e ${last}! Sejam muito bem-vindos à live!`;
 }
 
-export function createPriorityTaskQueue({ maxPending = 12, logger = console } = {}) {
+export function createPriorityTaskQueue({ maxPending = 12, logger = console, onIdle = null } = {}) {
   let active = null;
   let sequence = 0;
   const pending = [];
@@ -206,9 +282,27 @@ export function createPriorityTaskQueue({ maxPending = 12, logger = console } = 
         active = null;
       }
     }
+
+    if (active === null && pending.length === 0 && typeof onIdle === 'function') {
+      try {
+        onIdle();
+      } catch (err) {
+        logger.error?.(`[ERRO ON_IDLE] ${err instanceof Error ? err.message : err}`);
+      }
+    }
   }
 
-  function enqueue({ kind, priority, run, dedupeKey = null }) {
+  function cancelPending(predicate) {
+    const cancelled = [];
+    for (let i = pending.length - 1; i >= 0; i--) {
+      if (predicate(pending[i])) {
+        cancelled.push(pending.splice(i, 1)[0]);
+      }
+    }
+    return cancelled;
+  }
+
+  function enqueue({ kind, priority, run, dedupeKey = null, shouldCancel = null }) {
     if (typeof run !== 'function') throw new Error('A interação precisa informar uma função run.');
 
     if (
@@ -216,6 +310,22 @@ export function createPriorityTaskQueue({ maxPending = 12, logger = console } = 
       (active?.dedupeKey === dedupeKey || pending.some((item) => item.dedupeKey === dedupeKey))
     ) {
       return { accepted: false, reason: 'duplicate' };
+    }
+
+    // Regra aprovada: interação que exige atendimento (pergunta, presente, vídeo, membro)
+    // cancela fala automática ainda pendente na fila para priorizar o público imediatamente.
+    if (priority > INTERACTION_PRIORITIES.ambient) {
+      const removed = cancelPending((item) => item.kind === 'ambient');
+      if (removed.length > 0) {
+        logger.log?.(`[FILA] fala automática pendente cancelada para priorizar evento ${kind}`);
+      }
+    }
+
+    // Mantém no máximo uma fala automática em preparação ou execução; não acumula na fila.
+    if (kind === 'ambient') {
+      if (active?.kind === 'ambient' || pending.some((item) => item.kind === 'ambient')) {
+        return { accepted: false, reason: 'ambient-already-queued' };
+      }
     }
 
     if (pending.length >= maxPending) {
@@ -229,7 +339,7 @@ export function createPriorityTaskQueue({ maxPending = 12, logger = console } = 
       pending.splice(lowest.index, 1);
     }
 
-    pending.push({ kind, priority, run, dedupeKey, sequence: sequence++ });
+    pending.push({ kind, priority, run, dedupeKey, shouldCancel, sequence: sequence++ });
     pending.sort((a, b) => b.priority - a.priority || a.sequence - b.sequence);
     void drain();
     return { accepted: true };
@@ -237,7 +347,12 @@ export function createPriorityTaskQueue({ maxPending = 12, logger = console } = 
 
   return {
     enqueue,
+    cancelPending,
     isIdle: () => !active && pending.length === 0,
+    hasPendingPriority: (threshold) => pending.some((item) => item.priority > threshold),
+    isKindActive: (kind) => active?.kind === kind,
+    isKindPending: (kind) => pending.some((item) => item.kind === kind),
+    getActiveKind: () => active?.kind || null,
     snapshot: () => ({
       active: active?.kind || null,
       pending: pending.map((item) => item.kind),
@@ -263,16 +378,32 @@ export function createLiveInteractionEngine({
   if (typeof speak !== 'function') throw new Error('A função speak é obrigatória.');
   if (typeof answerQuestion !== 'function') throw new Error('A função answerQuestion é obrigatória.');
 
-  const queue = createPriorityTaskQueue({ maxPending: config.maxPending, logger });
+  const queue = createPriorityTaskQueue({
+    maxPending: config.maxPending,
+    logger,
+    onIdle: () => touchActivity(),
+  });
   const pendingMembers = new Map();
+  const cycleSelector = createLineCycleSelector(ambientLines, { random });
   let welcomeTimer = null;
   let openingTimer = null;
   let ambientTimer = null;
-  let ambientCursor = 0;
   let lastActivityAt = now();
   let lastWelcomeAt = 0;
   let started = false;
   let stopped = false;
+  let suspended = false;
+  let ambientPreparing = false;
+
+  function isCharacterAvailable() {
+    return (
+      started &&
+      !stopped &&
+      !suspended &&
+      !ambientPreparing &&
+      queue.isIdle()
+    );
+  }
 
   function getAmbientDelayBounds() {
     const legacyDelay = Number(config.ambientSilenceMs);
@@ -280,7 +411,7 @@ export function createLiveInteractionEngine({
     const configuredMax = Number(config.ambientMaxSilenceMs);
     const min = Number.isFinite(configuredMin)
       ? configuredMin
-      : Number.isFinite(legacyDelay) ? legacyDelay : 35000;
+      : Number.isFinite(legacyDelay) ? legacyDelay : 5000;
     const max = Math.max(
       min,
       Number.isFinite(configuredMax)
@@ -302,19 +433,28 @@ export function createLiveInteractionEngine({
 
   function scheduleAmbient() {
     cancelAmbientTimer();
-    if (!started || stopped || !config.enabled || !config.ambientEnabled || !ambientLines.length) return;
+    if (!started || stopped || suspended || !config.enabled || !config.ambientEnabled || !ambientLines.length) return;
+
+    // Conta o intervalo somente quando o personagem estiver disponível,
+    // sem fala em reprodução, resposta em processamento ou interação pendente na fila.
+    if (!queue.isIdle() || ambientPreparing) {
+      return;
+    }
 
     const elapsed = Math.max(0, now() - lastActivityAt);
-    const delay = Math.max(1000, getAmbientDelayMs() - elapsed);
+    const targetDelay = getAmbientDelayMs();
+    const delay = Math.max(0, targetDelay - elapsed);
+
     ambientTimer = setTimer(() => {
       ambientTimer = null;
-      if (stopped) return;
-      if (!queue.isIdle()) {
-        touchActivity();
+      if (stopped || suspended) return;
+
+      // Revalida: personagem e fila precisam estar completamente disponíveis
+      if (!isCharacterAvailable()) {
         return;
       }
 
-      // 1ª opção: rotação de vídeos curtos de ambiente (MVP 6 — nine clips).
+      // 1ª opção: rotação de vídeos curtos de ambiente (MVP 6 — nine clips, se ativada).
       if (typeof findAmbientRotation === 'function') {
         const clip = findAmbientRotation();
         if (clip?.id && clip?.file) {
@@ -342,18 +482,44 @@ export function createLiveInteractionEngine({
         }
       }
 
-      // Fallback: fala de ambiente por TTS.
-      const text = ambientLines[ambientCursor % ambientLines.length];
-      ambientCursor += 1;
-      enqueueSpeech({ kind: 'ambient', text, priority: INTERACTION_PRIORITIES.ambient });
+      // Fala automática curta por TTS usando o seletor cíclico
+      const text = cycleSelector.next();
+      const scheduledAt = now();
+      const silenceMs = Math.max(0, scheduledAt - lastActivityAt);
+
+      logger.log?.(
+        `[AMBIENTE] elegibilidade atingida após ${silenceMs}ms de inatividade | preparando fala automática: "${text}"`,
+      );
+
+      ambientPreparing = true;
+
+      enqueueSpeech({
+        kind: 'ambient',
+        text,
+        priority: INTERACTION_PRIORITIES.ambient,
+        metadata: {
+          scheduledAt,
+          silenceMs,
+        },
+        shouldCancel: () => {
+          // Revalida a elegibilidade antes e durante a geração/reprodução:
+          // Se uma interação prioritária chegou ou a sessão foi suspensa/encerrada
+          if (stopped || suspended) return true;
+          if (queue.hasPendingPriority(INTERACTION_PRIORITIES.ambient)) return true;
+          return false;
+        },
+        onFinally: () => {
+          ambientPreparing = false;
+        },
+      });
     }, delay);
   }
 
   function scheduleOpening() {
-    if (!started || stopped || !config.openingEnabled || !openingLines.length) return;
+    if (!started || stopped || suspended || !config.openingEnabled || !openingLines.length) return;
     openingTimer = setTimer(() => {
       openingTimer = null;
-      if (stopped) return;
+      if (stopped || suspended) return;
       const openingIndex = Math.min(
         openingLines.length - 1,
         Math.floor(Math.min(1, Math.max(0, random())) * openingLines.length),
@@ -371,22 +537,53 @@ export function createLiveInteractionEngine({
     scheduleAmbient();
   }
 
-  function enqueueSpeech({ kind, text, priority, metadata = {}, dedupeKey = null }) {
+  function enqueueSpeech({
+    kind,
+    text,
+    priority,
+    metadata = {},
+    dedupeKey = null,
+    shouldCancel = null,
+    onFinally = null,
+  }) {
     const result = queue.enqueue({
       kind,
       priority,
       dedupeKey,
+      shouldCancel,
       run: async () => {
         try {
-          await speak(text, { ...metadata, interactionKind: kind });
+          if (typeof shouldCancel === 'function' && shouldCancel()) {
+            logger.log?.(
+              `[AMBIENTE] fala automática cancelada antes de iniciar | motivo=interação-prioritária-pendente`,
+            );
+            return;
+          }
+          await speak(text, {
+            ...metadata,
+            interactionKind: kind,
+            shouldCancel,
+            onPlaybackStart: (playbackCtx) => {
+              if (kind === 'ambient') {
+                const audibleAt = now();
+                const audibleDelayMs = audibleAt - (metadata.scheduledAt || audibleAt);
+                logger.log?.(
+                  `[AMBIENTE] início audível | latencia_geracao_ms=${playbackCtx?.generationLatencyMs ?? '?'} ` +
+                    `tempo_ate_inicio_audivel_ms=${audibleDelayMs}`,
+                );
+              }
+            },
+          });
         } finally {
-          touchActivity();
+          onFinally?.();
+          lastActivityAt = now();
         }
       },
     });
 
     if (!result.accepted) {
       logger.log?.(`[FILA] tipo=${kind} ignorado | motivo=${result.reason}`);
+      onFinally?.();
     }
     return result;
   }
@@ -407,7 +604,7 @@ export function createLiveInteractionEngine({
         try {
           await playVideo({ id, video, user, phrase });
         } finally {
-          touchActivity();
+          lastActivityAt = now();
         }
       },
     });
@@ -459,7 +656,7 @@ export function createLiveInteractionEngine({
 
   function onAudienceActivity() {
     if (!config.enabled || stopped) return;
-    touchActivity();
+    // Não reinicia contagem para curtidas ou comentários genéricos não atendidos
   }
 
   function onGift({ user, giftName }) {
@@ -510,7 +707,7 @@ export function createLiveInteractionEngine({
         try {
           await answerQuestion({ user: spokenUser, comment });
         } finally {
-          touchActivity();
+          lastActivityAt = now();
         }
       },
     });
@@ -521,9 +718,30 @@ export function createLiveInteractionEngine({
     return result;
   }
 
+  function pause() {
+    suspended = true;
+    cancelAmbientTimer();
+    if (openingTimer) clearTimer(openingTimer);
+    openingTimer = null;
+    if (welcomeTimer) clearTimer(welcomeTimer);
+    welcomeTimer = null;
+    queue.cancelPending((item) => item.kind === 'ambient');
+    logger.log?.('[INTERAÇÃO] suspensa (desconexão ou indisponibilidade).');
+  }
+
+  function resume() {
+    if (!suspended) return;
+    suspended = false;
+    cancelAmbientTimer();
+    lastActivityAt = now();
+    logger.log?.('[INTERAÇÃO] retomada após reconexão.');
+    scheduleAmbient();
+  }
+
   function start() {
     if (config.enabled && !started && !stopped) {
       started = true;
+      suspended = false;
       lastActivityAt = now();
       const ambientBounds = getAmbientDelayBounds();
       logger.log?.(
@@ -538,22 +756,30 @@ export function createLiveInteractionEngine({
 
   function stop() {
     stopped = true;
+    suspended = true;
+    ambientPreparing = false;
     cancelAmbientTimer();
     if (openingTimer) clearTimer(openingTimer);
     openingTimer = null;
     if (welcomeTimer) clearTimer(welcomeTimer);
     welcomeTimer = null;
+    queue.cancelPending((item) => item.kind === 'ambient');
   }
 
   return {
     flushMembers,
+    getCycleSelector: () => cycleSelector,
+    isAvailable: () => isCharacterAvailable(),
+    isPreparingAmbient: () => ambientPreparing,
     onAudienceActivity,
     onGift,
     onGiftVideo,
     onMember,
     onQuestion,
     onVideo,
+    pause,
     queue,
+    resume,
     start,
     stop,
   };

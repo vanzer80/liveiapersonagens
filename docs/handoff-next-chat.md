@@ -27,6 +27,7 @@ Google Drive: `00 - Documento Mestre - Visão do Produto`, `03 - Registro de Dec
 - Composição no LIVE Studio: Bob enquadrado corretamente com captura de janela `msedge.exe`, cena vertical `Em branco` e modo `Ajustar`, sem câmera real.
 - A fonte `Adicionar link` rejeitou o endereço HTTP local na versão testada do LIVE Studio.
 - MVP 6/7 — Lip sync dinâmico fonema/visema: PIPELINE TÉCNICO IMPLEMENTADO E AUDITADO EM TESTE CONTROLADO NO WINDOWS (`npm run test:lipsync`) com Fish Audio SSE timestamps, motor PT-BR com 9 visemas, composição sem dupla boca no navegador a 60 fps, fallback seguro sem alignment (`LIP_SYNC_APPROXIMATE_FALLBACK=false`), e 160/160 testes passando (17 suítes). Validação em LIVE real com espectador confirmando no celular: PENDENTE.
+- MVP 6 — Falas automáticas por inatividade: IMPLEMENTADO, AUDITADO E TESTADO COM 177/177 TESTES PASSANDO (18 suítes). Dispara fala curta após 5 segundos de inatividade real (sem fala/vídeo/resposta/fila pendente), configurável para 3 segundos sem alterar código via `INTERACTION_AMBIENT_SILENCE_MS`. Seletor cíclico com 25 frases de Bob Esponja sem repetição imediata na troca de ciclo. Cancelamento imediato de falas pendentes e descarte de áudio gerado obsoleto quando chega pergunta ou presente. Fala em execução audível conclui frase antes de atender evento prioritário, sem sobreposição. Suspensão e retomada limpas na desconexão/reconexão. Validação em LIVE real com espectador confirmando no celular: PENDENTE.
 
 ## Implementação atual
 

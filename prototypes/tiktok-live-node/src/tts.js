@@ -450,7 +450,7 @@ async function invokeLifecycleHook(hook, payload, hookName) {
 
 export async function speakText(
   value,
-  { force = false, onPlaybackStart = null, onPlaybackEnd = null } = {},
+  { force = false, onPlaybackStart = null, onPlaybackEnd = null, shouldCancel = null } = {},
 ) {
   const operationStartedAt = performance.now();
   let temporaryDirectory = null;
@@ -517,6 +517,19 @@ export async function speakText(
     console.log(
       `[TTS] áudio gerado | provedor=${config.provider} voz=${voiceInfo.voice} idioma=${voiceInfo.culture} latencia_ms=${generationLatencyMs}`,
     );
+
+    if (typeof shouldCancel === 'function' && shouldCancel()) {
+      console.log('[TTS] reprodução cancelada antes de iniciar | áudio gerado descartado');
+      return {
+        ok: false,
+        skipped: true,
+        reason: 'cancelled-before-playback',
+        provider: config.provider,
+        voice: voiceInfo.voice,
+        culture: voiceInfo.culture,
+        generationLatencyMs,
+      };
+    }
 
     const playbackContext = {
       provider: config.provider,

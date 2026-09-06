@@ -101,16 +101,17 @@ export function createLiveSceneRuntime({
     return show(SCENE_STATES.THINKING, { ...metadata, reason: 'ai-processing' });
   }
 
-  async function speak(text, { speaker, metadata = {} } = {}) {
+  async function speak(text, { speaker, metadata = {}, shouldCancel = null, onPlaybackStart = null } = {}) {
     if (typeof speaker !== 'function') {
       throw new Error('A função de TTS não foi informada para a cena ao vivo.');
     }
 
-    if (!config.enabled) return speaker(text);
+    if (!config.enabled) return speaker(text, { shouldCancel, onPlaybackStart });
 
     let playbackStarted = false;
     let playbackEnded = false;
     const result = await speaker(text, {
+      shouldCancel,
       onPlaybackStart: async (context) => {
         playbackStarted = true;
         await show(SCENE_STATES.SPEAKING, {
@@ -118,6 +119,13 @@ export function createLiveSceneRuntime({
           ...context,
           reason: 'tts-playback-start',
         });
+        if (typeof onPlaybackStart === 'function') {
+          try {
+            await onPlaybackStart(context);
+          } catch {
+            // Callback externo não deve derrubar o ciclo da cena
+          }
+        }
       },
       onPlaybackEnd: async (context) => {
         playbackEnded = true;

@@ -401,4 +401,48 @@ test('quando endpoint timestamped falha, speakText recorre ao /v1/tts regular, p
   }
 });
 
+test('descarta áudio e pula reprodução se shouldCancel retornar true antes de iniciar áudio', async () => {
+  const originalFetch = globalThis.fetch;
+  const sampleRate = 16000;
+  const dataSize = 100;
+  const silentWav = Buffer.alloc(44 + dataSize);
+  silentWav.write('RIFF', 0);
+  silentWav.writeUInt32LE(36 + dataSize, 4);
+  silentWav.write('WAVE', 8);
+  silentWav.write('fmt ', 12);
+  silentWav.writeUInt32LE(16, 16);
+  silentWav.writeUInt16LE(1, 20);
+  silentWav.writeUInt16LE(1, 22);
+  silentWav.writeUInt32LE(sampleRate, 24);
+  silentWav.writeUInt32LE(sampleRate * 2, 28);
+  silentWav.writeUInt16LE(2, 32);
+  silentWav.writeUInt16LE(16, 34);
+  silentWav.write('data', 36);
+  silentWav.writeUInt32LE(dataSize, 40);
+
+  globalThis.fetch = async (url, options) => {
+    return new Response(silentWav, { status: 200, headers: { 'Content-Type': 'audio/wav' } });
+  };
+
+  let playbackStarted = false;
+
+  try {
+    const result = await speakText('Teste de descarte prévio', {
+      force: true,
+      shouldCancel: () => true, // cancela imediatamente antes do playback
+      onPlaybackStart: () => {
+        playbackStarted = true;
+      },
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.skipped, true);
+    assert.equal(result.reason, 'cancelled-before-playback');
+    assert.equal(playbackStarted, false, 'onPlaybackStart não deve ser chamado quando cancelado');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+
 
