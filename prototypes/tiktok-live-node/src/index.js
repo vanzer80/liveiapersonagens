@@ -113,6 +113,13 @@ const giftVideoRouter = giftVideoConfig.enabled
     })
   : null;
 const liveScene = createLiveSceneRuntime({ config: sceneConfig });
+const browserTtsPlaybackEnabled = process.platform !== 'win32' && sceneConfig.enabled;
+const runtimeSpeaker = (text, options = {}) => speakText(text, {
+  ...options,
+  ...(browserTtsPlaybackEnabled
+    ? { playAudio: (audioPath, playbackOptions) => liveScene.playTtsAudio(audioPath, playbackOptions) }
+    : {}),
+});
 const connectRetryEnabled = ['1', 'true', 'yes', 'sim', 'on'].includes(
   String(process.env.TIKTOK_CONNECT_RETRY || '').trim().toLowerCase(),
 );
@@ -134,6 +141,9 @@ console.log(
     `voz=${ttsConfig.provider === 'fish-audio' ? `referência-${ttsConfig.fish.referenceId.slice(0, 8) || 'ausente'}` : ttsConfig.voice || 'automática-pt-BR'} ` +
     `velocidade=${ttsConfig.rate}`,
 );
+if (ttsConfig.enabled) {
+  console.log(`TTS playback: ${browserTtsPlaybackEnabled ? 'navegador da prévia' : 'player local do sistema'}`);
+}
 console.log(
   `Cena LIVE: ${sceneConfig.enabled ? 'ativada' : 'desativada'} | variante=${sceneConfig.variant}`,
 );
@@ -299,7 +309,7 @@ async function processAiReply({ user, comment: selectedText }) {
     console.log(`[RESPOSTA IA] modelo=${result.model} latencia_ms=${latencyMs}`);
     console.log(`[RESPOSTA IA] @${user}: ${result.text}`);
     await liveScene.speak(result.text, {
-      speaker: speakText,
+      speaker: runtimeSpeaker,
       metadata: { user, comment: selectedText },
     });
   } catch (error) {
@@ -341,7 +351,7 @@ const interactions = createLiveInteractionEngine({
   openingLines: interactionLines.opening,
   ambientLines: interactionLines.ambient,
   speak: (text, metadata) => liveScene.speak(text, {
-    speaker: speakText,
+    speaker: runtimeSpeaker,
     metadata,
     shouldCancel: metadata?.shouldCancel,
     onPlaybackStart: metadata?.onPlaybackStart,
