@@ -25,6 +25,7 @@ video{width:100%;height:100%;object-fit:cover;display:block;background:#111}
 <body>
 <main><div class="frame">
 <video id="video" muted autoplay loop playsinline preload="auto"></video>
+<audio id="tts-audio" preload="auto"></audio>
 <img id="base-image" class="base-image" alt="Bob Base" />
 <img id="mouth" class="mouth-layer" alt="Boca Bob" />
 <div class="badge" id="badge">aguardando…</div>
@@ -32,11 +33,13 @@ video{width:100%;height:100%;object-fit:cover;display:block;background:#111}
 </div></main>
 <script>
 const video=document.getElementById('video');
+const ttsAudio=document.getElementById('tts-audio');
 const baseImage=document.getElementById('base-image');
 const mouth=document.getElementById('mouth');
 const badge=document.getElementById('badge');
 const unlock=document.getElementById('unlock');
 let revision=-1;
+let audioRevision=-1;
 let mediaDeadlineTimer=null;
 let activeLipSync=null;
 let currentViseme='rest';
@@ -91,10 +94,39 @@ function report(rev,status){
   }).catch(function(){});
 }
 
+function reportAudio(rev,status){
+  if(rev!==audioRevision) return;
+  fetch('/api/audio-event',{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({revision:rev,status})
+  }).catch(function(){});
+}
+
+async function applyAudio(audio){
+  if(!audio || !audio.url || audio.revision<=audioRevision) return;
+  audioRevision=audio.revision;
+  const rev=audioRevision;
+  ttsAudio.pause();
+  ttsAudio.onplaying=function(){reportAudio(rev,'started');};
+  ttsAudio.onended=function(){reportAudio(rev,'ended');};
+  ttsAudio.onerror=function(){reportAudio(rev,'error');};
+  ttsAudio.src=audio.url+'?v='+rev;
+  ttsAudio.currentTime=0;
+  try{
+    await ttsAudio.play();
+    unlock.style.display='none';
+  }catch(error){
+    unlock.style.display='grid';
+    reportAudio(rev,'blocked');
+  }
+}
+
 // Um clique em qualquer lugar destrava a reprodução com som no navegador.
 document.addEventListener('click',function(){
   unlock.style.display='none';
   video.play().catch(function(){});
+  if(ttsAudio.src && ttsAudio.paused) ttsAudio.play().catch(function(){});
 });
 
 async function apply(state){
@@ -163,6 +195,7 @@ async function tick(){
     const state=await response.json();
     badge.textContent=state.variant+' · '+state.state + (state.lipSync?.enabled ? ' (lip)' : '');
     if(state.revision>revision && state.assetUrl){ await apply(state); }
+    if(state.audio?.revision>audioRevision && state.audio?.url){ await applyAudio(state.audio); }
   }catch(error){}
 }
 setInterval(tick,150); tick();
@@ -217,6 +250,24 @@ async function serveImage(request, response, filePath) {
     'content-type': 'image/png',
     'content-length': fileStat.size,
     'cache-control': 'public, max-age=3600',
+  });
+  createReadStream(filePath).pipe(response);
+}
+
+async function serveAudio(response, filePath) {
+  let fileStat;
+  try {
+    fileStat = await stat(filePath);
+  } catch {
+    response.writeHead(404);
+    response.end('Áudio não encontrado.');
+    return;
+  }
+
+  response.writeHead(200, {
+    'content-type': 'audio/wav',
+    'content-length': fileStat.size,
+    'cache-control': 'no-store',
   });
   createReadStream(filePath).pipe(response);
 }
@@ -356,6 +407,33 @@ export function createScenePreview({
     },
   };
   let pendingMedia = null;
+  let pendingAudio = null;
+  let audioFilePath = null;
+  let audioState = { revision: 0, url: null };
+
+  function settleAudio(revision, status) {
+    if (!pendingAudio || pendingAudio.revision !== revision) return false;
+    const settle = pendingAudio.settle;
+    pendingAudio = null;
+    settle(status);
+    return true;
+  }
+
+  async function handleAudioEvent(revision, status) {
+    if (!pendingAudio || pendingAudio.revision !== revision) return false;
+    if (status === 'started') {
+      if (!pendingAudio.started) {
+        pendingAudio.started = true;
+        await pendingAudio.onStart?.();
+      }
+      return true;
+    }
+    if (status === 'blocked') {
+      logger.warn?.('[TTS] navegador bloqueou o áudio dinâmico; clique uma vez na prévia para liberar.');
+      return true;
+    }
+    return settleAudio(revision, status);
+  }
 
   function settleMedia(revision, status) {
     if (!pendingMedia || pendingMedia.revision !== revision) return false;
@@ -375,7 +453,7 @@ export function createScenePreview({
     }
 
     if (url.pathname === '/api/state') {
-      sendJson(response, 200, current);
+      sendJson(response, 200, { ...current, audio: audioState });
       return;
     }
 
@@ -385,6 +463,26 @@ export function createScenePreview({
       const status = String(body?.status || 'ended');
       const handled = settleMedia(revision, status);
       sendJson(response, 200, { handled });
+      return;
+    }
+
+    if (url.pathname === '/api/audio-event' && request.method === 'POST') {
+      const body = await readJsonBody(request);
+      const revision = Number(body?.revision);
+      const status = String(body?.status || 'ended');
+      const handled = await handleAudioEvent(revision, status);
+      sendJson(response, 200, { handled });
+      return;
+    }
+
+    if (url.pathname.startsWith('/tts-audio/')) {
+      const revision = Number(basename(url.pathname).replace(/\.wav$/u, ''));
+      if (!audioFilePath || revision !== audioState.revision) {
+        response.writeHead(404);
+        response.end('Áudio não encontrado.');
+        return;
+      }
+      await serveAudio(response, audioFilePath);
       return;
     }
 
@@ -513,6 +611,38 @@ export function createScenePreview({
     });
   }
 
+  function playAudio({ filePath, onStart = null, signal = null, shouldCancel = null, timeoutMs = 60000 } = {}) {
+    if (!filePath) return Promise.resolve({ ok: false, status: 'invalid-file' });
+    if (pendingAudio) settleAudio(pendingAudio.revision, 'superseded');
+
+    const revision = audioState.revision + 1;
+    audioFilePath = filePath;
+    audioState = { revision, url: `/tts-audio/${revision}.wav` };
+
+    return new Promise((resolvePlayback) => {
+      const timer = setTimeout(() => settleAudio(revision, 'timeout'), timeoutMs);
+      if (typeof timer.unref === 'function') timer.unref();
+
+      const onAbort = () => {
+        if (!pendingAudio?.started) settleAudio(revision, 'cancelled');
+      };
+      signal?.addEventListener('abort', onAbort, { once: true });
+
+      pendingAudio = {
+        revision,
+        started: false,
+        onStart,
+        settle: (status) => {
+          clearTimeout(timer);
+          signal?.removeEventListener('abort', onAbort);
+          resolvePlayback({ ok: status === 'ended', status });
+        },
+      };
+
+      if (signal?.aborted || shouldCancel?.()) settleAudio(revision, 'cancelled');
+    });
+  }
+
   async function start() {
     await new Promise((resolveStart, rejectStart) => {
       server.once('error', rejectStart);
@@ -530,6 +660,7 @@ export function createScenePreview({
 
   async function stop() {
     if (pendingMedia) settleMedia(pendingMedia.revision, 'stopped');
+    if (pendingAudio) settleAudio(pendingAudio.revision, 'stopped');
     if (!server.listening) return;
     await new Promise((resolveStop) => {
       server.close(resolveStop);
@@ -539,5 +670,5 @@ export function createScenePreview({
     });
   }
 
-  return { setScene, playMedia, getState: () => current, start, stop };
+  return { setScene, playMedia, playAudio, getState: () => ({ ...current, audio: audioState }), start, stop };
 }
