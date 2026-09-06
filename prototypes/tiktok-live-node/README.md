@@ -311,6 +311,22 @@ Na versão testada do TikTok LIVE Studio, `Adicionar link` rejeitou a URL HTTP l
 
 A transmissão só estará validada depois que outro dispositivo confirmar imagem e voz em LIVE real. Procedimento: [`../../docs/mvp5-live-bob.md`](../../docs/mvp5-live-bob.md). Erros e acertos da primeira configuração: [`../../docs/mvp5-live-studio-retrospective.md`](../../docs/mvp5-live-studio-retrospective.md).
 
+## Experimento VPS — TTS dinâmico pelo navegador
+
+Na branch `feat/mvp6-auto-speech`, o Linux pode usar o navegador da prévia como player do áudio dinâmico gerado pelo Fish Audio. Isso evita depender de `powershell.exe`/`System.Media.SoundPlayer` na VPS: a VPS gera o WAV, a prévia disponibiliza o áudio pela mesma conexão HTTP e o navegador no Windows reproduz o arquivo enquanto a cena recebe os callbacks de início/fim.
+
+Requisitos deste experimento:
+
+- `SCENE_ENABLED=true`;
+- `TTS_ENABLED=true`;
+- `TTS_PROVIDER=fish-audio`;
+- chave/referência Fish e chave OpenRouter somente no `.env` local da VPS;
+- túnel SSH para a porta da prévia;
+- clicar uma vez na prévia se o navegador bloquear autoplay;
+- `AI_RESPOND_ALL=true` para responder comentários comuns sem `ia/!ia`.
+
+A reprodução pelo navegador é selecionada automaticamente em plataformas não-Windows quando a cena está ativa. Windows preserva o player local existente. Esta rota permanece **experimental até validação em LIVE real com espectador**.
+
 ## Testes automatizados
 
 ```bash
