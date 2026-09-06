@@ -156,6 +156,15 @@ export function createLiveSceneRuntime({
    * Nenhum TTS é gerado aqui: o áudio é o do próprio MP4.
    * O retorno ao `idle` usa o fim REAL informado pelo player, nunca um atraso fixo.
    */
+  async function playTtsAudio(filePath, options = {}) {
+    if (!config.enabled || !started) return { ok: false, skipped: true, status: 'scene-disabled' };
+    if (typeof preview.playAudio !== 'function') {
+      logger.error?.('[TTS] a prévia atual não suporta reprodução de áudio dinâmico.');
+      return { ok: false, status: 'unsupported' };
+    }
+    return preview.playAudio({ filePath, ...options });
+  }
+
   async function playClip(file, metadata = {}) {
     if (!config.enabled) return { ok: false, skipped: true, status: 'scene-disabled' };
 
@@ -208,6 +217,7 @@ export function createLiveSceneRuntime({
     getState: () => controller.getState(),
     getUrl: () => previewUrl,
     playClip,
+    playTtsAudio,
     reset,
     showThinking,
     speak,
