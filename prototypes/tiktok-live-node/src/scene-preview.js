@@ -37,6 +37,7 @@ const mouth=document.getElementById('mouth');
 const badge=document.getElementById('badge');
 const unlock=document.getElementById('unlock');
 let revision=-1;
+let mediaDeadlineTimer=null;
 let activeLipSync=null;
 let currentViseme='rest';
 
@@ -79,6 +80,10 @@ function animLoop(){
 requestAnimationFrame(animLoop);
 
 function report(rev,status){
+  if(rev!==revision) return;
+  // Antes de liberar a fila, interrompe qualquer reprodução residual no navegador.
+  video.pause();
+  video.muted=true;
   fetch('/api/media-ended',{
     method:'POST',
     headers:{'content-type':'application/json'},
@@ -96,6 +101,7 @@ async function apply(state){
   revision=state.revision;
   const isMedia=state.mode==='media';
   const rev=revision;
+  clearTimeout(mediaDeadlineTimer);
   video.onended=null;
   video.onerror=null;
 
@@ -135,6 +141,9 @@ async function apply(state){
     // Contrato real de término: o evento ended do próprio player.
     video.onended=function(){report(rev,'ended');};
     video.onerror=function(){report(rev,'error');};
+    const remaining=Math.max(0,state.expiresAt-Date.now());
+    if(remaining===0){report(rev,'timeout');return;}
+    mediaDeadlineTimer=setTimeout(function(){report(rev,'timeout');},remaining);
   }
   try{
     await video.play();
@@ -153,7 +162,7 @@ async function tick(){
     if(!response.ok) throw new Error('state');
     const state=await response.json();
     badge.textContent=state.variant+' · '+state.state + (state.lipSync?.enabled ? ' (lip)' : '');
-    if(state.revision!==revision && state.assetUrl){ await apply(state); }
+    if(state.revision>revision && state.assetUrl){ await apply(state); }
   }catch(error){}
 }
 setInterval(tick,150); tick();
@@ -451,7 +460,8 @@ export function createScenePreview({
    * Resolve quando o player informa o fim REAL (`ended`), erro ou bloqueio de autoplay.
    * O timeout existe apenas como rede de segurança.
    */
-  function playMedia({ file, timeoutMs = mediaTimeoutMs } = {}) {
+  function playMedia({ file, muted = false, timeoutMs = mediaTimeoutMs } = {}) {
+    timeoutMs = Number.isFinite(Number(timeoutMs)) && Number(timeoutMs) > 0 ? Number(timeoutMs) : 60000;
     const assetName = basename(String(file || ''));
     if (!assetName) return Promise.resolve({ ok: false, status: 'invalid-file' });
 
@@ -464,7 +474,8 @@ export function createScenePreview({
       asset: assetName,
       assetUrl: `/media/${encodeURIComponent(assetName)}`,
       loop: false,
-      muted: false,
+      muted,
+      expiresAt: Date.now() + timeoutMs,
       revision: current.revision + 1,
       lipSync: {
         enabled: false,
@@ -530,4 +541,3 @@ export function createScenePreview({
 
   return { setScene, playMedia, getState: () => current, start, stop };
 }
-

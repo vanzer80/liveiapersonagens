@@ -1,5 +1,8 @@
 # Continuidade — próximo chat
 
+> Atualização complementar de 2026-09-06: continuar da branch `feat/mvp6-auto-speech`, base auditada `9533a0c`, com as correções e limitações no [relatório complementar](mvp6-auto-speech-complementary-review.md). 205 testes encontrados em Linux: 204 aprovados, 0 falhas, 1 Windows não executado. Rotação/TTS agora alternam; convites por modo, cancelamento e recuperação corrigidos. Windows com Fish real e LIVE com espectador pendentes. O número 177/177 abaixo é registro do relatório anterior, não resultado reproduzido nesta revisão.
+
+
 ## Direção vigente
 
 A influencer virtual foi adiada. A prioridade é colocar o Bob Esponja em uma TikTok LIVE real e confirmar que os espectadores recebem imagem, voz e respostas aos comentários.

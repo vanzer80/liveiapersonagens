@@ -1,0 +1,307 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> liveia-tiktok-live-prototype@0.1.0 test
+> node --test
+
+✔ matchAiTrigger reconhece ia e !ia no início do comentário (0.816472ms)
+✔ modo gatilho: responde apenas com gatilho e mensagem (0.712676ms)
+✔ modo gatilho: ignora comentário sem gatilho (0.235235ms)
+✔ modo gatilho: gatilho sem mensagem não responde (0.129074ms)
+✔ modo responde-a-tudo: qualquer comentário com conteúdo vira pergunta (0.311921ms)
+✔ modo responde-a-tudo: mantém o texto completo, sem remover o gatilho (0.276036ms)
+✔ modo responde-a-tudo: pula comentário vazio ou só emoji/pontuação (0.39119ms)
+[ROTAÇÃO] clip-1.mp4 em cooldown | restam 5s
+[ROTAÇÃO] clip-1.mp4 em cooldown | restam 5s
+▶ getAmbientRotationConfig
+  ✔ retorna defaults quando env está vazio (0.74178ms)
+  ✔ lê AMBIENT_ROTATION_ENABLED (0.61604ms)
+  ✔ lê AMBIENT_ROTATION_SHUFFLED (0.157187ms)
+  ✔ lê AMBIENT_ROTATION_COOLDOWN_SECONDS com limites (0.176727ms)
+✔ getAmbientRotationConfig (2.841087ms)
+▶ loadAmbientRotation
+  ✔ retorna clips vazios quando o arquivo não existe (0.884265ms)
+  ✔ normaliza clips de string simples (0.425211ms)
+✔ loadAmbientRotation (1.487975ms)
+▶ validateAmbientAssets
+  ✔ reporta presente e ausente corretamente (0.341725ms)
+  ✔ ok=true quando todos os clipes existem (0.160332ms)
+✔ validateAmbientAssets (0.678244ms)
+▶ createAmbientRotationController
+  ✔ hasClips=false sem clipes configurados (0.307423ms)
+  ✔ hasClips=false quando arquivos não existem (0.251279ms)
+  ✔ hasClips=true quando arquivo existe (0.205791ms)
+  ✔ percorre todos os clipes em sequência (0.234013ms)
+  ✔ respeita cooldown: retorna null se único clipe acabou de tocar (0.672434ms)
+  ✔ markPlayed registra o id e bloqueia próxima chamada em cooldown (0.980409ms)
+  ✔ reset limpa cooldowns e reinicia sequência (0.994991ms)
+  ✔ shuffled=false respeita ordem de configuração (0.148855ms)
+✔ createAmbientRotationController (4.275802ms)
+✔ preserva cooldown explícito do ambiente e identifica shuffled=false explícito (0.19862ms)
+[FILA] fala automática pendente cancelada para priorizar evento gift
+✔ intervalo fixo de 3s prevalece sobre faixa de 5s do .env; faixa explícita funciona sem fixo (1.048422ms)
+✔ convites por modo, variedade e transição de ciclo: fallback=false, respondAll=false (0.939217ms)
+✔ convites por modo, variedade e transição de ciclo: fallback=false, respondAll=true (0.340284ms)
+✔ convites por modo, variedade e transição de ciclo: fallback=true, respondAll=false (0.343268ms)
+✔ convites por modo, variedade e transição de ciclo: fallback=true, respondAll=true (0.240653ms)
+✔ rotação habilitada convive com três ciclos TTS; sem sobreposição e 5s após término real (6.916035ms)
+✔ comentário e presente aguardam vídeo falado e passam antes da retomada ambiente (2.382495ms)
+✔ cancelamento de ambiente pendente inclui vídeo de baixa prioridade (0.78238ms)
+✔ clipe silencioso é mutado e limitado a 5s; timeout real da prévia devolve idle e permite TTS (21.874035ms)
+✔ membro aguardando agrupamento impede ambiente; retoma 5s depois das boas-vindas (1.085318ms)
+✔ pause/resume durante geração invalida a fala antiga e mantém um único timer (0.918096ms)
+✔ encerramento descarta fila pendente e aguarda a frase ativa antes de fechar (0.55003ms)
+✔ falhas retornadas e exceções espaçam tentativas em 15/30/60s e liberam perguntas (3.705351ms)
+✔ exceção do TTS restaura cena: após início=false (0.594728ms)
+✔ exceção do TTS restaura cena: após início=true (0.165469ms)
+✔ desativar ambiente preserva interações humanas sem novas falas nem timers (0.462067ms)
+✔ script servido pausa e muta mídia ao timeout, antes de avisar o servidor (24.532366ms)
+[INTERAÇÃO] ativa | boas-vindas=não abertura=não ambiente=3000-3000ms
+[AMBIENTE] elegibilidade atingida após 3000ms de inatividade | preparando fala automática: "Quem chegou agora manda um oi no chat!"
+[INTERAÇÃO] ativa | boas-vindas=não abertura=não ambiente=não
+[INTERAÇÃO] ativa | boas-vindas=não abertura=não ambiente=5000-5000ms
+[AMBIENTE] elegibilidade atingida após 5000ms de inatividade | preparando fala automática: "Quem chegou agora manda um oi no chat!"
+[AMBIENTE] elegibilidade atingida após 5000ms de inatividade | preparando fala automática: "De qual cidade vocês estão assistindo?"
+[INTERAÇÃO] ativa | boas-vindas=não abertura=não ambiente=5000-5000ms
+[AMBIENTE] elegibilidade atingida após 5000ms de inatividade | preparando fala automática: "Quem chegou agora manda um oi no chat!"
+[INTERAÇÃO] ativa | boas-vindas=não abertura=não ambiente=5000-5000ms
+[AMBIENTE] elegibilidade atingida após 5000ms de inatividade | preparando fala automática: "Quem chegou agora manda um oi no chat!"
+[INTERAÇÃO] ativa | boas-vindas=não abertura=não ambiente=5000-5000ms
+[AMBIENTE] elegibilidade atingida após 5000ms de inatividade | preparando fala automática: "Quem chegou agora manda um oi no chat!"
+[INTERAÇÃO] ativa | boas-vindas=não abertura=não ambiente=5000-5000ms
+[INTERAÇÃO] suspensa (desconexão ou indisponibilidade).
+[INTERAÇÃO] retomada após reconexão.
+[AMBIENTE] elegibilidade atingida após 5000ms de inatividade | preparando fala automática: "Quem chegou agora manda um oi no chat!"
+[AMBIENTE] elegibilidade atingida após 5000ms de inatividade | preparando fala automática: "De qual cidade vocês estão assistindo?"
+[INTERAÇÃO] ativa | boas-vindas=não abertura=não ambiente=5000-5000ms
+[AMBIENTE] elegibilidade atingida após 5000ms de inatividade | preparando fala automática: "Quem chegou agora manda um oi no chat!"
+[INTERAÇÃO] ativa | boas-vindas=não abertura=não ambiente=5000-5000ms
+[AMBIENTE] elegibilidade atingida após 5000ms de inatividade | preparando fala automática: "Quem chegou agora manda um oi no chat!"
+▶ Falas automáticas por inatividade (Bob Esponja)
+  ✔ não dispara antes do intervalo de 5s e dispara exatamente uma vez ao atingir o limite (3.587112ms)
+  ✔ permite configurar o intervalo para 3000ms sem alterar código (1.991075ms)
+  ✔ aplica fallback seguro para configuração inválida ou valor negativo (0.148374ms)
+  ✔ não dispara quando INTERACTION_AMBIENT_ENABLED é false ou desativado (0.303999ms)
+  ✔ reinicia a contagem somente após o término real da fala anterior (1.354253ms)
+  ✔ bloqueia disparo automático durante reprodução de vídeo com fala e fila pendente (1.791052ms)
+  ✔ uma pergunta ou presente cancela fala automática que ainda estiver pendente na fila (1.579383ms)
+  ✔ descarta resultado de fala automática obsoleto quando interação chega durante a geração do áudio (0.904896ms)
+  ✔ se fala automática já estiver reproduzindo audivelmente, conclui a frase e atende interação em seguida sem sobreposição (2.192157ms)
+  ✔ mantém no máximo uma fala automática em preparação ou fila (sem acúmulo) (0.297389ms)
+  ✔ o seletor cíclico percorre todas as frases antes de repetir e nunca repete a última na troca de ciclo (0.172571ms)
+  ✔ possui pelo menos 20 frases de Bob Esponja configuradas com variedade temática (0.223267ms)
+  ✔ recupera-se de falha no TTS sem travar a fila ou impedir respostas futuras (0.702109ms)
+  ✔ suspende e retoma na desconexão/reconexão sem duplicar timers ou listeners (0.587937ms)
+  ✔ curtidas isoladas e comentários comuns não atrasam as falas automáticas (0.299112ms)
+  ✔ integração com rotação de vídeo: usa vídeo quando disponível, ou fala automática quando desabilitado (0.3643ms)
+✔ Falas automáticas por inatividade (Bob Esponja) (18.218439ms)
+✔ comando ia vai para a IA mesmo quando o texto contém palavra de vídeo (2.554755ms)
+✔ comando !ia continua indo para a IA (0.33135ms)
+✔ a palavra ia sozinha não vira vídeo nem resposta (1.210957ms)
+✔ comentário temático aciona vídeo quando AI_RESPOND_ALL está desligado (1.293361ms)
+✔ AI_RESPOND_ALL + gatilho de vídeo produz APENAS o vídeo, sem resposta dupla (0.273092ms)
+✔ AI_RESPOND_ALL responde quando nenhum vídeo casa (0.492904ms)
+✔ sem comando e sem vídeo, com AI_RESPOND_ALL desligado, não há resposta (0.257028ms)
+✔ ruído puro não vira resposta nem vídeo (0.495537ms)
+✔ com vídeos desativados o comportamento anterior é preservado (0.634097ms)
+✔ o mesmo comentário nunca devolve vídeo e IA ao mesmo tempo (2.925004ms)
+[PRESENTE] vídeo=rosa-sandy em cooldown | restam 5s
+[PRESENTE] vídeo=rosa-sandy em cooldown | restam 10s
+▶ getGiftVideoConfig
+  ✔ retorna defaults quando env está vazio (0.666085ms)
+  ✔ respeita GIFT_VIDEOS_ENABLED=false (0.123496ms)
+  ✔ lê GIFT_VIDEOS_FILE (0.114403ms)
+✔ getGiftVideoConfig (2.159217ms)
+▶ loadGiftVideos
+  ✔ retorna entries vazias quando o arquivo não existe (0.718153ms)
+  ✔ carrega o arquivo real de config (0.896823ms)
+✔ loadGiftVideos (1.817452ms)
+▶ validateGiftVideoAssets
+  ✔ reporta presentes e ausentes (0.386183ms)
+✔ validateGiftVideoAssets (0.531782ms)
+▶ createGiftVideoRouter
+  ✔ hasEntries=false quando arquivo não existe (0.620556ms)
+  ✔ hasEntries=true quando arquivo existe (0.123476ms)
+  ✔ casa por nome normalizado (0.254204ms)
+  ✔ casa por giftId (0.273723ms)
+  ✔ retorna null quando nome não bate (0.225791ms)
+  ✔ respeita cooldown (0.794328ms)
+  ✔ markFired bloqueia chamadas subsequentes no cooldown (0.201845ms)
+✔ createGiftVideoRouter (3.016572ms)
+✔ configura a interação com limites seguros (2.181562ms)
+✔ carrega falas editáveis do arquivo de configuração (0.564812ms)
+✔ usa falas internas se o arquivo editável não existir (0.262846ms)
+✔ limpa nomes antes de pronunciá-los (0.862852ms)
+✔ agradece presente em sequência apenas quando a sequência termina (0.182265ms)
+✔ agrupa boas-vindas sem narrar uma entrada por vez (0.177478ms)
+✔ fila executa uma fala por vez e prioriza o próximo item (7.609221ms)
+✔ motor agrupa membros e fala uma única mensagem (2.671541ms)
+✔ motor não acumula duas perguntas pendentes do mesmo usuário (1.759014ms)
+✔ fala de ambiente só entra depois do período de silêncio (1.453734ms)
+✔ fala de abertura começa somente quando o motor é iniciado (5.670486ms)
+[CENA] prévia local: http://127.0.0.1:41587
+▶ Integração de Cena e Prévia com Lip Sync
+  ✔ setScene sem lip-sync mantém lipSync.enabled como false (1.215654ms)
+  ✔ setScene com lip-sync ativo e estado speaking ativa o compositor labial (0.552414ms)
+  ✔ retorno ao idle desativa o lipSync automaticamente (0.239782ms)
+  ✔ playMedia desativa o lipSync e preserva reprodução de clipe (0.26508ms)
+  ✔ servidor HTTP serve arquivos estáticos de /lipsync/* com Content-Type image/png (62.101218ms)
+  ✔ setScene com timeline vazia mantém lipSync desativado (fallback para speaking tradicional) (0.504031ms)
+  ✔ setScene com timeline nula mantém lipSync desativado (fallback para speaking tradicional) (0.255656ms)
+✔ Integração de Cena e Prévia com Lip Sync (66.305743ms)
+▶ Motor de Lip Sync PT-BR
+  ▶ Mapeador de Grafemas e Dígrafos
+    ✔ mapeia bilabiais M/B/P para MBP (0.62337ms)
+    ✔ mapeia labiodentais F/V para FV (0.151359ms)
+    ✔ mapeia vogais e acentuações PT-BR corretamente (0.173382ms)
+    ✔ mapeia dígrafos comuns em PT-BR (nh, lh, ch, rr, qu, gu) (0.150718ms)
+  ✔ Mapeador de Grafemas e Dígrafos (1.846846ms)
+  ▶ Decomposição de Palavras (wordToVisemes)
+    ✔ Bob vira sequência MBP -> O -> MBP (3.855868ms)
+    ✔ Patrick contém bilabial inicial, vogal e alveolar (0.341325ms)
+    ✔ Fenda começa com FV (0.169436ms)
+    ✔ Biquíni contém MBP, WQ e E (0.148785ms)
+    ✔ palavra vazia retorna array vazio (1.320513ms)
+  ✔ Decomposição de Palavras (wordToVisemes) (6.193926ms)
+  ▶ Frases de Teste Obrigatórias da Especificação
+    ✔ processa com sucesso: "Oi, pessoal! Meu nome é Bob." (1.260282ms)
+    ✔ processa com sucesso: "Vamos para a praia?" (0.988491ms)
+    ✔ processa com sucesso: "Bob, Patrick e Plankton." (1.047891ms)
+    ✔ processa com sucesso: "Mamãe me mandou um hambúrguer." (0.113902ms)
+    ✔ processa com sucesso: "Fui visitar a Fenda do Biquíni." (0.120682ms)
+    ✔ identifica corretamente oclusão bilabial nas palavras com M/B/P (0.195856ms)
+    ✔ identifica corretamente labiodental em palavras com F/V (0.132891ms)
+  ✔ Frases de Teste Obrigatórias da Especificação (4.101279ms)
+  ▶ Construção e Validação da Timeline
+    ✔ gera timeline monotônica sem intervalos negativos ou sobreposição (0.182115ms)
+    ✔ insere REST nas pausas entre palavras distantes (0.130156ms)
+    ✔ timeline vazia retorna um item seguro de REST (0.079079ms)
+    ✔ validateTimeline rejeita arrays vazios ou estruturas corrompidas (0.07261ms)
+  ✔ Construção e Validação da Timeline (0.580636ms)
+  ▶ Resolução Temporal (resolveVisemeAtTimestamp)
+    ✔ retorna REST para timestamp anterior ao início (negativo) (0.16577ms)
+    ✔ retorna o viseme correto no meio do intervalo (0.071728ms)
+    ✔ retorna REST após o fim da fala (0.08589ms)
+    ✔ retorna REST para timeline nula ou inválida (0.073451ms)
+  ✔ Resolução Temporal (resolveVisemeAtTimestamp) (0.55705ms)
+  ▶ Parser de Alinhamento Fish Audio (Fixture SSE)
+    ✔ consolida snapshots por chunk_seq usando regra latest-wins (0.24561ms)
+    ✔ sobrescreve snapshots cumulativos do mesmo chunk_seq (regra latest-wins) (0.109855ms)
+    ✔ trata mapa nulo ou vazio com segurança (0.118559ms)
+  ✔ Parser de Alinhamento Fish Audio (Fixture SSE) (0.640326ms)
+✔ Motor de Lip Sync PT-BR (14.586399ms)
+✔ CLI de lip sync retorna falha quando TTS falha e não anuncia homologação (4419.913623ms)
+✔ live scene is opt-in and defaults to the Bob variant (0.807128ms)
+✔ starts the preview with the approved Bob asset family in idle (0.918626ms)
+✔ drives thinking, speaking and idle from a real TTS playback lifecycle (0.975041ms)
+✔ returns to idle when TTS fails before playback starts (0.550511ms)
+✔ refuses to start the live scene when an approved asset is missing (0.521817ms)
+▶ Orquestração do motor de interação (MVP 6)
+  ✔ dispara fala de ambiente por TTS quando não há vídeos de rotação (2.381594ms)
+  ✔ usa vídeo de rotação de ambiente quando disponível (0.570821ms)
+  ✔ onVideo enfileira vídeo acionado com prioridade maior que ambiente (2.237235ms)
+  ✔ onQuestion gera resposta da IA e retorna ao idle (3.680534ms)
+  ✔ onGiftVideo enfileira vídeo de presente na prioridade máxima (0.494235ms)
+  ✔ onGiftVideo sem clipId/clipFile cai para TTS de agradecimento (0.587857ms)
+  ✔ a fila respeita ordem de prioridade: presente > pergunta > vídeo > ambiente (1.926576ms)
+  ✔ presente novo ultrapassa perguntas pendentes mais antigas na fila (0.399102ms)
+  ✔ motor volta a agendar ambiente após concluir interação (0.383759ms)
+  ✔ stop() cancela todos os timers e impede novos enfileiramentos (0.377729ms)
+✔ Orquestração do motor de interação (MVP 6) (16.037077ms)
+✔ starts in idle using the default visual variant (0.890243ms)
+✔ transitions idle -> thinking -> speaking -> idle when assets exist (0.348786ms)
+✔ missing influencer asset falls back only to influencer idle (0.330449ms)
+✔ missing SpongeBob asset falls back only to SpongeBob idle (0.267214ms)
+✔ switching variant resets state to idle and uses the selected asset family (0.256558ms)
+✔ unknown variant is ignored safely (0.190768ms)
+✔ missing idle asset returns null visual asset and keeps process-safe state (0.33816ms)
+✔ unknown state safely resolves to idle within the current variant (0.249496ms)
+✔ transporte recompõe marcador fragmentado e aguarda callback antes de resolver (105.195548ms)
+✔ cancelamento na prontidão envia CANCEL e não inicia player (54.096025ms)
+✔ evento após autorização do player aguarda fim sem matar o subprocesso (83.602356ms)
+✔ timeout mata processo e espera close antes de liberar fila (38.077575ms)
+[TTS] gerando | provedor=fish-audio voz=referência fake-voi
+✔ abort durante preparação encerra processo antes da resolução (3.635225ms)
+[TTS] fim_geracao | status=error | duracao_ms=25
+[ERRO TTS] latencia_ms=27 | The operation was aborted due to timeout
+[TTS] gerando | provedor=fish-audio voz=referência fake-voi
+✔ timeout de geração Fish aborta requisição e não chama player (29.253941ms)
+[TTS] fim_geracao | status=cancelled | duracao_ms=1
+[TTS] cancelado antes da reprodução local
+[TTS] gerando | provedor=fish-audio voz=referência fake-voi
+✔ abort durante stream não tenta fallback regular nem toca áudio obsoleto (1.960308ms)
+[TTS] áudio gerado | provedor=fish-audio voz=Fish fake-voi idioma=pt-BR latencia_ms=4
+[TTS] preparando player local...
+[ERRO TTS] latencia_ms=4 | Player encerrou sem marcador de início; reprodução não confirmada.
+[TTS] gerando | provedor=fish-audio voz=referência fake-voi
+✔ player sem marcador não fabrica início/fim de reprodução (6.074375ms)
+[TTS] áudio gerado | provedor=fish-audio voz=Fish fake-voi idioma=pt-BR latencia_ms=1
+[TTS] preparando player local...
+[TTS] inicio_reproducao_local | origem=AUDIO_PLAYBACK_START | espectador=nao-verificado
+[TTS] fim_reproducao_local | duracao_ms=0 | status=error
+[ERRO TTS] latencia_ms=2 | timeout do player
+✔ falha após marcador chama fim com erro e remove WAV temporário (2.658141ms)
+[TTS] gerando | provedor=fish-audio voz=referência fake-ref
+✔ codifica o script completo no formato esperado pelo Windows PowerShell (1.012708ms)
+✔ normaliza Markdown, emoji e URL sem perder o sentido (0.638584ms)
+✔ remove bloco de código e normaliza espaços (0.334785ms)
+✔ interpreta metadados de voz gravados em UTF-8 (0.880929ms)
+✔ rejeita metadados sem identificação da voz (0.369598ms)
+✔ usa configuração padrão segura quando TTS não foi habilitado (0.688048ms)
+✔ marca velocidade inválida sem derrubar o processo (0.932066ms)
+✔ monta a solicitação Fish Audio sem colocar a chave no corpo (0.358341ms)
+✔ Fish Audio informa claramente quando falta chave ou referência (0.700908ms)
+✔ TTS desativado não tenta executar o provedor (0.786697ms)
+✔ configuração inválida vira erro de TTS sem lançar exceção (0.236386ms)
+✔ sanitizeWavHeader corrige tamanho dos chunks data e RIFF em streaming WAV (0.990625ms)
+✔ buildFishTimestampedRequest aponta para /tts/stream/with-timestamp sem expor chave no corpo (0.300674ms)
+✔ getWavDurationMs calcula duração a partir do cabeçalho WAV (0.21873ms)
+﹣ AUDIO_PLAYBACK_START chega ao Node em tempo real antes do término da reprodução (0.118469ms) # Exige Windows e SoundPlayer reais; não validado no Linux.
+[LIP] aviso: falha no stream com timestamps (Simulated network error on timestamped stream). Usando /v1/tts padrão.
+[LIP] timestamps ausentes e fallback aproximado desativado; lip sync visual desativado (speaking tradicional).
+[TTS] áudio gerado | provedor=fish-audio voz=Fish fake-ref idioma=pt-BR latencia_ms=7
+[TTS] preparando player local...
+[TTS] inicio_reproducao_local | origem=AUDIO_PLAYBACK_START | espectador=nao-verificado
+[TTS] fim_reproducao_local | duracao_ms=0 | status=ended
+[TTS] gerando | provedor=fish-audio voz=referência fake-ref
+✔ quando endpoint timestamped falha, speakText recorre ao /v1/tts regular, preserva a voz e desativa lip-sync visual (19.668548ms)
+[TTS] áudio gerado | provedor=fish-audio voz=Fish fake-ref idioma=pt-BR latencia_ms=1
+[TTS] reprodução cancelada antes de iniciar | áudio gerado descartado
+✔ descarta áudio e pula reprodução se shouldCancel retornar true antes de iniciar áudio (2.051455ms)
+✔ toca o clipe e volta ao idle pelo fim real da reprodução (1.940819ms)
+✔ arquivo ausente não derruba o processo e volta ao idle (0.387364ms)
+✔ erro de reprodução volta ao idle com segurança (0.275456ms)
+✔ bloqueio de autoplay é reportado sem travar a cena (0.677422ms)
+✔ vídeo pré-gravado não gera TTS (0.310118ms)
+✔ a cena desativada ignora o clipe sem erro (0.63688ms)
+✔ a prévia é aberta com a política de autoplay liberada (3.458248ms)
+✔ encontra o navegador Chromium e aceita caminho sobrescrito (0.170016ms)
+✔ a prioridade do vídeo fica entre entrada e pergunta (0.136245ms)
+✔ o vídeo entra na fila existente e é reproduzido (6.596183ms)
+✔ o mesmo vídeo não entra duas vezes enquanto ainda está pendente (1.732204ms)
+✔ apenas uma mídia por vez: vídeo e fala não se sobrepõem (1.195043ms)
+✔ o presente tem prioridade sobre o vídeo na escolha do próximo item (0.70298ms)
+✔ sem reprodutor configurado o vídeo é recusado sem quebrar (0.221354ms)
+✔ carrega os cinco gatilhos do arquivo de configuração (2.86314ms)
+✔ cai para gatilhos internos quando o arquivo não existe (0.341926ms)
+✔ ignora gatilho malformado sem derrubar a configuração (0.262726ms)
+✔ valida a existência dos cinco arquivos de vídeo (0.395967ms)
+✔ normaliza para minúsculas e remove acentos (0.160943ms)
+✔ compara por expressão inteira, não por pedaço de palavra (0.513144ms)
+✔ reconhece os gatilhos documentados de cada vídeo (0.621508ms)
+✔ aceita os sinônimos configurados (0.270468ms)
+✔ não gera falso positivo por substring (0.343538ms)
+✔ a palavra ia sozinha não aciona o vídeo de convite (0.296948ms)
+✔ um comentário aciona no máximo um vídeo, escolhendo a expressão mais específica (1.805414ms)
+✔ respeita o cooldown de 60 segundos por vídeo (0.349067ms)
+✔ o cooldown é por vídeo e não bloqueia os outros (0.288125ms)
+✔ o cooldown só conta depois de markFired (0.211279ms)
+✔ findAmbient devolve o vídeo de convite e respeita o cooldown (0.194163ms)
+✔ a configuração por ambiente tem padrões seguros (0.176907ms)
+ℹ tests 205
+ℹ suites 18
+ℹ pass 204
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 4639.391717

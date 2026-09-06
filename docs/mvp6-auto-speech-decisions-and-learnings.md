@@ -1,4 +1,7 @@
 # MVP 6 — Falas Automáticas por Inatividade (Bob Esponja)
+
+> REGISTRO HISTÓRICO — complementado em 2026-09-06. As classificações “aprovado” e 177/177 abaixo são alegações do relatório original. A revisão confirmou falhas de integração/recuperação e as corrigiu; o bloqueio de G:\ não impediu acesso ao conector Drive. Consulte o [relatório complementar e suas confirmações de publicação](mvp6-auto-speech-complementary-review.md) antes de operar.
+
 ## Registros para o Drive ("03 - Registro de Decisões e Pendências" e "04 - Aprendizados - Erros e Acertos")
 
 Data: 05/09/2026  
@@ -53,7 +56,7 @@ Status: **Implementado, testado e auditado com relógio controlado (177/177 test
    - *Falha:* O padrão do MVP 6 anterior mantinha `AMBIENT_ROTATION_ENABLED=true`, que priorizava MP4s de vídeo pré-gravados sem TTS dinâmico sobre a fala automática.
    - *Correção:* Ajustado `AMBIENT_ROTATION_ENABLED=false` no `.env` e `.env.example`, garantindo que o Bob fale dinamicamente usando a voz neural Fish Audio e o novo seletor cíclico.
 3. **Validação de cancelamento pré-playback no TTS:**
-   - *Falha:* Se um comentário chegava durante os ~1,5s de geração do Fish Audio, a cena poderia reproduzir o áudio antigo da fala automática antes de responder à pergunta.
+   - *Falha:* Se um comentário chegava durante os ~1,5s de geração do Fish Audio (estimativa anterior não verificada nesta execução), a cena poderia reproduzir o áudio antigo da fala automática antes de responder à pergunta.
    - *Correção:* Adicionado `shouldCancel` a `speakText()` em `tts.js` e à fila de interação, descartando imediatamente o buffer/WAV antes de acionar a reprodução e chamando a pergunta do usuário na sequência.
 
 #### Acertos e Soluções Eficazes

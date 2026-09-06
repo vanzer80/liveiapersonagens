@@ -204,3 +204,7 @@ Drive folder ID: `1RaAjzRHWARPSw8zimulTnzORgCfHTSF3`.
 Todos os nove arquivos foram verificados com `ffprobe` depois da edição e retornaram exatamente 10,000 s, 720x1280, H.264 24 fps e AAC 48 kHz estéreo. Uma inspeção visual de quadros intermediários confirmou que o enquadramento permaneceu coerente e que a padronização não introduziu crop relevante.
 
 **Decisão operacional:** estas versões finais passam a ser os ativos preferenciais para integração da rotação curta de ambiente. Os MP4s originais e o consolidado de 90 s permanecem preservados no Drive como fontes e backup.
+
+## Coordenação com falas por inatividade — 2026-09-06
+
+Na branch `feat/mvp6-auto-speech`, a rotação passa a alternar com TTS automático na fila única. O primeiro slot ambiente preserva vídeo; o seguinte é TTS, após 5s de disponibilidade. Escolhas explícitas de habilitação, cooldown e ordem são mantidas. Clipes só são tratados como silenciosos quando o manifesto declara `hasSpeech:false`; os nove clipes falados existentes não foram mutados. A validação desta revisão é automatizada, ainda sem Windows/Fish real ou confirmação em celular. [Evidências e matriz](mvp6-auto-speech-complementary-review.md).

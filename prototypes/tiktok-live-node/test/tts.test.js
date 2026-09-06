@@ -10,6 +10,8 @@ import {
   parseTtsMetadata,
   sanitizeWavHeader,
   speakText,
+  runPowerShell,
+  PLAY_WAV_SCRIPT,
 } from '../src/tts.js';
 
 test('codifica o script completo no formato esperado pelo Windows PowerShell', () => {
@@ -262,80 +264,27 @@ test('getWavDurationMs calcula duração a partir do cabeçalho WAV', () => {
   assert.equal(durationMs, 1000);
 });
 
-test('AUDIO_PLAYBACK_START chega ao Node em tempo real antes do término da reprodução', async () => {
-  const { spawn } = await import('node:child_process');
-  const { writeFile, unlink } = await import('node:fs/promises');
+test('AUDIO_PLAYBACK_START chega ao Node em tempo real antes do término da reprodução', {
+  skip: process.platform !== 'win32' ? 'Exige Windows e SoundPlayer reais; não validado no Linux.' : false,
+}, async () => {
+  const { writeFile, rm, mkdtemp } = await import('node:fs/promises');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
-
-  // Cria WAV de 500ms de silêncio para teste seguro e mensurável
-  const sampleRate = 8000;
-  const dataSize = Math.round(sampleRate * 2 * 0.5);
-  const buf = Buffer.alloc(44 + dataSize);
-  buf.write('RIFF', 0);
-  buf.writeUInt32LE(36 + dataSize, 4);
-  buf.write('WAVE', 8);
-  buf.write('fmt ', 12);
-  buf.writeUInt32LE(16, 16);
-  buf.writeUInt16LE(1, 20);
-  buf.writeUInt16LE(1, 22);
-  buf.writeUInt32LE(sampleRate, 24);
-  buf.writeUInt32LE(sampleRate * 2, 28);
-  buf.writeUInt16LE(2, 32);
-  buf.writeUInt16LE(16, 34);
-  buf.write('data', 36);
-  buf.writeUInt32LE(dataSize, 40);
-
-  const testWav = join(tmpdir(), `test-marker-${Date.now()}.wav`);
-  await writeFile(testWav, buf);
-
-  const script = `
-$audioPath = '${testWav.replace(/\\/g, '\\\\')}'
-$player = [System.Media.SoundPlayer]::new($audioPath)
-try {
-  $player.Load()
-  [Console]::Out.WriteLine('AUDIO_PLAYBACK_START')
-  [Console]::Out.Flush()
-  $player.PlaySync()
-} finally {
-  $player.Dispose()
-}
-`;
-
-  const encoded = Buffer.from(script, 'utf16le').toString('base64');
-  let signalReceivedAt = null;
-  let closedAt = null;
-
-  await new Promise((resolveTest, rejectTest) => {
-    const child = spawn(
-      'powershell.exe',
-      ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', encoded],
-      { stdio: ['ignore', 'pipe', 'pipe'] },
-    );
-
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', (chunk) => {
-      if (chunk.includes('AUDIO_PLAYBACK_START') && signalReceivedAt === null) {
-        signalReceivedAt = performance.now();
-      }
-    });
-
-    child.once('error', rejectTest);
-    child.once('close', () => {
-      closedAt = performance.now();
-      resolveTest();
-    });
-  });
-
-  await unlink(testWav).catch(() => {});
-
-  assert.ok(signalReceivedAt !== null, 'Marcador AUDIO_PLAYBACK_START deve ser recebido');
-  assert.ok(closedAt !== null, 'PowerShell deve encerrar normalmente');
-  const deltaMs = closedAt - signalReceivedAt;
-  assert.ok(
-    deltaMs >= 100,
-    `O sinal deve chegar enquanto PlaySync ainda está executando (delta observado: ${deltaMs}ms >= 100ms)`,
-  );
+  const buf = Buffer.alloc(8044);
+  buf.write('RIFF'); buf.writeUInt32LE(buf.length - 8, 4); buf.write('WAVE', 8);
+  buf.write('fmt ', 12); buf.writeUInt32LE(16, 16); buf.writeUInt16LE(1, 20);
+  buf.writeUInt16LE(1, 22); buf.writeUInt32LE(8000, 24); buf.writeUInt32LE(16000, 28);
+  buf.writeUInt16LE(2, 32); buf.writeUInt16LE(16, 34); buf.write('data', 36); buf.writeUInt32LE(8000, 40);
+  const directory = await mkdtemp(join(tmpdir(), 'liveia-marker-'));
+  const file = join(directory, 'test.wav');
+  try {
+    await writeFile(file, buf);
+    let signalAt = null;
+    await runPowerShell(PLAY_WAV_SCRIPT, { LIVEIA_TTS_OUTPUT: file }, () => { signalAt = performance.now(); });
+    const deltaMs = performance.now() - signalAt;
+    assert.notEqual(signalAt, null);
+    assert.ok(deltaMs >= 100, `marcador recebido durante PlaySync: delta=${deltaMs}ms`);
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });
 
 test('quando endpoint timestamped falha, speakText recorre ao /v1/tts regular, preserva a voz e desativa lip-sync visual', async () => {
@@ -374,14 +323,11 @@ test('quando endpoint timestamped falha, speakText recorre ao /v1/tts regular, p
     return originalFetch(url, options);
   };
 
-  const prevLipSync = process.env.LIP_SYNC_ENABLED;
-  const prevApprox = process.env.LIP_SYNC_APPROXIMATE_FALLBACK;
-  process.env.LIP_SYNC_ENABLED = 'true';
-  process.env.LIP_SYNC_APPROXIMATE_FALLBACK = 'false';
-
   try {
     const result = await speakText('Teste de fallback sem timestamps', {
       force: true,
+      config: getTtsConfig({ TTS_PROVIDER: 'fish-audio', FISH_AUDIO_API_KEY: 'fake-key', FISH_AUDIO_REFERENCE_ID: 'fake-reference', LIP_SYNC_ENABLED: 'true' }),
+      runProcess: async (_script, _env, onSignal) => { await onSignal(); return 'AUDIO_PLAYBACK_START'; },
       onPlaybackStart: (ctx) => {
         receivedPlaybackContext = ctx;
       },
@@ -394,10 +340,7 @@ test('quando endpoint timestamped falha, speakText recorre ao /v1/tts regular, p
     assert.equal(receivedPlaybackContext?.lipSyncEnabled, false, 'lipSync visual deve estar desativado');
   } finally {
     globalThis.fetch = originalFetch;
-    if (prevLipSync === undefined) delete process.env.LIP_SYNC_ENABLED;
-    else process.env.LIP_SYNC_ENABLED = prevLipSync;
-    if (prevApprox === undefined) delete process.env.LIP_SYNC_APPROXIMATE_FALLBACK;
-    else process.env.LIP_SYNC_APPROXIMATE_FALLBACK = prevApprox;
+
   }
 });
 
@@ -425,11 +368,14 @@ test('descarta áudio e pula reprodução se shouldCancel retornar true antes de
   };
 
   let playbackStarted = false;
+  let generated = false;
+  globalThis.fetch = async () => { generated = true; return new Response(silentWav); };
 
   try {
     const result = await speakText('Teste de descarte prévio', {
       force: true,
-      shouldCancel: () => true, // cancela imediatamente antes do playback
+      config: getTtsConfig({ TTS_PROVIDER: 'fish-audio', FISH_AUDIO_API_KEY: 'fake-key', FISH_AUDIO_REFERENCE_ID: 'fake-reference' }),
+      shouldCancel: () => generated, // evento chega enquanto a síntese está em curso
       onPlaybackStart: () => {
         playbackStarted = true;
       },

@@ -49,7 +49,7 @@ const aiKeyInfo = getSafeAiKeyInfo();
 const ttsConfig = getTtsConfig();
 const sceneConfig = getLiveSceneConfig();
 const interactionConfig = getInteractionConfig();
-const interactionLines = loadInteractionLines({ filePath: interactionConfig.linesFile });
+const interactionLines = loadInteractionLines({ filePath: interactionConfig.linesFile, respondAll: aiConfig.respondAll, trigger: aiConfig.trigger });
 const videoConfig = getVideoTriggerConfig();
 const videoLibrary = videoConfig.enabled
   ? loadVideoTriggers({
@@ -77,6 +77,7 @@ const ambientRotationLibrary = ambientRotationConfig.enabled
   ? loadAmbientRotation({
       filePath: ambientRotationConfig.rotationFile,
       cooldownSeconds: ambientRotationConfig.cooldownSeconds,
+      cooldownFromEnv: ambientRotationConfig.cooldownFromEnv,
     })
   : { clips: [], cooldownMs: 0, source: 'desativado', fallbackUsed: false };
 const ambientRotationAssets = ambientRotationConfig.enabled && ambientRotationLibrary.clips.length
@@ -90,7 +91,7 @@ const ambientRotationController = ambientRotationConfig.enabled
       clips: ambientRotationLibrary.clips,
       presentFiles: new Set(ambientRotationAssets.present),
       cooldownMs: ambientRotationLibrary.cooldownMs,
-      shuffled: ambientRotationConfig.shuffled || ambientRotationLibrary.shuffled,
+      shuffled: ambientRotationConfig.shuffledFromEnv ? ambientRotationConfig.shuffled : ambientRotationLibrary.shuffled,
     })
   : null;
 
@@ -298,13 +299,13 @@ async function processAiReply({ user, comment: selectedText }) {
 }
 
 // Reproduz um clipe do MVP 6. O áudio é o do próprio MP4: nenhum TTS é gerado aqui.
-async function playTriggeredVideo({ id, video, user = null, phrase = null }) {
+async function playTriggeredVideo({ id, video, user = null, phrase = null, hasSpeech = true, timeoutMs }) {
   console.log(
     `[VÍDEO] usuario=${user || 'ambiente'} | gatilho=${id} | arquivo=${video}` +
       (phrase ? ` | expressao=${phrase}` : ''),
   );
 
-  const result = await liveScene.playClip(video, { videoId: id, user });
+  const result = await liveScene.playClip(video, { videoId: id, user, hasSpeech, timeoutMs });
 
   if (result?.ok) {
     console.log(`[VÍDEO] concluído | gatilho=${id} | arquivo=${video}`);
@@ -326,11 +327,13 @@ const interactions = createLiveInteractionEngine({
     metadata,
     shouldCancel: metadata?.shouldCancel,
     onPlaybackStart: metadata?.onPlaybackStart,
+    onPlaybackEnd: metadata?.onPlaybackEnd,
+    signal: metadata?.signal,
   }),
   answerQuestion: processAiReply,
-  playVideo: videoConfig.enabled ? playTriggeredVideo : null,
+  playVideo: videoConfig.enabled || ambientRotationConfig.enabled || giftVideoConfig.enabled ? playTriggeredVideo : null,
   findAmbientVideo:
-    videoConfig.enabled && videoConfig.ambientEnabled && videoMatcher
+    !aiConfig.respondAll && videoConfig.enabled && videoConfig.ambientEnabled && videoMatcher
       ? () => {
           const clip = videoMatcher.findAmbient();
           // Marcar aqui evita que o convite toque em TODO beat de silêncio:
@@ -491,12 +494,13 @@ async function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log('\nEncerrando conexão...');
-  interactions.stop();
+  const interactionsStopped = interactions.stop();
   try {
     await connection.disconnect();
   } catch {
     // Nada a fazer no encerramento do protótipo.
   }
+  await interactionsStopped;
   await liveScene.stop();
   process.exit(0);
 }

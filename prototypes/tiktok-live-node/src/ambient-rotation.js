@@ -40,6 +40,8 @@ export function getAmbientRotationConfig(env = process.env) {
       { min: 0, max: 3600 },
     ),
     shuffled: parseBoolean(env.AMBIENT_ROTATION_SHUFFLED, false),
+    cooldownFromEnv: String(env.AMBIENT_ROTATION_COOLDOWN_SECONDS ?? '').trim() !== '',
+    shuffledFromEnv: String(env.AMBIENT_ROTATION_SHUFFLED ?? '').trim() !== '',
   };
 }
 
@@ -47,6 +49,7 @@ export function loadAmbientRotation({
   filePath = 'config/ambient-rotation.json',
   cwd = process.cwd(),
   cooldownSeconds = DEFAULT_AMBIENT_ROTATION_COOLDOWN_SECONDS,
+  cooldownFromEnv = false,
   logger = console,
 } = {}) {
   const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(cwd, filePath);
@@ -65,11 +68,11 @@ export function loadAmbientRotation({
           logger.warn?.(`[ROTAÇÃO] entrada #${index} ignorada: sem nome de arquivo.`);
           return null;
         }
-        return { id, file };
+        return { id, file, ...(item?.hasSpeech === false ? { hasSpeech: false } : {}) };
       })
       .filter(Boolean);
 
-    const effectiveCooldown = Number.isFinite(Number(fileCooldown))
+    const effectiveCooldown = !cooldownFromEnv && fileCooldown !== undefined && Number.isFinite(Number(fileCooldown))
       ? Math.max(0, Number(fileCooldown))
       : cooldownSeconds;
 

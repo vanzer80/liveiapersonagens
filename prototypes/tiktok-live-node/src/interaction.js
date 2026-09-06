@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const DEFAULT_OPENING_LINES = [
   'Oi, pessoal! A live começou e eu já estou pronto para conversar com vocês!',
-  'Sejam bem-vindos! Escrevam ia e depois a pergunta para falar comigo ao vivo!',
+  { trigger: 'Sejam bem-vindos! Escrevam {trigger} e depois a pergunta para falar comigo ao vivo!', respondAll: 'Sejam bem-vindos! Mandem uma pergunta no chat que eu respondo!' },
 ];
 
 export const DEFAULT_AMBIENT_LINES = [
@@ -12,7 +12,7 @@ export const DEFAULT_AMBIENT_LINES = [
   'De qual cidade vocês estão assistindo?',
   'Quem aí também adora hambúrguer de siri?',
   'Qual personagem da Fenda do Biquíni vocês mais gostam?',
-  'Pessoal, mandem uma pergunta começando com ia que eu respondo ao vivo!',
+  { trigger: 'Pessoal, mandem uma pergunta começando com {trigger} para falar comigo!', respondAll: 'Mandem uma pergunta no chat que eu respondo!' },
   'Quem tá curtindo a live clica duas vezes na tela!',
   'Quero saber: vocês preferem hambúrguer ou pizza?',
   'Quem aí já caçou água-viva levanta a mão no chat!',
@@ -25,7 +25,7 @@ export const DEFAULT_AMBIENT_LINES = [
   'Tep tep na telinha pra espalhar alegria submarina!',
   'Vocês escolheriam morar no fundo do mar por uma semana?',
   'Quem aí é amigo do Patrick manda um coração no chat!',
-  'Tem pergunta pro Bob? Comece com ia que eu respondo tudo!',
+  { trigger: 'Tem pergunta pro Bob? Comece com {trigger} e mande no chat!', respondAll: 'Tem pergunta pro Bob? Manda no chat, vamos conversar!' },
   'Compartilha essa live com quem precisa dar uma boa risada hoje!',
   'Quem já almoçou ou jantou? Me conta o que comeu no chat!',
   'Não esquece de seguir o perfil pra acompanhar as próximas aventuras!',
@@ -109,9 +109,10 @@ function parseInteger(value, fallback, { min, max }) {
 }
 
 export function getInteractionConfig(env = process.env) {
-  const legacyAmbientSilence = env.INTERACTION_AMBIENT_SILENCE_MS;
-  const configuredMin = env.INTERACTION_AMBIENT_MIN_SILENCE_MS ?? legacyAmbientSilence;
-  const configuredMax = env.INTERACTION_AMBIENT_MAX_SILENCE_MS ?? legacyAmbientSilence;
+  const legacyAmbientSilence = String(env.INTERACTION_AMBIENT_SILENCE_MS ?? '').trim() || undefined;
+  // O intervalo fixo explícito prevalece sobre a faixa antiga, inclusive no teste de 3s.
+  const configuredMin = legacyAmbientSilence ?? env.INTERACTION_AMBIENT_MIN_SILENCE_MS;
+  const configuredMax = legacyAmbientSilence ?? env.INTERACTION_AMBIENT_MAX_SILENCE_MS;
 
   // Padrão aprovado: 5000 ms (5 segundos). Permite configurar valores menores (como 3000 ms)
   // com faixa segura entre 1000 ms (1s) e 300000 ms (5 minutos).
@@ -128,6 +129,8 @@ export function getInteractionConfig(env = process.env) {
 
   return {
     enabled: parseBoolean(env.INTERACTION_ENABLED, false),
+    respondAll: parseBoolean(env.AI_RESPOND_ALL, false),
+    trigger: String(env.AI_TRIGGER || '!ia').trim(),
     linesFile: String(env.INTERACTION_LINES_FILE || 'config/live-lines.json').trim(),
     openingEnabled: parseBoolean(env.INTERACTION_OPENING_ENABLED, true),
     openingDelayMs: parseInteger(env.INTERACTION_OPENING_DELAY_MS, 3000, {
@@ -161,12 +164,14 @@ export function getInteractionConfig(env = process.env) {
   };
 }
 
-function normalizeLines(lines, field) {
+function normalizeLines(lines, field, { respondAll = false, trigger = '!ia' } = {}) {
   if (!Array.isArray(lines)) throw new Error(`o campo ${field} precisa ser uma lista`);
 
   const normalized = [...new Set(
     lines
+      .map((line) => typeof line === 'string' ? line : line?.[respondAll ? 'respondAll' : 'trigger'])
       .filter((line) => typeof line === 'string')
+      .map((line) => line.replaceAll('{trigger}', trigger))
       .map((line) => line.replace(/\s+/gu, ' ').trim().slice(0, 280))
       .filter(Boolean),
   )];
@@ -179,14 +184,16 @@ export function loadInteractionLines({
   filePath = 'config/live-lines.json',
   cwd = process.cwd(),
   logger = console,
+  respondAll = false,
+  trigger = '!ia',
 } = {}) {
   const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(cwd, filePath);
 
   try {
     const parsed = JSON.parse(readFileSync(resolvedPath, 'utf8'));
     return {
-      opening: normalizeLines(parsed.opening, 'opening'),
-      ambient: normalizeLines(parsed.ambient, 'ambient'),
+      opening: normalizeLines(parsed.opening, 'opening', { respondAll, trigger }),
+      ambient: normalizeLines(parsed.ambient, 'ambient', { respondAll, trigger }),
       source: resolvedPath,
       fallbackUsed: false,
     };
@@ -196,8 +203,8 @@ export function loadInteractionLines({
         `${error instanceof Error ? error.message : error}`,
     );
     return {
-      opening: [...DEFAULT_OPENING_LINES],
-      ambient: [...DEFAULT_AMBIENT_LINES],
+      opening: normalizeLines(DEFAULT_OPENING_LINES, 'opening', { respondAll, trigger }),
+      ambient: normalizeLines(DEFAULT_AMBIENT_LINES, 'ambient', { respondAll, trigger }),
       source: 'falas-internas',
       fallbackUsed: true,
     };
@@ -266,6 +273,7 @@ export function createPriorityTaskQueue({ maxPending = 12, logger = console, onI
   let active = null;
   let sequence = 0;
   const pending = [];
+  const idleWaiters = [];
 
   async function drain() {
     if (active) return;
@@ -290,19 +298,22 @@ export function createPriorityTaskQueue({ maxPending = 12, logger = console, onI
         logger.error?.(`[ERRO ON_IDLE] ${err instanceof Error ? err.message : err}`);
       }
     }
+    if (!active && !pending.length) idleWaiters.splice(0).forEach((resolve) => resolve());
   }
 
   function cancelPending(predicate) {
     const cancelled = [];
     for (let i = pending.length - 1; i >= 0; i--) {
       if (predicate(pending[i])) {
-        cancelled.push(pending.splice(i, 1)[0]);
+        const item = pending.splice(i, 1)[0];
+        cancelled.push(item);
+        item.onCancel?.();
       }
     }
     return cancelled;
   }
 
-  function enqueue({ kind, priority, run, dedupeKey = null, shouldCancel = null }) {
+  function enqueue({ kind, priority, run, dedupeKey = null, shouldCancel = null, onCancel = null }) {
     if (typeof run !== 'function') throw new Error('A interação precisa informar uma função run.');
 
     if (
@@ -315,7 +326,7 @@ export function createPriorityTaskQueue({ maxPending = 12, logger = console, onI
     // Regra aprovada: interação que exige atendimento (pergunta, presente, vídeo, membro)
     // cancela fala automática ainda pendente na fila para priorizar o público imediatamente.
     if (priority > INTERACTION_PRIORITIES.ambient) {
-      const removed = cancelPending((item) => item.kind === 'ambient');
+      const removed = cancelPending((item) => item.priority <= INTERACTION_PRIORITIES.ambient);
       if (removed.length > 0) {
         logger.log?.(`[FILA] fala automática pendente cancelada para priorizar evento ${kind}`);
       }
@@ -336,10 +347,10 @@ export function createPriorityTaskQueue({ maxPending = 12, logger = console, onI
       if (!lowest || lowest.item.priority >= priority) {
         return { accepted: false, reason: 'queue-full' };
       }
-      pending.splice(lowest.index, 1);
+      pending.splice(lowest.index, 1)[0].onCancel?.();
     }
 
-    pending.push({ kind, priority, run, dedupeKey, shouldCancel, sequence: sequence++ });
+    pending.push({ kind, priority, run, dedupeKey, shouldCancel, onCancel, sequence: sequence++ });
     pending.sort((a, b) => b.priority - a.priority || a.sequence - b.sequence);
     void drain();
     return { accepted: true };
@@ -357,6 +368,7 @@ export function createPriorityTaskQueue({ maxPending = 12, logger = console, onI
       active: active?.kind || null,
       pending: pending.map((item) => item.kind),
     }),
+    whenIdle: () => !active && !pending.length ? Promise.resolve() : new Promise((resolve) => idleWaiters.push(resolve)),
   };
 }
 
@@ -384,6 +396,8 @@ export function createLiveInteractionEngine({
     onIdle: () => touchActivity(),
   });
   const pendingMembers = new Map();
+  openingLines = normalizeLines(openingLines, 'opening', config);
+  ambientLines = normalizeLines(ambientLines, 'ambient', config);
   const cycleSelector = createLineCycleSelector(ambientLines, { random });
   let welcomeTimer = null;
   let openingTimer = null;
@@ -394,6 +408,11 @@ export function createLiveInteractionEngine({
   let stopped = false;
   let suspended = false;
   let ambientPreparing = false;
+  let ambientController = null;
+  let ambientEpoch = 0;
+  let preferAmbientVideo = true;
+  let ambientFailures = 0;
+  let ambientRetryAt = 0;
 
   function isCharacterAvailable() {
     return (
@@ -401,6 +420,8 @@ export function createLiveInteractionEngine({
       !stopped &&
       !suspended &&
       !ambientPreparing &&
+      openingTimer === null &&
+      pendingMembers.size === 0 &&
       queue.isIdle()
     );
   }
@@ -427,7 +448,7 @@ export function createLiveInteractionEngine({
   }
 
   function cancelAmbientTimer() {
-    if (ambientTimer) clearTimer(ambientTimer);
+    if (ambientTimer !== null) clearTimer(ambientTimer);
     ambientTimer = null;
   }
 
@@ -437,13 +458,13 @@ export function createLiveInteractionEngine({
 
     // Conta o intervalo somente quando o personagem estiver disponível,
     // sem fala em reprodução, resposta em processamento ou interação pendente na fila.
-    if (!queue.isIdle() || ambientPreparing) {
+    if (!isCharacterAvailable()) {
       return;
     }
 
     const elapsed = Math.max(0, now() - lastActivityAt);
     const targetDelay = getAmbientDelayMs();
-    const delay = Math.max(0, targetDelay - elapsed);
+    const delay = Math.max(0, targetDelay - elapsed, ambientRetryAt - now());
 
     ambientTimer = setTimer(() => {
       ambientTimer = null;
@@ -455,7 +476,7 @@ export function createLiveInteractionEngine({
       }
 
       // 1ª opção: rotação de vídeos curtos de ambiente (MVP 6 — nine clips, se ativada).
-      if (typeof findAmbientRotation === 'function') {
+      if (preferAmbientVideo && typeof playVideo === 'function' && typeof findAmbientRotation === 'function') {
         const clip = findAmbientRotation();
         if (clip?.id && clip?.file) {
           enqueueVideo({
@@ -463,13 +484,15 @@ export function createLiveInteractionEngine({
             video: clip.file,
             phrase: 'rotacao-ambiente',
             priority: INTERACTION_PRIORITIES.ambient,
+            hasSpeech: clip.hasSpeech !== false,
           });
+          preferAmbientVideo = false;
           return;
         }
       }
 
       // 2ª opção: vídeo de convite (opcional, desligado por padrão).
-      if (typeof findAmbientVideo === 'function') {
+      if (preferAmbientVideo && typeof playVideo === 'function' && typeof findAmbientVideo === 'function') {
         const clip = findAmbientVideo();
         if (clip?.id && clip?.video) {
           enqueueVideo({
@@ -478,6 +501,7 @@ export function createLiveInteractionEngine({
             phrase: 'ambiente',
             priority: INTERACTION_PRIORITIES.ambient,
           });
+          preferAmbientVideo = false;
           return;
         }
       }
@@ -492,6 +516,9 @@ export function createLiveInteractionEngine({
       );
 
       ambientPreparing = true;
+      preferAmbientVideo = true;
+      const epoch = ambientEpoch;
+      ambientController = new AbortController();
 
       enqueueSpeech({
         kind: 'ambient',
@@ -500,16 +527,18 @@ export function createLiveInteractionEngine({
         metadata: {
           scheduledAt,
           silenceMs,
+          signal: ambientController.signal,
         },
         shouldCancel: () => {
           // Revalida a elegibilidade antes e durante a geração/reprodução:
           // Se uma interação prioritária chegou ou a sessão foi suspensa/encerrada
-          if (stopped || suspended) return true;
+          if (stopped || suspended || epoch !== ambientEpoch || pendingMembers.size) return true;
           if (queue.hasPendingPriority(INTERACTION_PRIORITIES.ambient)) return true;
           return false;
         },
         onFinally: () => {
           ambientPreparing = false;
+          ambientController = null;
         },
       });
     }, delay);
@@ -533,6 +562,9 @@ export function createLiveInteractionEngine({
   }
 
   function touchActivity() {
+    // Invalidação persistente: reconectar não pode ressuscitar uma geração antiga.
+    ambientEpoch++;
+    ambientController?.abort();
     lastActivityAt = now();
     scheduleAmbient();
   }
@@ -551,6 +583,7 @@ export function createLiveInteractionEngine({
       priority,
       dedupeKey,
       shouldCancel,
+      onCancel: onFinally,
       run: async () => {
         try {
           if (typeof shouldCancel === 'function' && shouldCancel()) {
@@ -559,21 +592,31 @@ export function createLiveInteractionEngine({
             );
             return;
           }
-          await speak(text, {
+          const result = await speak(text, {
             ...metadata,
             interactionKind: kind,
             shouldCancel,
             onPlaybackStart: (playbackCtx) => {
               if (kind === 'ambient') {
-                const audibleAt = now();
-                const audibleDelayMs = audibleAt - (metadata.scheduledAt || audibleAt);
+                const localAt = now();
+                const localDelayMs = localAt - (metadata.scheduledAt ?? localAt);
                 logger.log?.(
-                  `[AMBIENTE] início audível | latencia_geracao_ms=${playbackCtx?.generationLatencyMs ?? '?'} ` +
-                    `tempo_ate_inicio_audivel_ms=${audibleDelayMs}`,
+                  `[AMBIENTE] inicio_reproducao_local | geracao_ms=${playbackCtx?.generationLatencyMs ?? '?'} ` +
+                    `elegibilidade_ate_player_ms=${localDelayMs} | espectador=nao-verificado`,
                 );
               }
             },
+            onPlaybackEnd: (context) => {
+              if (kind === 'ambient') logger.log?.(`[AMBIENTE] fim_reproducao_local | duracao_ms=${context?.playbackDurationMs ?? '?'} | status=${context?.status ?? 'ended'}`);
+            },
           });
+          if (kind === 'ambient') {
+            if (result?.ok === false && !result.skipped) recordAmbientFailure();
+            else if (!result?.skipped) { ambientFailures = 0; ambientRetryAt = 0; }
+          }
+        } catch (error) {
+          if (kind === 'ambient') recordAmbientFailure();
+          throw error;
         } finally {
           onFinally?.();
           lastActivityAt = now();
@@ -588,13 +631,21 @@ export function createLiveInteractionEngine({
     return result;
   }
 
+  function recordAmbientFailure() {
+    ambientFailures++;
+    const backoffMs = Math.min(60000, 15000 * 2 ** Math.min(ambientFailures - 1, 2));
+    ambientRetryAt = now() + backoffMs;
+    logger.warn?.(`[AMBIENTE] falha | nova_tentativa_em_ms=${backoffMs}`);
+  }
+
   // Vídeo pré-gravado entra na MESMA fila das falas: uma mídia por vez.
-  function enqueueVideo({ id, video, user = null, phrase = null, priority = INTERACTION_PRIORITIES.video }) {
+  function enqueueVideo({ id, video, user = null, phrase = null, priority = INTERACTION_PRIORITIES.video, hasSpeech = true }) {
     if (typeof playVideo !== 'function') {
       logger.log?.(`[VÍDEO] gatilho=${id} ignorado | motivo=reprodutor-indisponivel`);
       return { accepted: false, reason: 'no-player' };
     }
 
+    const epoch = ambientEpoch;
     const result = queue.enqueue({
       kind: 'video',
       priority,
@@ -602,7 +653,12 @@ export function createLiveInteractionEngine({
       dedupeKey: `video:${id}`,
       run: async () => {
         try {
-          await playVideo({ id, video, user, phrase });
+          if (stopped || suspended || (priority === INTERACTION_PRIORITIES.ambient && epoch !== ambientEpoch)) return;
+          const result = await playVideo({ id, video, user, phrase, hasSpeech,
+            // Visual silencioso tem ocupação limitada; não monopoliza a fila.
+            timeoutMs: !hasSpeech && priority === INTERACTION_PRIORITIES.ambient ? getAmbientDelayMs() : undefined,
+          });
+          if (priority === INTERACTION_PRIORITIES.ambient && result?.ok === false && result.status !== 'timeout') recordAmbientFailure();
         } finally {
           lastActivityAt = now();
         }
@@ -616,16 +672,16 @@ export function createLiveInteractionEngine({
   }
 
   function onVideo({ id, video, user = null, phrase = null } = {}) {
-    if (!config.enabled || stopped) return { accepted: false, reason: 'disabled' };
+    if (!config.enabled || stopped || suspended) return { accepted: false, reason: 'disabled' };
     if (!id || !video) return { accepted: false, reason: 'invalid' };
     touchActivity();
     return enqueueVideo({ id, video, user, phrase });
   }
 
   function flushMembers() {
-    if (welcomeTimer) clearTimer(welcomeTimer);
+    if (welcomeTimer !== null) clearTimer(welcomeTimer);
     welcomeTimer = null;
-    if (!pendingMembers.size || stopped) return { accepted: false, reason: 'empty' };
+    if (!pendingMembers.size || stopped || suspended) return { accepted: false, reason: 'empty' };
 
     const names = [...pendingMembers.values()];
     pendingMembers.clear();
@@ -640,27 +696,27 @@ export function createLiveInteractionEngine({
   }
 
   function scheduleMemberFlush() {
-    if (welcomeTimer || stopped) return;
+    if (welcomeTimer !== null || stopped || suspended) return;
     const cooldownRemaining = Math.max(0, config.welcomeCooldownMs - (now() - lastWelcomeAt));
     welcomeTimer = setTimer(flushMembers, Math.max(config.welcomeBatchMs, cooldownRemaining));
   }
 
   function onMember({ id, name }) {
-    if (!config.enabled || !config.welcomeEnabled || stopped) return;
-    touchActivity();
+    if (!config.enabled || !config.welcomeEnabled || stopped || suspended) return;
     const key = String(id || name || '').toLowerCase();
     if (!key) return;
     pendingMembers.set(key, sanitizeSpokenName(name || id));
+    touchActivity();
     scheduleMemberFlush();
   }
 
   function onAudienceActivity() {
-    if (!config.enabled || stopped) return;
+    if (!config.enabled || stopped || suspended) return;
     // Não reinicia contagem para curtidas ou comentários genéricos não atendidos
   }
 
   function onGift({ user, giftName }) {
-    if (!config.enabled || stopped) return;
+    if (!config.enabled || stopped || suspended) return;
     touchActivity();
     const name = sanitizeSpokenName(user);
     const gift = sanitizeSpokenName(giftName || 'presente');
@@ -679,7 +735,7 @@ export function createLiveInteractionEngine({
    * Nunca produz vídeo e TTS simultaneamente para o mesmo evento.
    */
   function onGiftVideo({ user, giftName, clipId, clipFile }) {
-    if (!config.enabled || stopped) return { accepted: false, reason: 'disabled' };
+    if (!config.enabled || stopped || suspended) return { accepted: false, reason: 'disabled' };
     if (clipId && clipFile) {
       touchActivity();
       return enqueueVideo({
@@ -696,7 +752,7 @@ export function createLiveInteractionEngine({
   }
 
   function onQuestion({ user, comment }) {
-    if (!config.enabled || stopped) return { accepted: false, reason: 'disabled' };
+    if (!config.enabled || stopped || suspended) return { accepted: false, reason: 'disabled' };
     touchActivity();
     const spokenUser = sanitizeSpokenName(user);
     const result = queue.enqueue({
@@ -719,18 +775,22 @@ export function createLiveInteractionEngine({
   }
 
   function pause() {
+    if (suspended || stopped) return;
     suspended = true;
+    ambientEpoch++;
+    ambientController?.abort();
     cancelAmbientTimer();
-    if (openingTimer) clearTimer(openingTimer);
+    if (openingTimer !== null) clearTimer(openingTimer);
     openingTimer = null;
-    if (welcomeTimer) clearTimer(welcomeTimer);
+    if (welcomeTimer !== null) clearTimer(welcomeTimer);
     welcomeTimer = null;
-    queue.cancelPending((item) => item.kind === 'ambient');
+    queue.cancelPending(() => true);
+    pendingMembers.clear();
     logger.log?.('[INTERAÇÃO] suspensa (desconexão ou indisponibilidade).');
   }
 
   function resume() {
-    if (!suspended) return;
+    if (!suspended || stopped) return;
     suspended = false;
     cancelAmbientTimer();
     lastActivityAt = now();
@@ -755,15 +815,19 @@ export function createLiveInteractionEngine({
   }
 
   function stop() {
+    if (stopped) return queue.whenIdle();
     stopped = true;
     suspended = true;
-    ambientPreparing = false;
+    ambientEpoch++;
+    ambientController?.abort();
     cancelAmbientTimer();
-    if (openingTimer) clearTimer(openingTimer);
+    if (openingTimer !== null) clearTimer(openingTimer);
     openingTimer = null;
-    if (welcomeTimer) clearTimer(welcomeTimer);
+    if (welcomeTimer !== null) clearTimer(welcomeTimer);
     welcomeTimer = null;
-    queue.cancelPending((item) => item.kind === 'ambient');
+    queue.cancelPending(() => true);
+    pendingMembers.clear();
+    return queue.whenIdle();
   }
 
   return {

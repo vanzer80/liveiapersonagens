@@ -1,7 +1,10 @@
 {
   "opening": [
     "Oi, pessoal! A live começou e eu já estou pronto para conversar com vocês!",
-    "Sejam bem-vindos! Escrevam ia e depois a pergunta para falar comigo ao vivo!"
+    {
+      "trigger": "Sejam bem-vindos! Escrevam {trigger} e depois a pergunta para falar comigo ao vivo!",
+      "respondAll": "Sejam bem-vindos! Mandem uma pergunta no chat que eu respondo!"
+    }
   ],
   "ambient": [
     "Galerinha, vamos curtir a live! Tep tep na telinha!",
@@ -9,7 +12,10 @@
     "De qual cidade vocês estão assistindo?",
     "Quem aí também adora hambúrguer de siri?",
     "Qual personagem da Fenda do Biquíni vocês mais gostam?",
-    "Pessoal, mandem uma pergunta começando com ia que eu respondo ao vivo!",
+    {
+      "trigger": "Pessoal, mandem uma pergunta começando com {trigger} para falar comigo!",
+      "respondAll": "Mandem uma pergunta no chat que eu respondo!"
+    },
     "Quem tá curtindo a live clica duas vezes na tela!",
     "Quero saber: vocês preferem hambúrguer ou pizza?",
     "Quem aí já caçou água-viva levanta a mão no chat!",
@@ -22,7 +28,10 @@
     "Tep tep na telinha pra espalhar alegria submarina!",
     "Vocês escolheriam morar no fundo do mar por uma semana?",
     "Quem aí é amigo do Patrick manda um coração no chat!",
-    "Tem pergunta pro Bob? Comece com ia que eu respondo tudo!",
+    {
+      "trigger": "Tem pergunta pro Bob? Comece com {trigger} e mande no chat!",
+      "respondAll": "Tem pergunta pro Bob? Manda no chat, vamos conversar!"
+    },
     "Compartilha essa live com quem precisa dar uma boa risada hoje!",
     "Quem já almoçou ou jantou? Me conta o que comeu no chat!",
     "Não esquece de seguir o perfil pra acompanhar as próximas aventuras!",

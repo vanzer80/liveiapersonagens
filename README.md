@@ -17,7 +17,7 @@ O objetivo imediato não é construir um SaaS completo. Primeiro precisamos vali
 - MVP 5 — transmissão do Bob em LIVE real: validado em LIVE real com imagem, voz e respostas aos comentários ouvidas no celular do espectador.
 - MVP 6 — interação contínua e voz neural: orquestração implementada; modo experimental `AI_RESPOND_ALL` validado em LIVE real; cinco vídeos acionáveis com gatilhos e reprodução testados; rotação de ambiente implementada; voz neural Fish Audio (PT-BR) VALIDADA EM LIVE REAL no celular do espectador em 04/09/2026, após correção técnica no cabeçalho de streaming WAV para compatibilidade com o SoundPlayer do Windows. Lip sync dinâmico fonema/visema IMPLEMENTADO e VALIDADO LOCALMENTE no Windows com Fish Audio SSE timestamps e 9 visemas PT-BR; validação visual em transmissão ao vivo real pendente de abertura de LIVE.
 
-O protótipo converte a resposta textual em WAV. Com o Fish Audio, gera o áudio neural via API em ~1,8 a 2,5 s e reproduz localmente no Windows com áudio capturado pelo TikTok LIVE Studio. A voz nativa Microsoft Maria permanece como fallback local.
+O protótipo converte a resposta textual em WAV. Com o Fish Audio, gera o áudio neural via API (1819, 2047 e 2287 ms nas três respostas da LIVE de 04/09/2026; não é garantia de latência) e reproduz localmente no Windows com áudio capturado pelo TikTok LIVE Studio. A voz nativa Microsoft Maria permanece como fallback local.
 
 O comando `npm run live:bob -- <usuario>` inicia a cena vertical, aguarda a conta entrar ao vivo e integra `thinking`, `speaking` e `idle` ao fluxo comentário → IA → TTS. O TikTok LIVE Studio deve capturar a janela do navegador e o áudio do sistema (Alto-falantes). A recepção audiovisual foi confirmada no celular do espectador em 04/09/2026.
 
@@ -76,3 +76,7 @@ Procedimento da etapa atual: [`docs/mvp5-live-bob.md`](docs/mvp5-live-bob.md). R
 Interação e voz: [`docs/mvp6-interaction-voice-lipsync.md`](docs/mvp6-interaction-voice-lipsync.md). Piloto dos cinco vídeos acionáveis: [`docs/mvp6-prerecorded-video-pilot.md`](docs/mvp6-prerecorded-video-pilot.md).
 
 Rotações de ambiente e análise do loop: [`docs/mvp6-live-ambient-rotations.md`](docs/mvp6-live-ambient-rotations.md).
+
+## Falas automáticas — revisão complementar
+
+Rotação e TTS ambiente alternam na mesma fila após 5s de disponibilidade. Frases acompanham `AI_RESPOND_ALL`; áudio obsoleto é cancelado antes de liberar o player. Resultado desta revisão: 204 testes aprovados, 0 falhas, 1 teste Windows não executado em Linux (205 encontrados). Homologação no Windows com Fish Audio real e LIVE com espectador permanece pendente. [Relatório, matriz e reversão](docs/mvp6-auto-speech-complementary-review.md).

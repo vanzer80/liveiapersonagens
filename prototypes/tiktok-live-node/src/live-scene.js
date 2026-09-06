@@ -101,49 +101,53 @@ export function createLiveSceneRuntime({
     return show(SCENE_STATES.THINKING, { ...metadata, reason: 'ai-processing' });
   }
 
-  async function speak(text, { speaker, metadata = {}, shouldCancel = null, onPlaybackStart = null } = {}) {
+  async function speak(text, { speaker, metadata = {}, shouldCancel = null, onPlaybackStart = null, onPlaybackEnd = null, signal = null } = {}) {
     if (typeof speaker !== 'function') {
       throw new Error('A função de TTS não foi informada para a cena ao vivo.');
     }
 
-    if (!config.enabled) return speaker(text, { shouldCancel, onPlaybackStart });
+    if (!config.enabled) return speaker(text, { shouldCancel, onPlaybackStart, onPlaybackEnd, signal });
 
     let playbackStarted = false;
     let playbackEnded = false;
-    const result = await speaker(text, {
-      shouldCancel,
-      onPlaybackStart: async (context) => {
-        playbackStarted = true;
-        await show(SCENE_STATES.SPEAKING, {
-          ...metadata,
-          ...context,
-          reason: 'tts-playback-start',
-        });
-        if (typeof onPlaybackStart === 'function') {
-          try {
-            await onPlaybackStart(context);
-          } catch {
-            // Callback externo não deve derrubar o ciclo da cena
+    let result;
+    try {
+      result = await speaker(text, {
+        shouldCancel,
+        signal,
+        onPlaybackStart: async (context) => {
+          playbackStarted = true;
+          await show(SCENE_STATES.SPEAKING, {
+            ...metadata,
+            ...context,
+            reason: 'tts-playback-start',
+          });
+          if (typeof onPlaybackStart === 'function') {
+            try {
+              await onPlaybackStart(context);
+            } catch {
+              // Callback externo não deve derrubar o ciclo da cena
+            }
           }
-        }
-      },
-      onPlaybackEnd: async (context) => {
-        playbackEnded = true;
-        await reset({
-          ...metadata,
-          ...context,
-          reason: 'tts-playback-end',
-        });
-      },
-    });
-
-    if (!result?.ok || result?.skipped || !playbackStarted || !playbackEnded) {
-      await ensureIdle({
-        ...metadata,
-        reason: result?.ok ? 'tts-without-playback' : 'tts-failed',
+        },
+        onPlaybackEnd: async (context) => {
+          playbackEnded = true;
+          await reset({
+            ...metadata,
+            ...context,
+            reason: 'tts-playback-end',
+          });
+          await onPlaybackEnd?.(context);
+        },
       });
+    } finally {
+      if (!result?.ok || result?.skipped || !playbackStarted || !playbackEnded) {
+        await ensureIdle({
+          ...metadata,
+          reason: result?.ok ? 'tts-without-playback' : 'tts-failed',
+        });
+      }
     }
-
     return result;
   }
 
@@ -169,8 +173,8 @@ export function createLiveSceneRuntime({
 
     let result = { ok: false, status: 'unknown' };
     try {
-      result = await preview.playMedia({ file });
-      if (!result.ok) {
+      result = await preview.playMedia({ file, muted: metadata.hasSpeech === false, timeoutMs: metadata.timeoutMs });
+      if (!result.ok && !(metadata.hasSpeech === false && result.status === 'timeout')) {
         logger.error?.(`[VÍDEO] reprodução não concluída | arquivo=${file} status=${result.status}`);
       }
     } catch (error) {
