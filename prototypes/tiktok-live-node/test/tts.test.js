@@ -344,6 +344,60 @@ test('quando endpoint timestamped falha, speakText recorre ao /v1/tts regular, p
   }
 });
 
+test('Fish Audio pode reproduzir pelo navegador sem chamar PowerShell no Linux', async () => {
+  const originalFetch = globalThis.fetch;
+  const sampleRate = 8000;
+  const dataSize = 1600;
+  const silentWav = Buffer.alloc(44 + dataSize);
+  silentWav.write('RIFF', 0);
+  silentWav.writeUInt32LE(36 + dataSize, 4);
+  silentWav.write('WAVE', 8);
+  silentWav.write('fmt ', 12);
+  silentWav.writeUInt32LE(16, 16);
+  silentWav.writeUInt16LE(1, 20);
+  silentWav.writeUInt16LE(1, 22);
+  silentWav.writeUInt32LE(sampleRate, 24);
+  silentWav.writeUInt32LE(sampleRate * 2, 28);
+  silentWav.writeUInt16LE(2, 32);
+  silentWav.writeUInt16LE(16, 34);
+  silentWav.write('data', 36);
+  silentWav.writeUInt32LE(dataSize, 40);
+
+  globalThis.fetch = async () => new Response(silentWav, { status: 200 });
+
+  let started = 0;
+  let ended = 0;
+  let browserCalls = 0;
+
+  try {
+    const result = await speakText('Olá pelo navegador', {
+      force: true,
+      config: getTtsConfig({
+        TTS_PROVIDER: 'fish-audio',
+        FISH_AUDIO_API_KEY: 'fake-key',
+        FISH_AUDIO_REFERENCE_ID: 'fake-reference',
+      }),
+      runProcess: async () => {
+        throw new Error('PowerShell não deve ser chamado no transporte browser');
+      },
+      playAudio: async (_audioPath, { onStart }) => {
+        browserCalls += 1;
+        await onStart();
+        return { ok: true, status: 'ended' };
+      },
+      onPlaybackStart: () => { started += 1; },
+      onPlaybackEnd: () => { ended += 1; },
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(browserCalls, 1);
+    assert.equal(started, 1);
+    assert.equal(ended, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('descarta áudio e pula reprodução se shouldCancel retornar true antes de iniciar áudio', async () => {
   const originalFetch = globalThis.fetch;
   const sampleRate = 16000;
