@@ -11,6 +11,21 @@ O projeto está em fase inicial de validação. Mudanças devem favorecer experi
 5. Registrar limitações e falhas encontradas, não apenas resultados positivos.
 6. Quando uma descoberta alterar uma decisão duradoura do projeto, atualizar também a documentação oficial no Google Drive.
 
+## Colaboração entre contas e IAs
+
+O projeto pode ser desenvolvido por co-proprietários usando contas separadas de IA, desde que todos trabalhem sobre as mesmas fontes oficiais compartilhadas.
+
+- Google Drive: visão, decisões, aprendizados, riscos, pendências e estado consolidado.
+- GitHub: código, testes, documentação técnica, Issues, branches e Pull Requests.
+- Histórico ou memória privada de chat não é fonte canônica.
+- Antes de tarefa relevante, conferir Drive, `main`, branches, PRs, Issues e documentação recente.
+- Depois de decisão, resultado, aprendizado, risco ou pendência duradoura, registrar a informação na fonte compartilhada adequada.
+- Não é necessário que diferentes IAs produzam respostas textualmente idênticas; elas devem convergir para o mesmo estado operacional, evidências, dependências e limites de validação.
+- Uma nova IA/plataforma só deve ser tratada como colaborador operacional depois de teste controlado de acesso e continuidade, verificando cruzamento Drive × GitHub, `main` × PRs, teste × LIVE real, histórico × vigente e recuperação correta do ponto de continuidade.
+- Mesmo entre co-proprietários autorizados, não reproduzir chaves, tokens, cookies, `.env` ou identificadores privados sem necessidade operacional.
+
+O modelo foi validado com duas contas separadas do ChatGPT. A avaliação de Gemini, Gems e/ou Jules é uma hipótese de interoperabilidade futura e ainda precisa do mesmo teste controlado antes de ser considerada validada.
+
 ## Commits
 
 Preferir mensagens curtas e descritivas, por exemplo:
