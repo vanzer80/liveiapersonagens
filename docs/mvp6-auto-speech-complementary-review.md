@@ -5,7 +5,7 @@ Data: 2026-09-06. **Relatório parcial de homologação: correções e testes di
 ## Estado verificado antes da edição
 
 - GitHub remoto: `feat/mvp6-auto-speech` em `9533a0c22e82f29585593655e6a96d4f924331f9`, confirmado por conector e `git ls-remote`.
-- Pai: `cd96ca981431cdfe7af7ea3e4ae8973bfb7e0e7d`, branch `feat/mvp6-lip-sync`. PR #15 aberto, sem merge, base `main` em `94ddacfa8808a806c74eb3c98f95efc7c4c7c7fd`. A revisão de falas depende desse código de lip sync; o novo PR deverá comparar contra `feat/mvp6-lip-sync` e permanecer rascunho até homologação. Não trocar o PR #15 nem integrá-lo automaticamente.
+- Pai: `cd96ca981431cdfe7af7ea3e4ae8973bfb7e0e7d`, branch `feat/mvp6-lip-sync`. PR #15 aberto, sem merge, base `main` em `94ddacfa8808a806c74eb3c98f95efc7c4c7c7fd`. A revisão de falas depende desse código de lip sync; o PR #16 foi criado com base em `feat/mvp6-lip-sync` e permanece rascunho até homologação. Não trocar o PR #15 nem integrá-lo automaticamente.
 - Pesquisa e listagem direta `/pulls?state=all&head=vanzer80:feat/mvp6-auto-speech`: nenhum PR existente no início. `/pull/new/...` não era um PR criado.
 - `AGENTS.md` não existe na árvore auditada. Lidos `CONTRIBUTING.md`, README raiz/protótipo, continuidade, relatório anterior, código/testes pertinentes e Issue #9.
 - Drive: lidos `00 - Documento Mestre - Visão do Produto`, `03 - Registro de Decisões e Pendências` e `04 - Aprendizados - Erros e Acertos`. O conector está disponível. O bloqueio anterior de `G:\` não demonstrava falha do conector.
@@ -59,8 +59,9 @@ O intervalo mede **elegibilidade**, não garante áudio em exatamente 5s: geraç
 7. Sintaxe verificada com `node --check` nos módulos alterados e `git diff --check` sem erros; diff revisado. Nenhum teste Windows foi classificado como aprovado por passar em Linux.
 
 8. Achado adicional na inspeção operacional: `test:lipsync` encerrava com sucesso mesmo após falha de TTS e imprimia `fallback=false` sem evidência. Agora retorna código 1 se houve erro/sem alignment e deixa a homologação visual para o operador. A regressão executa o CLI real sem rede nem áudio.
-9. Tentativa `git push origin feat/mvp6-auto-speech` falhou: `could not read Username for https://github.com`. O conector GitHub autenticado será usado para publicação Git sem force; o commit local inicial não equivale a commit remoto.
+9. Tentativa `git push origin feat/mvp6-auto-speech` falhou: `could not read Username for https://github.com`. A publicação funcionou pelo conector GitHub autenticado, com criação de árvore/commit e avanço de referência sem force. Árvore publicada e árvore testada coincidem. Os commits locais preliminares foram preservados em referência separada; não foram apresentados como commits remotos.
 10. A regra existente `*.log` impediu incluir a saída de teste. A evidência foi renomeada para `.txt`, preservando a política do repositório; não foi forçada a inclusão de logs ignorados.
+11. A primeira gravação no Google Docs falhou com HTTP 400 porque a data nativa não aceitava `locale=pt`; o lote não foi aplicado. O formato aceito `locale=en` foi usado na retomada. Antes dela, a revisão automática havia rejeitado a gravação por limite de uso; o bloqueio foi informado, sem tentativa de contorno. Após o usuário pedir continuidade, ambos os documentos foram gravados e relidos com sucesso, preservando todo o histórico.
 
 ## Medições e origem
 
@@ -93,7 +94,8 @@ Logs novos distinguem `[AMBIENTE] elegibilidade`, `[TTS] gerando`/`áudio gerado
 | Fish Audio real e sincronização de cena no Windows | `test:tts`, `test:lipsync` inspecionados | Pendente |
 | Três ciclos e comentários idle/preparação/audível na LIVE | roteiro abaixo | Pendente |
 | Presente, retomadas, rotação, ausência de sobreposição e lip sync no celular | roteiro abaixo | Pendente; não comprar presente sem autorização |
-| Commit/push, PR real, Drive e Issue | confirmação de publicação abaixo | Atualizar somente após leitura remota |
+| Commit publicado, PR real e Issue | GitHub relido; hashes e URLs abaixo | Confirmado, sem merge |
+| Drive 03 e 04 | conteúdo relido, histórico comparado e data nativa verificada | Atualizados efetivamente |
 
 ## Participação mínima no Windows e LIVE
 
@@ -115,4 +117,13 @@ A cópia do usuário não foi inspecionada por acesso remoto. Antes de atualizar
 
 ## Confirmações de publicação
 
-Em preparação: código e relatório auditados localmente. Preencher esta seção com hashes/URLs observados após push, criação de PR e leitura das gravações oficiais. Windows/Fish/LIVE permanecem pendentes mesmo após a publicação.
+- Implementação original confirmada remotamente: [`9533a0c22e82f29585593655e6a96d4f924331f9`](https://github.com/vanzer80/liveiapersonagens/commit/9533a0c22e82f29585593655e6a96d4f924331f9).
+- Correções de código publicadas: [`e88822ecbf13ba871db319e1629fc008e404811b`](https://github.com/vanzer80/liveiapersonagens/commit/e88822ecbf13ba871db319e1629fc008e404811b). Árvore `bd75ea30bed7e0c8783c5d63939f730db67d62a5`, idêntica à testada. As alterações posteriores de fechamento são somente documentais e não mudam esse código.
+- [PR #16](https://github.com/vanzer80/liveiapersonagens/pull/16) criado de verdade, aberto e em rascunho: `feat/mvp6-auto-speech` → `feat/mvp6-lip-sync`. Depende do [PR #15](https://github.com/vanzer80/liveiapersonagens/pull/15); não houve merge. Descrição atualizada e confirmada por leitura.
+- [Issue #9](https://github.com/vanzer80/liveiapersonagens/issues/9) recebeu seção complementar com correções, testes, documentos e pendências. Conteúdo anterior preservado e gravação confirmada por leitura; Issue permanece aberta.
+- [03 — Registro de Decisões e Pendências](https://docs.google.com/document/d/1uYAtE0vLWqs2enRHgQ6mgRA24r1c2VN0xRgNk5mKFZ4/edit): seção **35 — Revisão complementar — falas automáticas por inatividade**, gravada e relida. Comparação confirmou os 418 parágrafos anteriores preservados e todos os novos parágrafos esperados.
+- [04 — Aprendizados — Erros e Acertos](https://docs.google.com/document/d/1DBTJ1CjmDodV5XWtrqEGm2AhFRHlRE5WkyUwzxvpMyw/edit): seção **20 — Revisão complementar — falas automáticas por inatividade**, gravada e relida. Comparação confirmou os 139 parágrafos anteriores preservados e todos os novos parágrafos esperados.
+- As duas inserções usam data nativa de 06/09/2026, conferida na estrutura do documento. Revisões e resultados de leitura estão em [`publication-confirmation.json`](evidence/auto-speech-2026-09-06/publication-confirmation.json).
+- README raiz/protótipo, documentação técnica e continuidade atualizados. O relatório anterior permanece identificado como histórico, sem ser usado como evidência nova.
+
+**Fechamento parcial de homologação:** revisão de código, testes disponíveis e documentação oficial concluídos. Permanecem pendentes a cópia Windows do usuário, Fish Audio real, reprodução acústica e LIVE com espectador. Próximo passo mínimo: executar o roteiro local acima e registrar o que o celular efetivamente recebe. Não é necessário reimplementar nem refazer a documentação para iniciar essa validação.
